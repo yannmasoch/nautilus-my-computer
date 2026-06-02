@@ -109,7 +109,7 @@ fetch_latest_version() {
     response=$(curl -s "https://api.github.com/repos/$REPO/releases/latest") \
         || die "Failed to reach GitHub API."
 
-    LATEST=$(echo "$response" | grep '"tag_name"' | sed 's/.*"tag_name": *"\(.*\)".*/\1/')
+    LATEST=$(echo "$response" | grep '"tag_name"' | sed 's/.*"tag_name": *"\(.*\)".*/\1/' || true)
     if [ -z "$LATEST" ]; then
         LATEST="main"
         line "Latest release" "none — using main branch"
