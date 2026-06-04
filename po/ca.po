@@ -1,0 +1,149 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: nautilus-my-computer\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-06-01 00:00+0200\n"
+"PO-Revision-Date: 2026-06-01 00:00+0200\n"
+"Last-Translator: Unai Lomas\n"
+"Language-Team: Catalan\n"
+"Language: ca\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+
+msgid "My Computer Settings"
+msgstr "Configuració d'Ordinador"
+
+msgid "System"
+msgstr "Sistema"
+
+msgid "Devices and Drives"
+msgstr "Dispositius i unitats"
+
+msgid "Removable Devices"
+msgstr "Dispositius extraïbles"
+
+msgid "Disc Images"
+msgstr "Imatges de disc"
+
+msgid "Network Volumes"
+msgstr "Volums de xarxa"
+
+msgid "Not mounted"
+msgstr "No muntat"
+
+msgid "Format…"
+msgstr "Formatar…"
+
+msgid "General"
+msgstr "General"
+
+msgid "Start on Computer view"
+msgstr "Iniciar a la vista Ordinador"
+
+msgid "Show the disk panel when Nautilus opens"
+msgstr "Mostra el panell de discos en obrir Nautilus"
+
+msgid "Disk Usage Color"
+msgstr "Color d'ús del disc"
+
+msgid "Color mode"
+msgstr "Mode de color"
+
+msgid "System accent"
+msgstr "Color d'accent del sistema"
+
+msgid "Custom color"
+msgstr "Color personalitzat"
+
+msgid "Gradient"
+msgstr "Degradat"
+
+msgid "Color"
+msgstr "Color"
+
+msgid "Start color"
+msgstr "Color inicial"
+
+msgid "End color"
+msgstr "Color final"
+
+msgid "Sidebar Bookmark"
+msgstr "Marcador de la barra lateral"
+
+msgid "The \"Computer\" bookmark gives access to this panel from the sidebar. Restore it here if you accidentally removed it."
+msgstr "El marcador \"Ordinador\" dóna accés a aquest panell des de la barra lateral. Restaureu-lo aquí si l'heu eliminat accidentalment."
+
+msgid "Restore \"Computer\" bookmark"
+msgstr "Restaurar marcador \"Ordinador\""
+
+msgid "Restore"
+msgstr "Restaurar"
+
+msgid "Added ✓"
+msgstr "Afegit ✓"
+
+msgid "About"
+msgstr "Quant a"
+
+msgid "Extension"
+msgstr "Extensió"
+
+msgid "Version"
+msgstr "Versió"
+
+msgid "Author"
+msgstr "Autor"
+
+msgid "License"
+msgstr "Llicència"
+
+msgid "Source code"
+msgstr "Codi font"
+
+msgid "GitHub ↗"
+msgstr "GitHub ↗"
+
+msgid "{free} free of {total}"
+msgstr "{free} lliure de {total}"
+
+msgid "Computer"
+msgstr "Ordinador"
+
+msgid "Mount"
+msgstr "Muntar"
+
+msgid "Unmount"
+msgstr "Desmuntar"
+
+msgid "Eject"
+msgstr "Expulsar"
+
+msgid "Open"
+msgstr "Obrir"
+
+msgid "Open in New Tab"
+msgstr "Obrir en una pestanya nova"
+
+msgid "Open in New Window"
+msgstr "Obrir en una finestra nova"
+
+msgid "Properties"
+msgstr "Propietats"
+
+msgid "Hide system partitions"
+msgstr "Ocultar particions del sistema"
+
+msgid "Hide boot and EFI drives"
+msgstr "Ocultar unitats d'arrencada (Boot i EFI)"
+
+msgid "Browse Network"
+msgstr "Explorar la xarxa"
+
+msgid "Disks Utility"
+msgstr "Utilitat de discs"
+
+msgid "System Monitor"
+msgstr "Monitor del sistema"
+

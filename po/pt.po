@@ -1,0 +1,149 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: nautilus-my-computer\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-06-01 00:00+0200\n"
+"PO-Revision-Date: 2026-06-01 00:00+0200\n"
+"Last-Translator: Unai Lomas\n"
+"Language-Team: Portuguese\n"
+"Language: pt\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+
+msgid "My Computer Settings"
+msgstr "Configurações de Meu Computador"
+
+msgid "System"
+msgstr "Sistema"
+
+msgid "Devices and Drives"
+msgstr "Dispositivos e Unidades"
+
+msgid "Removable Devices"
+msgstr "Dispositivos Removíveis"
+
+msgid "Disc Images"
+msgstr "Imagens de Disco"
+
+msgid "Network Volumes"
+msgstr "Volumes de Rede"
+
+msgid "Not mounted"
+msgstr "Não montado"
+
+msgid "Format…"
+msgstr "Formatar…"
+
+msgid "General"
+msgstr "Geral"
+
+msgid "Start on Computer view"
+msgstr "Iniciar na visualização Computador"
+
+msgid "Show the disk panel when Nautilus opens"
+msgstr "Mostrar o painel de discos ao abrir o Nautilus"
+
+msgid "Disk Usage Color"
+msgstr "Cor de uso do disco"
+
+msgid "Color mode"
+msgstr "Modo de cor"
+
+msgid "System accent"
+msgstr "Destaque do sistema"
+
+msgid "Custom color"
+msgstr "Cor personalizada"
+
+msgid "Gradient"
+msgstr "Gradiente"
+
+msgid "Color"
+msgstr "Cor"
+
+msgid "Start color"
+msgstr "Cor inicial"
+
+msgid "End color"
+msgstr "Cor final"
+
+msgid "Sidebar Bookmark"
+msgstr "Favorito da Barra Lateral"
+
+msgid "The \"Computer\" bookmark gives access to this panel from the sidebar. Restore it here if you accidentally removed it."
+msgstr "O favorito \"Computador\" dá acesso a este painel pela barra lateral. Restaure-o aqui se o removeu acidentalmente."
+
+msgid "Restore \"Computer\" bookmark"
+msgstr "Restaurar favorito \"Computador\""
+
+msgid "Restore"
+msgstr "Restaurar"
+
+msgid "Added ✓"
+msgstr "Adicionado ✓"
+
+msgid "About"
+msgstr "Sobre"
+
+msgid "Extension"
+msgstr "Extensão"
+
+msgid "Version"
+msgstr "Versão"
+
+msgid "Author"
+msgstr "Autor"
+
+msgid "License"
+msgstr "Licença"
+
+msgid "Source code"
+msgstr "Código-fonte"
+
+msgid "GitHub ↗"
+msgstr "GitHub ↗"
+
+msgid "{free} free of {total}"
+msgstr "{free} livre de {total}"
+
+msgid "Computer"
+msgstr "Computador"
+
+msgid "Mount"
+msgstr "Montar"
+
+msgid "Unmount"
+msgstr "Desmontar"
+
+msgid "Eject"
+msgstr "Ejetar"
+
+msgid "Open"
+msgstr "Abrir"
+
+msgid "Open in New Tab"
+msgstr "Abrir em Nova Aba"
+
+msgid "Open in New Window"
+msgstr "Abrir em Nova Janela"
+
+msgid "Properties"
+msgstr "Propriedades"
+
+msgid "Hide system partitions"
+msgstr "Ocultar partições do sistema"
+
+msgid "Hide boot and EFI drives"
+msgstr "Ocultar unidades de inicialização (Boot e EFI)"
+
+msgid "Browse Network"
+msgstr "Navegar na Rede"
+
+msgid "Disks Utility"
+msgstr "Utilitário de Discos"
+
+msgid "System Monitor"
+msgstr "Monitor do Sistema"
+

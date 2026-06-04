@@ -420,6 +420,11 @@ def _scan_mounts() -> list[MountInfo]:
     seen: set[str] = set()
     uuid_map = _build_uuid_map()
 
+    hide_boot_efi = False
+    gsettings = _get_gsettings()
+    if gsettings:
+        hide_boot_efi = gsettings.get_boolean("hide-system-partitions")
+
     # Build mountpoint → Gio.Icon / Gio.Mount from VolumeMonitor so we can
     # attach the real hardware icon and GIO handle to each /proc/mounts entry.
     icon_by_path: dict[str, Gio.Icon] = {}
@@ -447,6 +452,8 @@ def _scan_mounts() -> list[MountInfo]:
                 opts = set(options.split(","))
                 gvfs_show = "x-gvfs-show" in opts
                 is_external = any(mountpoint.startswith(p) for p in EXTERNAL_PREFIXES)
+                if hide_boot_efi and mountpoint in ("/boot", "/boot/efi", "/efi"):
+                    continue
                 if (
                     fstype not in REAL_FSTYPES and not gvfs_show and not is_external
                 ) or device in seen:
@@ -1010,6 +1017,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _on_settings_changed(self, settings: Gio.Settings, key: str) -> None:
         if key == "start-on-disks":
             self._start_on_disks = settings.get_boolean(key)
+        elif key == "hide-system-partitions":
+            self._schedule_live_refresh()
         elif key in ("color-mode", "custom-color", "gradient-color-1", "gradient-color-2"):
             self._apply_bar_color()
 
@@ -1308,24 +1317,28 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             if key not in _disk_data:
                 continue
             _disk_data[key] = dataclasses.replace(_disk_data[key], total=total, free=free)
+            m = _disk_data[key]
             for state in self._windows.values():
                 if not self._has_live_stack(state, "apply_usage_updates"):
                     continue
                 if state.get("visible_child") != STACK_DISKINFO:
                     continue
-                self._update_card_usage(state, key, total, free)
+                self._update_card_usage(state, m)
         return GLib.SOURCE_REMOVE
 
-    def _update_card_usage(self, state: dict, key: str, total: int, free: int) -> None:
+    def _update_card_usage(self, state: dict, m: MountInfo) -> None:
         """Update LevelBar and subtext label for a card via the O(1) card_widgets registry."""
-        entry = state.get("card_widgets", {}).get(key)
+        entry = state.get("card_widgets", {}).get(m.key)
         if entry is None:
             return
         bar, sub = entry
-        if bar is not None and total > 0:
-            bar.set_value(min(1.0, (total - free) / total))
-        if sub is not None and total > 0:
-            sub.set_label(f"{_format_size(free)} free of {_format_size(total)}")
+        if bar is not None and m.total > 0:
+            bar.set_value(min(1.0, (m.total - m.free) / m.total))
+        if sub is not None and m.total > 0:
+            base_sub = _("{free} free of {total}").format(
+                free=_format_size(m.free), total=_format_size(m.total)
+            )
+            sub.set_label(f"{base_sub} • {m.fstype}" if m.fstype else base_sub)
 
     def _ensure_usage_poll_running(self) -> None:
         """Arm both usage poll workers if not already running."""
@@ -1669,9 +1682,10 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             bar.set_name(bname)
             if v > 0:
                 bar_geom[bname] = v
-            sub_text = _("{free} free of {total}").format(
+            base_sub = _("{free} free of {total}").format(
                 free=_format_size(m.free), total=_format_size(m.total)
             )
+            sub_text = f"{base_sub} • {m.fstype}" if m.fstype else base_sub
         else:
             bar.set_visible(False)
             sub_text = nav_uri
@@ -1855,15 +1869,77 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                 self._do_open(nav_uri, win)
         return True
 
-    def _on_panel_clicked(self, _gesture, _n, _x, _y, win: Gtk.Window) -> None:
+    def _on_panel_clicked(self, gesture, _n, x, y, win: Gtk.Window) -> None:
         state = self._windows.get(win)
         if not state:
             return
-        state["_deselecting"] = True
-        for flow in state.get("section_flows", []):
-            flow.unselect_all()
-        state["_deselecting"] = False
-        state["selected_key"] = None
+        
+        button = gesture.get_current_button()
+        if button == 1:
+            state["_deselecting"] = True
+            for flow in state.get("section_flows", []):
+                flow.unselect_all()
+            state["_deselecting"] = False
+            state["selected_key"] = None
+        elif button == 3:
+            self._show_bg_context_menu(gesture, x, y, win)
+
+    def _show_bg_context_menu(self, gesture, x, y, win: Gtk.Window) -> None:
+        gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+        menu = Gio.Menu()
+        menu.append(_("Browse Network"), "bg.browse-network")
+        menu.append(_("Disks Utility"), "bg.open-disks")
+        menu.append(_("System Monitor"), "bg.open-sysmon")
+        menu.append(_("My Computer Settings"), "bg.open-settings")
+
+        popover = Gtk.PopoverMenu.new_from_model(menu)
+        popover.set_has_arrow(False)
+        popover.set_parent(gesture.get_widget())
+
+        rect = Gdk.Rectangle()
+        rect.x = int(x)
+        rect.y = int(y)
+        rect.width = 1
+        rect.height = 1
+        popover.set_pointing_to(rect)
+
+        ag = Gio.SimpleActionGroup()
+
+        def _on_network(_act, _param):
+            self._navigate(win, "network:///")
+
+        def _on_disks(_act, _param):
+            try:
+                Gio.Subprocess.new(["gnome-disks"], Gio.SubprocessFlags.NONE)
+            except Exception:
+                pass
+
+        def _on_sysmon(_act, _param):
+            try:
+                Gio.Subprocess.new(["gnome-system-monitor"], Gio.SubprocessFlags.NONE)
+            except Exception:
+                pass
+
+        def _on_settings(_act, _param):
+            self._launch_prefs(win)
+
+        for name, callback in [
+            ("browse-network", _on_network),
+            ("open-disks", _on_disks),
+            ("open-sysmon", _on_sysmon),
+            ("open-settings", _on_settings),
+        ]:
+            action = Gio.SimpleAction.new(name, None)
+            action.connect("activate", callback)
+            ag.add_action(action)
+
+        popover.insert_action_group("bg", ag)
+        
+        def _on_closed(pop):
+            pop.unparent()
+
+        popover.connect("closed", _on_closed)
+        popover.popup()
 
     def _on_disk_right_clicked(self, gesture, _n, x, y, win: Gtk.Window, row: Gtk.Box) -> None:
         mount_key = getattr(row, "_mount_key", None)
@@ -2117,6 +2193,12 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         start_row.set_subtitle(_("Show the disk panel when Nautilus opens"))
         self._gsettings.bind("start-on-disks", start_row, "active", Gio.SettingsBindFlags.DEFAULT)
         gen_group.add(start_row)
+
+        hide_sys_row = Adw.SwitchRow()
+        hide_sys_row.set_title(_("Hide system partitions"))
+        hide_sys_row.set_subtitle(_("Hide boot and EFI drives"))
+        self._gsettings.bind("hide-system-partitions", hide_sys_row, "active", Gio.SettingsBindFlags.DEFAULT)
+        gen_group.add(hide_sys_row)
 
         color_group = Adw.PreferencesGroup()
         color_group.set_title(_("Disk Usage Color"))
