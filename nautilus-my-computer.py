@@ -1869,77 +1869,15 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                 self._do_open(nav_uri, win)
         return True
 
-    def _on_panel_clicked(self, gesture, _n, x, y, win: Gtk.Window) -> None:
+    def _on_panel_clicked(self, _gesture, _n, _x, _y, win: Gtk.Window) -> None:
         state = self._windows.get(win)
         if not state:
             return
-        
-        button = gesture.get_current_button()
-        if button == 1:
-            state["_deselecting"] = True
-            for flow in state.get("section_flows", []):
-                flow.unselect_all()
-            state["_deselecting"] = False
-            state["selected_key"] = None
-        elif button == 3:
-            self._show_bg_context_menu(gesture, x, y, win)
-
-    def _show_bg_context_menu(self, gesture, x, y, win: Gtk.Window) -> None:
-        gesture.set_state(Gtk.EventSequenceState.CLAIMED)
-        menu = Gio.Menu()
-        menu.append(_("Browse Network"), "bg.browse-network")
-        menu.append(_("Disks Utility"), "bg.open-disks")
-        menu.append(_("System Monitor"), "bg.open-sysmon")
-        menu.append(_("My Computer Settings"), "bg.open-settings")
-
-        popover = Gtk.PopoverMenu.new_from_model(menu)
-        popover.set_has_arrow(False)
-        popover.set_parent(gesture.get_widget())
-
-        rect = Gdk.Rectangle()
-        rect.x = int(x)
-        rect.y = int(y)
-        rect.width = 1
-        rect.height = 1
-        popover.set_pointing_to(rect)
-
-        ag = Gio.SimpleActionGroup()
-
-        def _on_network(_act, _param):
-            self._navigate(win, "network:///")
-
-        def _on_disks(_act, _param):
-            try:
-                Gio.Subprocess.new(["gnome-disks"], Gio.SubprocessFlags.NONE)
-            except Exception:
-                pass
-
-        def _on_sysmon(_act, _param):
-            try:
-                Gio.Subprocess.new(["gnome-system-monitor"], Gio.SubprocessFlags.NONE)
-            except Exception:
-                pass
-
-        def _on_settings(_act, _param):
-            self._launch_prefs(win)
-
-        for name, callback in [
-            ("browse-network", _on_network),
-            ("open-disks", _on_disks),
-            ("open-sysmon", _on_sysmon),
-            ("open-settings", _on_settings),
-        ]:
-            action = Gio.SimpleAction.new(name, None)
-            action.connect("activate", callback)
-            ag.add_action(action)
-
-        popover.insert_action_group("bg", ag)
-        
-        def _on_closed(pop):
-            pop.unparent()
-
-        popover.connect("closed", _on_closed)
-        popover.popup()
+        state["_deselecting"] = True
+        for flow in state.get("section_flows", []):
+            flow.unselect_all()
+        state["_deselecting"] = False
+        state["selected_key"] = None
 
     def _on_disk_right_clicked(self, gesture, _n, x, y, win: Gtk.Window, row: Gtk.Box) -> None:
         mount_key = getattr(row, "_mount_key", None)
@@ -2197,7 +2135,9 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         hide_sys_row = Adw.SwitchRow()
         hide_sys_row.set_title(_("Hide system partitions"))
         hide_sys_row.set_subtitle(_("Hide boot and EFI drives"))
-        self._gsettings.bind("hide-system-partitions", hide_sys_row, "active", Gio.SettingsBindFlags.DEFAULT)
+        self._gsettings.bind(
+            "hide-system-partitions", hide_sys_row, "active", Gio.SettingsBindFlags.DEFAULT
+        )
         gen_group.add(hide_sys_row)
 
         color_group = Adw.PreferencesGroup()
