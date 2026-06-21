@@ -1,0 +1,179 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: nautilus-my-computer\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-06-01 00:00+0200\n"
+"PO-Revision-Date: 2026-06-22 00:17+0300\n"
+"Last-Translator: Taylan Tatlı\n"
+"Language-Team: Turkish\n"
+"Language: tr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.9\n"
+
+# ——————————————————————————————
+# Panel - Group labels
+# ——————————————————————————————
+msgid "On this Computer"
+msgstr "Bu Bilgisayarda"
+
+msgid "System"
+msgstr "Sistem"
+
+msgid "Removable"
+msgstr "Çıkarılabilir"
+
+msgid "Disc"
+msgstr "Disk"
+
+msgid "Network Volumes"
+msgstr "Ağ Birimleri"
+
+# ——————————————————————————————
+# Panel - Disk card
+# ——————————————————————————————
+msgid "{free} free of {total}"
+msgstr "{total} alanda {free} boş"
+
+msgid "Not mounted"
+msgstr "Bağlanmamış"
+
+# ——————————————————————————————
+# Panel - Disk card actions
+# ——————————————————————————————
+msgid "Open"
+msgstr "Aç"
+
+msgid "Open in New Tab"
+msgstr "Yeni Sekmede Aç"
+
+msgid "Open in New Window"
+msgstr "Yeni Pencerede Aç"
+
+msgid "Mount"
+msgstr "Bağla"
+
+msgid "Unmount"
+msgstr "Bağlantıyı Kes"
+
+msgid "Eject"
+msgstr "Çıkar"
+
+msgid "Properties"
+msgstr "Özellikler"
+
+msgid "Format…"
+msgstr "Biçimlendir"
+
+# ——————————————————————————————
+# Sidebar
+# ——————————————————————————————
+msgid "Computer"
+msgstr "Bilgisayar"
+
+msgid "Open My Computer"
+msgstr "Bilgisayarımı Aç"
+
+# ——————————————————————————————
+# Preferences - General
+# ——————————————————————————————
+msgid "My Computer Settings"
+msgstr "Bilgisayarım Ayarları"
+
+msgid "General"
+msgstr "Genel"
+
+msgid "Start on the Computer view"
+msgstr "Bilgisayar görünümünde başlat"
+
+msgid "Launch directly to the Computer view instead of Home"
+msgstr "Ev yerine doğrudan Bilgisayar görünümünü aç"
+
+# ——————————————————————————————
+# Preferences - Bar Color
+# ——————————————————————————————
+msgid "Bar Color"
+msgstr "Çubuk Rengi"
+
+msgid "Select or customize the bar color."
+msgstr "Çubuk rengini seçin veya özelleştirin."
+
+msgid "Color mode"
+msgstr "Renk modu"
+
+msgid "System accent"
+msgstr "Sistem vurgu rengi"
+
+msgid "Custom color"
+msgstr "Özel renk"
+
+msgid "Custom gradient"
+msgstr "Özel gradyan"
+
+msgid "Color"
+msgstr "Renk"
+
+msgid "Start color"
+msgstr "Başlangıç rengi"
+
+msgid "End color"
+msgstr "Bitiş rengi"
+
+# ——————————————————————————————
+# Preferences - Visibility
+# ——————————————————————————————
+msgid "Visibility"
+msgstr "Görünürlük"
+
+msgid ""
+"Choose how each group appears. Visible: shows the group as a normal "
+"separated section. Merged: folds the group into the On this Computer group. "
+"Hidden: hides the group entirely."
+msgstr ""
+"Her grubun nasıl görüneceğini seçin. Görünür: grubu normal, ayrı bir bölüm "
+"olarak gösterir. Birleştirilmiş: grubu Bu Bilgisayarda grubunun içine "
+"toplar. Gizli: grubu tamamen gizler."
+
+msgid "Visible"
+msgstr "Görünür"
+
+msgid "Merged"
+msgstr "Birleştirilmiş"
+
+msgid "Hidden"
+msgstr "Gizli"
+
+# ——————————————————————————————
+# Preferences - System
+# ——————————————————————————————
+msgid "Show system partitions"
+msgstr "Sistem bölümlerini göster"
+
+msgid "Include boot and EFI partitions in the System group"
+msgstr "Önyükleme ve EFI bölümlerini Sistem grubuna dahil et"
+
+# ——————————————————————————————
+# Preferences - About
+# ——————————————————————————————
+msgid "About"
+msgstr "Hakkında"
+
+msgid "Extension"
+msgstr "Eklenti"
+
+msgid "Version"
+msgstr "Sürüm"
+
+msgid "Author"
+msgstr "Yazar"
+
+msgid "License"
+msgstr "Lisans"
+
+msgid "Source code"
+msgstr "Kaynak kodu"
+
+msgid "GitHub"
+msgstr "GitHub"
