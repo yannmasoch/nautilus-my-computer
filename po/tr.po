@@ -65,7 +65,7 @@ msgid "Properties"
 msgstr "Özellikler"
 
 msgid "Format…"
-msgstr "Biçimlendir"
+msgstr "Biçimlendir..."
 
 # ——————————————————————————————
 # Sidebar
