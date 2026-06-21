@@ -130,11 +130,17 @@ msgstr "Endfarbe"
 # Preferences - Visibility
 #——————————————————————————————
 
-msgid "Visibility"
+msgid "Panel visibility"
 msgstr "Sichtbarkeit"
 
 msgid "Choose how each group appears. Visible: shows the group as a normal separated section. Merged: folds the group into the On this Computer group. Hidden: hides the group entirely."
 msgstr "Wählen Sie, wie jede Gruppe angezeigt wird. Sichtbar: zeigt die Gruppe als normalen separaten Bereich an. Zusammengeführt: führt die Gruppe in die Gruppe Auf diesem Computer ein. Versteckt: versteckt die Gruppe vollständig."
+
+msgid "Sidebar visibility"
+msgstr "Sichtbarkeit der Seitenleiste"
+
+msgid "Choose which locations appear on the sidebar."
+msgstr "Wählen Sie, welche Orte in der Seitenleiste erscheinen sollen."
 
 msgid "Visible"
 msgstr "Sichtbar"
