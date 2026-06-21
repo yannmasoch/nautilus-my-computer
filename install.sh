@@ -88,7 +88,7 @@ detect_pm() {
     if   command -v pacman  >/dev/null 2>&1; then PM=pacman;  NP_PKG="python-nautilus"
     elif command -v apt-get >/dev/null 2>&1; then PM=apt;     NP_PKG="python3-nautilus"
     elif command -v dnf     >/dev/null 2>&1; then PM=dnf;     NP_PKG="nautilus-python"
-    elif command -v zypper  >/dev/null 2>&1; then PM=zypper;  NP_PKG="python3-nautilus"
+    elif command -v zypper  >/dev/null 2>&1; then PM=zypper;  NP_PKG="python313-nautilus"
     else die "Cannot detect package manager. Install nautilus-python manually and re-run."
     fi
     line "Package manager" "$PM"
