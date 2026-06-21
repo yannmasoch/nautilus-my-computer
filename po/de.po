@@ -1,0 +1,154 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: nautilus-my-computer\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-06-21 11:20+0200\n"
+"PO-Revision-Date: 2026-06-21 11:20+0200\n"
+"Last-Translator: crian\n"
+"Language-Team: German\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+
+# Panel - Group labels
+msgid "On this Computer"
+msgstr "Auf diesem Gerät"
+
+msgid "System"
+msgstr "System"
+
+msgid "Removable"
+msgstr "Wechselmedien"
+
+msgid "Disc"
+msgstr "Datenträger"
+
+msgid "Network Volumes"
+msgstr "Netzwerklaufwerke"
+
+# Panel - Disk card
+msgid "{free} free of {total}"
+msgstr "{free} frei von {total}"
+
+msgid "Not mounted"
+msgstr "Nicht verbunden"
+
+# Panel - Disk card actions
+msgid "Open"
+msgstr "Öffnen"
+
+msgid "Open in New Tab"
+msgstr "In neuem Tab öffnen"
+
+msgid "Open in New Window"
+msgstr "In neuem Fenster öffnen"
+
+msgid "Mount"
+msgstr "Verbinden"
+
+msgid "Unmount"
+msgstr "Trennen"
+
+msgid "Eject"
+msgstr "Auswerfen"
+
+msgid "Properties"
+msgstr "Eigenschaften"
+
+msgid "Format…"
+msgstr "Formatieren…"
+
+# Sidebar
+msgid "Computer"
+msgstr "Computer"
+
+msgid "Open My Computer"
+msgstr "Computer öffnen"
+
+# Preferences - General
+msgid "My Computer Settings"
+msgstr "„Mein Computer“-Einstellungen"
+
+msgid "General"
+msgstr "Allgemein"
+
+msgid "Start on the Computer view"
+msgstr "Computer-Ansicht beim Start"
+
+msgid "Launch directly to the Computer view instead of Home"
+msgstr "Beim Start direkt die Computer-Ansicht statt den persönlichen Ordner öffnen"
+
+# Preferences - Bar Color
+msgid "Bar Color"
+msgstr "Leistenfarbe"
+
+msgid "Select or customize the bar color."
+msgstr "Farbe der Leiste auswählen oder anpassen."
+
+msgid "Color mode"
+msgstr "Farbmodus"
+
+msgid "System accent"
+msgstr "System-Akzentfarbe"
+
+msgid "Custom color"
+msgstr "Eigene Farbe"
+
+msgid "Custom gradient"
+msgstr "Eigener Verlauf"
+
+msgid "Color"
+msgstr "Farbe"
+
+msgid "Start color"
+msgstr "Startfarbe"
+
+msgid "End color"
+msgstr "Endfarbe"
+
+# Preferences - Visibility
+msgid "Visibility"
+msgstr "Sichtbarkeit"
+
+msgid "Choose how each group appears. Visible: shows the group as a normal separated section. Merged: folds the group into the On this Computer group. Hidden: hides the group entirely."
+msgstr "Anzeige der Gruppen wählen. Sichtbar: Als eigener Bereich. Zusammengeführt: In „Auf diesem Gerät“ integriert. Verborgen: Gruppe ausblenden."
+
+msgid "Visible"
+msgstr "Sichtbar"
+
+msgid "Merged"
+msgstr "Zusammengeführt"
+
+msgid "Hidden"
+msgstr "Verborgen"
+
+# Preferences - System
+msgid "Show system partitions"
+msgstr "Systempartitionen anzeigen"
+
+msgid "Include boot and EFI partitions in the System group"
+msgstr "Boot- und EFI-Partitionen in der System-Gruppe anzeigen"
+
+# Preferences - About
+msgid "About"
+msgstr "Info"
+
+msgid "Extension"
+msgstr "Erweiterung"
+
+msgid "Version"
+msgstr "Version"
+
+msgid "Author"
+msgstr "Autor"
+
+msgid "License"
+msgstr "Lizenz"
+
+msgid "Source code"
+msgstr "Quellcode"
+
+msgid "GitHub"
+msgstr "GitHub"
