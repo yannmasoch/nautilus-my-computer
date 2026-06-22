@@ -1,0 +1,203 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: nautilus-my-computer\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-06-01 00:00+0200\n"
+"PO-Revision-Date: 2026-06-22 19:02+0300\n"
+"Last-Translator: Kirill Fish\n"
+"Language-Team: Russian\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;\n"
+
+#——————————————————————————————
+# Panel - Group labels
+#——————————————————————————————
+
+msgid "On this Computer"
+msgstr "На этом компьютере"
+
+msgid "System"
+msgstr "Системные"
+
+msgid "Removable"
+msgstr "Внешние"
+
+msgid "Disc"
+msgstr "Диски"
+
+msgid "Network"
+msgstr "Сеть"
+
+#——————————————————————————————
+# Panel - Disk card
+#——————————————————————————————
+
+msgid "{free} free of {total}"
+msgstr "{free} свободно из {total}"
+
+msgid "Not mounted"
+msgstr "Не присоединён"
+
+#——————————————————————————————
+# Panel - Disk card actions
+#——————————————————————————————
+
+msgid "Open"
+msgstr "Открыть"
+
+msgid "Open in New Tab"
+msgstr "Открыть в новой вкладке"
+
+msgid "Open in New Window"
+msgstr "Открыть в новом окне"
+
+msgid "Mount"
+msgstr "Присоединить"
+
+msgid "Unmount"
+msgstr "Отсоединить"
+
+msgid "Eject"
+msgstr "Извлечь"
+
+msgid "Properties"
+msgstr "Свойства"
+
+msgid "Format…"
+msgstr "Форматировать…"
+
+#——————————————————————————————
+# Sidebar
+#——————————————————————————————
+
+msgid "Computer"
+msgstr "Компьютер"
+
+msgid "Open My Computer"
+msgstr "Открыть мой компьютер"
+
+#——————————————————————————————
+# Sidebar - Places
+#——————————————————————————————
+
+msgid "Home"
+msgstr "Домашняя папка"
+
+msgid "Recent"
+msgstr "Недавние"
+
+msgid "Starred"
+msgstr "Избранное"
+
+msgid "Trash"
+msgstr "Корзина"
+
+#——————————————————————————————
+# Preferences - General
+#——————————————————————————————
+
+msgid "My Computer Settings"
+msgstr "Настройки моего компьютера"
+
+msgid "General"
+msgstr "Общие"
+
+msgid "Start on the Computer view"
+msgstr "Начинать на экране мой компьютер"
+
+msgid "Launch directly to the Computer view instead of Home"
+msgstr "Запускать прямо с экрана мой компьютер вместо домашней папки"
+
+#——————————————————————————————
+# Preferences - Bar Color
+#——————————————————————————————
+
+msgid "Bar Color"
+msgstr "Цвет полоски"
+
+msgid "Select or customize the bar color."
+msgstr "Выберите или установите свой цвет полоски."
+
+msgid "Color mode"
+msgstr "Режим цвета"
+
+msgid "System accent"
+msgstr "Системный акцентный цвет"
+
+msgid "Custom color"
+msgstr "Свой цвет"
+
+msgid "Custom gradient"
+msgstr "Свой градиент"
+
+msgid "Color"
+msgstr "Цвет"
+
+msgid "Start color"
+msgstr "Начальный цвет"
+
+msgid "End color"
+msgstr "Конечный цвет"
+
+#——————————————————————————————
+# Preferences - Visibility
+#——————————————————————————————
+
+msgid "Panel visibility"
+msgstr "Видимость панелей"
+
+msgid "Choose how each group appears. Visible: shows the group as a normal separated section. Merged: folds the group into the On this Computer group. Hidden: hides the group entirely."
+msgstr "Выберите, как будет отображаться каждая группа. Показать: показывает группу как обычную отдельную секцию. Объединить: Объединяет группу вместе с группой на этом компьютере. Спрятать: прячет группу полностью."
+
+msgid "Sidebar visibility"
+msgstr "Видимость элементов боковой панели"
+
+msgid "Choose which locations appear on the sidebar."
+msgstr "Выберите, какие места будут отображаться на боковой панели."
+
+msgid "Visible"
+msgstr "Показать"
+
+msgid "Merged"
+msgstr "Объединить"
+
+msgid "Hidden"
+msgstr "Спрятать"
+
+#——————————————————————————————
+# Preferences - System
+#——————————————————————————————
+
+msgid "Show system partitions"
+msgstr "Показывать системные разделы"
+
+msgid "Include boot and EFI partitions in the System group"
+msgstr "Включать загрузочные и EFI разделы в группу системных"
+
+#——————————————————————————————
+# Preferences - About
+#——————————————————————————————
+
+msgid "About"
+msgstr "О расширении"
+
+msgid "Extension"
+msgstr "Расширение"
+
+msgid "Version"
+msgstr "Версия"
+
+msgid "Author"
+msgstr "Автор"
+
+msgid "License"
+msgstr "Лицензия"
+
+msgid "Source code"
+msgstr "Исходный код"
+
+msgid "GitHub"
+msgstr "GitHub"
