@@ -413,7 +413,7 @@ def _disk_context_menu(ext, win, m) -> ContextualMenu:
     """
     nav_uri = m.nav_uri or (Gio.File.new_for_path(m.mountpoint).get_uri() if m.mountpoint else "")
     is_mounted = m.is_mounted
-    is_system = m.mountpoint == "/"
+    is_system = _is_system_mount(m)
     device = m.device or ""
     if not device.startswith("/dev/") and m.gio_volume:
         unix_dev = m.gio_volume.get_identifier(Gio.VOLUME_IDENTIFIER_KIND_UNIX_DEVICE)
@@ -455,7 +455,7 @@ def _disk_context_menu(ext, win, m) -> ContextualMenu:
         ]
 
     # Section 1: mount / unmount / eject + format (non-system only).
-    if not is_system:
+    if not is_system and m.mountpoint != "/home":
         if not is_mounted:
             items.append(MenuItem(_("Mount"), action=lambda: ext._do_mount(m, win), section=1))
         elif m.can_eject:
