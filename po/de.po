@@ -74,10 +74,10 @@ msgstr "Formatieren…"
 #——————————————————————————————
 
 msgid "Computer"
-msgstr "Rechner"
+msgstr "Computer"
 
 msgid "Open My Computer"
-msgstr "My Computer öffnen"
+msgstr "Mein Computer öffnen"
 
 #——————————————————————————————
 # Sidebar - Places
@@ -100,7 +100,7 @@ msgstr "Papierkorb"
 #——————————————————————————————
 
 msgid "My Computer Settings"
-msgstr "Einstellungen von My Computer"
+msgstr "Mein Computer Einstellungen"
 
 msgid "General"
 msgstr "Allgemein"
@@ -175,7 +175,7 @@ msgid "Show system partitions"
 msgstr "Systempartitionen anzeigen"
 
 msgid "Include boot and EFI partitions in the System group"
-msgstr "Boot- und EFI-Partitionen in der Gruppe System einbeziehen"
+msgstr "Boot- und EFI-Partitionen in die System-Gruppe einbeziehen"
 
 #——————————————————————————————
 # Preferences - About
