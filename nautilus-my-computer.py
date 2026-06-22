@@ -456,11 +456,11 @@ def _disk_context_menu(ext, win, m) -> ContextualMenu:
 
     # Section 1: mount / unmount / eject + format (non-system only).
     if not is_system and m.mountpoint != "/home":
-        if not is_mounted:
+        if not is_mounted and m.can_mount:
             items.append(MenuItem(_("Mount"), action=lambda: ext._do_mount(m, win), section=1))
         elif m.can_eject:
             items.append(MenuItem(_("Eject"), action=lambda: ext._do_eject(m), section=1))
-        else:
+        elif m.can_unmount:
             items.append(MenuItem(_("Unmount"), action=lambda: ext._do_unmount(m), section=1))
         if device.startswith("/dev/"):
             items.append(MenuItem(_("Format…"), action=lambda: ext._do_format(device), section=1))
@@ -511,6 +511,8 @@ class MountInfo:
     is_mounted: bool = True
     is_removable: bool = False
     can_eject: bool = False
+    can_mount: bool = False
+    can_unmount: bool = False
     is_network_place: bool = False
 
     # Right-click menu factory menu(ext, win, m) -> ContextualMenu (built at show-time).
@@ -913,6 +915,7 @@ def _scan_mounts(show_system_partitions: bool = False) -> list[MountInfo]:
                                 or (gio_mount and gio_mount.can_eject())
                                 or (gio_drive and gio_drive.can_eject())
                             ),
+                            can_unmount=bool(gio_mount and gio_mount.can_unmount()),
                         )
                     )
                 except OSError:
@@ -978,6 +981,7 @@ def _scan_gio_mounts() -> list[MountInfo]:
                         or mount.can_eject()
                         or (gio_drive and gio_drive.can_eject())
                     ),
+                    can_unmount=bool(mount.can_unmount()),
                 )
             )
     except Exception:
@@ -1016,7 +1020,8 @@ def _scan_gio_volumes() -> list[MountInfo]:
                     is_removable=is_removable,
                     gio_icon=volume.get_icon(),
                     gio_volume=volume,
-                    can_eject=bool(volume.can_eject() or (drive and drive.can_eject())),
+                            can_eject=bool(volume.can_eject() or (drive and drive.can_eject())),
+                            can_mount=bool(getattr(volume, "can_mount", lambda: False)() if volume else False),
                 )
             )
     except Exception:
@@ -2801,7 +2806,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         subprocess.Popen(["nautilus", "--new-window", mountpoint])
 
     def _do_mount(self, m: MountInfo, win: Gtk.Window) -> None:
-        if not m or not m.gio_volume:
+        if not m or not m.gio_volume or not m.can_mount:
             return
         op = Gio.MountOperation.new()
         m.gio_volume.mount(Gio.MountMountFlags.NONE, op, None, self._on_mount_finish, win)
@@ -2814,7 +2819,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         GLib.idle_add(self._repopulate_visible)
 
     def _do_mount_then_open(self, m: MountInfo, win: Gtk.Window, mode: str) -> None:
-        if not m or not m.gio_volume:
+        if not m or not m.gio_volume or not m.can_mount:
             return
         op = Gio.MountOperation.new()
         op.set_password_save(Gio.PasswordSave.NEVER)
@@ -2844,7 +2849,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             GLib.idle_add(self._do_open, uri, win)
 
     def _do_unmount(self, m: MountInfo) -> None:
-        if not m or not m.gio_mount:
+        if not m or not m.gio_mount or not m.can_unmount:
             return
         op = Gio.MountOperation.new()
         m.gio_mount.unmount_with_operation(
