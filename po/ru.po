@@ -77,7 +77,7 @@ msgid "Computer"
 msgstr "Компьютер"
 
 msgid "Open My Computer"
-msgstr "Открыть мой компьютер"
+msgstr "Открыть Мой компьютер"
 
 #——————————————————————————————
 # Sidebar - Places
@@ -106,10 +106,10 @@ msgid "General"
 msgstr "Общие"
 
 msgid "Start on the Computer view"
-msgstr "Начинать на экране мой компьютер"
+msgstr "Начинать на экране Мой компьютер"
 
 msgid "Launch directly to the Computer view instead of Home"
-msgstr "Запускать прямо с экрана мой компьютер вместо домашней папки"
+msgstr "Запускать прямо с экрана Мой компьютер вместо Домашней папки"
 
 #——————————————————————————————
 # Preferences - Bar Color
