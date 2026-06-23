@@ -559,6 +559,66 @@ def _read_os_name() -> str:
     return ""
 
 
+def _is_ostree_booted() -> bool:
+    """True on OSTree/image-based systems, including bootc distributions."""
+    return os.path.exists("/run/ostree-booted")
+
+
+def _is_ostree_implementation_mount(mountpoint: str) -> bool:
+    """True for implementation mounts that should not be shown as drives."""
+    if not _is_ostree_booted():
+        return False
+    return mountpoint in ("/etc", "/var", "/sysroot") or mountpoint.startswith("/sysroot/")
+
+
+def _statvfs_usage(path: str) -> tuple[int, int] | None:
+    """Return total/free bytes for a path, or None when unavailable."""
+    try:
+        st = os.statvfs(path)
+    except OSError:
+        return None
+    return st.f_blocks * st.f_frsize, st.f_bavail * st.f_frsize
+
+
+def _root_usage() -> tuple[int, int] | None:
+    """Return user-meaningful root capacity.
+
+    On OSTree/bootc systems, / may be the small immutable image view. Prefer
+    the writable/backing deployment filesystem for the displayed root card
+    while still navigating to /.
+    """
+    if _is_ostree_booted():
+        candidates = [
+            _statvfs_usage(path)
+            for path in ("/var", "/sysroot")
+            if os.path.exists(path)
+        ]
+        candidates = [usage for usage in candidates if usage is not None]
+        if candidates:
+            return max(candidates, key=lambda usage: usage[0])
+    return _statvfs_usage("/")
+
+
+def _root_mount_info() -> MountInfo | None:
+    """Build a canonical root entry when /proc/mounts does not expose one cleanly."""
+    usage = _root_usage()
+    if usage is None:
+        return None
+    total, free = usage
+    return MountInfo(
+        key="path:/",
+        uuid=None,
+        device="/",
+        mountpoint="/",
+        fstype="rootfs",
+        opts=set(),
+        total=total,
+        free=free,
+        display_name=_read_os_name() or "/",
+        nav_uri=Gio.File.new_for_path("/").get_uri(),
+    )
+
+
 def _build_uuid_map() -> dict[str, str]:
     """Return {real_device_path: uuid_string} from /dev/disk/by-uuid."""
     result: dict[str, str] = {}
@@ -856,6 +916,7 @@ def _scan_mounts(show_system_partitions: bool = False) -> list[MountInfo]:
     mounts: list[MountInfo] = []
     seen: set[str] = set()
     uuid_map = _build_uuid_map()
+    has_root = False
 
     # Build mountpoint → Gio.Icon / Gio.Mount from VolumeMonitor so we can
     # attach the real hardware icon and GIO handle to each /proc/mounts entry.
@@ -890,19 +951,25 @@ def _scan_mounts(show_system_partitions: bool = False) -> list[MountInfo]:
                 mountpoint = _unescape_mount_field(parts[1])
                 fstype, options = parts[2], parts[3]
                 opts = set(options.split(","))
+                if _is_ostree_implementation_mount(mountpoint):
+                    continue
                 gvfs_show = "x-gvfs-show" in opts
                 is_external = any(mountpoint.startswith(p) for p in EXTERNAL_PREFIXES)
                 if (
-                    fstype not in REAL_FSTYPES and not gvfs_show and not is_external
+                    fstype not in REAL_FSTYPES
+                    and not gvfs_show
+                    and not is_external
+                    and mountpoint != "/"
                 ) or device in seen:
                     continue
                 if not show_system_partitions and mountpoint in ("/boot", "/boot/efi", "/efi"):
                     continue
                 seen.add(device)
                 try:
-                    st = os.statvfs(mountpoint)
-                    total = st.f_blocks * st.f_frsize
-                    free = st.f_bavail * st.f_frsize
+                    usage = _root_usage() if mountpoint == "/" else _statvfs_usage(mountpoint)
+                    if usage is None:
+                        continue
+                    total, free = usage
                     real_dev = os.path.realpath(device)
                     uuid = uuid_map.get(real_dev)
                     gio_mount = mount_by_path.get(mountpoint) or (
@@ -917,6 +984,8 @@ def _scan_mounts(show_system_partitions: bool = False) -> list[MountInfo]:
                     gio_volume = gio_mount.get_volume() if gio_mount else None
                     gio_drive = gio_volume.get_drive() if gio_volume else None
                     key = f"uuid:{uuid}" if uuid else device
+                    if mountpoint == "/":
+                        has_root = True
                     mounts.append(
                         MountInfo(
                             key=key,
@@ -945,6 +1014,10 @@ def _scan_mounts(show_system_partitions: bool = False) -> list[MountInfo]:
                     pass
     except OSError:
         pass
+    if not has_root:
+        root = _root_mount_info()
+        if root is not None:
+            mounts.insert(0, root)
     return mounts
 
 
@@ -1810,14 +1883,12 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         for key, m in list(_disk_data.items()):
             if m.is_gio or not m.is_mounted or not m.mountpoint:
                 continue
-            try:
-                st = os.statvfs(m.mountpoint)
-                total = st.f_blocks * st.f_frsize
-                free = st.f_bavail * st.f_frsize
-                if free != m.free or total != m.total:
-                    updates[key] = (total, free)
-            except OSError:
-                pass
+            usage = _root_usage() if m.mountpoint == "/" else _statvfs_usage(m.mountpoint)
+            if usage is None:
+                continue
+            total, free = usage
+            if free != m.free or total != m.total:
+                updates[key] = (total, free)
         if updates:
             GLib.idle_add(self._apply_usage_updates, updates, priority=GLib.PRIORITY_DEFAULT)
 
