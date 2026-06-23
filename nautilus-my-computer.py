@@ -588,11 +588,7 @@ def _root_usage() -> tuple[int, int] | None:
     while still navigating to /.
     """
     if _is_ostree_booted():
-        candidates = [
-            _statvfs_usage(path)
-            for path in ("/var", "/sysroot")
-            if os.path.exists(path)
-        ]
+        candidates = [_statvfs_usage(path) for path in ("/var", "/sysroot") if os.path.exists(path)]
         candidates = [usage for usage in candidates if usage is not None]
         if candidates:
             return max(candidates, key=lambda usage: usage[0])
