@@ -3608,12 +3608,12 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     # Protocol definitions: (display_label, uri_scheme, default_port, fields)
     # fields is a tuple of booleans: (share, folder, port, user, domain)
     _PROTOCOLS = [
-        ("Windows Share (SMB)",  "smb",    None, (True,  True,  False, False, True)),
-        ("SSH / SFTP",          "sftp",   22,   (False, True,  True,  True,  False)),
-        ("FTP",                 "ftp",    21,   (False, True,  True,  True,  False)),
+        ("Windows Share (SMB)", "smb", None, (True, True, False, False, True)),
+        ("SSH / SFTP", "sftp", 22, (False, True, True, True, False)),
+        ("FTP", "ftp", 21, (False, True, True, True, False)),
         ("FTP (" + _("encrypted") + ")", "ftps", 990, (False, True, True, True, False)),
-        ("WebDAV (HTTP)",       "dav",    80,   (False, True,  True,  True,  False)),
-        ("WebDAV (HTTPS)",      "davs",   443,  (False, True,  True,  True,  False)),
+        ("WebDAV (HTTP)", "dav", 80, (False, True, True, True, False)),
+        ("WebDAV (HTTPS)", "davs", 443, (False, True, True, True, False)),
     ]
 
     def _show_connect_dialog(self, win: Gtk.Window) -> None:
@@ -3803,9 +3803,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                 self._schedule_live_refresh()
                 GLib.idle_add(self._navigate_to, uri, win)
 
-            gfile.mount_enclosing_volume(
-                Gio.MountMountFlags.NONE, op, None, _mount_done
-            )
+            gfile.mount_enclosing_volume(Gio.MountMountFlags.NONE, op, None, _mount_done)
 
         connect_btn.connect("clicked", _do_connect)
         # Also allow Enter in any entry row to trigger connect
