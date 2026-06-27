@@ -143,3 +143,48 @@ msgstr "Obrir Ordinador"
 
 msgid "On this computer"
 msgstr "En aquest ordinador"
+
+msgid "Connect to Server…"
+msgstr "Connectar a servidor…"
+
+msgid "Connect to Server"
+msgstr "Connectar a servidor"
+
+msgid "Protocol"
+msgstr "Protocol"
+
+msgid "encrypted"
+msgstr "xifrat"
+
+msgid "Server address"
+msgstr "Adreça del servidor"
+
+msgid "Share"
+msgstr "Recurs compartit"
+
+msgid "Folder"
+msgstr "Carpeta"
+
+msgid "Port"
+msgstr "Port"
+
+msgid "Authentication"
+msgstr "Autenticació"
+
+msgid "User"
+msgstr "Usuari"
+
+msgid "Domain"
+msgstr "Domini"
+
+msgid "Connect"
+msgstr "Connectar"
+
+msgid "Server address is required."
+msgstr "L'adreça del servidor és obligatòria."
+
+msgid "Invalid port number."
+msgstr "Número de port no vàlid."
+
+msgid "Connecting…"
+msgstr "Connectant…"

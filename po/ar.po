@@ -143,3 +143,48 @@ msgstr "افتح جهاز الكمبيوتر"
 
 msgid "On this computer"
 msgstr "على هذا الكمبيوتر"
+
+msgid "Connect to Server…"
+msgstr "الاتصال بخادم…"
+
+msgid "Connect to Server"
+msgstr "الاتصال بخادم"
+
+msgid "Protocol"
+msgstr "البروتوكول"
+
+msgid "encrypted"
+msgstr "مشفر"
+
+msgid "Server address"
+msgstr "عنوان الخادم"
+
+msgid "Share"
+msgstr "مشاركة"
+
+msgid "Folder"
+msgstr "مجلد"
+
+msgid "Port"
+msgstr "المنفذ"
+
+msgid "Authentication"
+msgstr "المصادقة"
+
+msgid "User"
+msgstr "المستخدم"
+
+msgid "Domain"
+msgstr "النطاق"
+
+msgid "Connect"
+msgstr "اتصال"
+
+msgid "Server address is required."
+msgstr "عنوان الخادم مطلوب."
+
+msgid "Invalid port number."
+msgstr "رقم المنفذ غير صالح."
+
+msgid "Connecting…"
+msgstr "جارٍ الاتصال…"

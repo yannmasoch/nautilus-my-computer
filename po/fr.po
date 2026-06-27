@@ -143,3 +143,48 @@ msgstr "Ouvrir My Computer"
 
 msgid "On this computer"
 msgstr "Sur cet ordinateur"
+
+msgid "Connect to Server…"
+msgstr "Se connecter à un serveur…"
+
+msgid "Connect to Server"
+msgstr "Se connecter à un serveur"
+
+msgid "Protocol"
+msgstr "Protocole"
+
+msgid "encrypted"
+msgstr "chiffré"
+
+msgid "Server address"
+msgstr "Adresse du serveur"
+
+msgid "Share"
+msgstr "Partage"
+
+msgid "Folder"
+msgstr "Dossier"
+
+msgid "Port"
+msgstr "Port"
+
+msgid "Authentication"
+msgstr "Authentification"
+
+msgid "User"
+msgstr "Utilisateur"
+
+msgid "Domain"
+msgstr "Domaine"
+
+msgid "Connect"
+msgstr "Connecter"
+
+msgid "Server address is required."
+msgstr "L'adresse du serveur est obligatoire."
+
+msgid "Invalid port number."
+msgstr "Numéro de port invalide."
+
+msgid "Connecting…"
+msgstr "Connexion en cours…"

@@ -143,3 +143,48 @@ msgstr "Abrir Equipo"
 
 msgid "On this computer"
 msgstr "En este equipo"
+
+msgid "Connect to Server…"
+msgstr "Conectar a servidor…"
+
+msgid "Connect to Server"
+msgstr "Conectar a servidor"
+
+msgid "Protocol"
+msgstr "Protocolo"
+
+msgid "encrypted"
+msgstr "cifrado"
+
+msgid "Server address"
+msgstr "Dirección del servidor"
+
+msgid "Share"
+msgstr "Recurso compartido"
+
+msgid "Folder"
+msgstr "Carpeta"
+
+msgid "Port"
+msgstr "Puerto"
+
+msgid "Authentication"
+msgstr "Autenticación"
+
+msgid "User"
+msgstr "Usuario"
+
+msgid "Domain"
+msgstr "Dominio"
+
+msgid "Connect"
+msgstr "Conectar"
+
+msgid "Server address is required."
+msgstr "La dirección del servidor es obligatoria."
+
+msgid "Invalid port number."
+msgstr "Número de puerto no válido."
+
+msgid "Connecting…"
+msgstr "Conectando…"
