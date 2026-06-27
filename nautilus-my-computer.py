@@ -2567,8 +2567,14 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
         bg_deselect = Gtk.GestureClick()
         bg_deselect.set_button(0)
+        bg_deselect.set_button(1)
         bg_deselect.connect("pressed", self._on_panel_clicked, win)
         scroll.add_controller(bg_deselect)
+
+        bg_right_click = Gtk.GestureClick()
+        bg_right_click.set_button(3)
+        bg_right_click.connect("pressed", self._on_panel_right_clicked, win)
+        scroll.add_controller(bg_right_click)
 
         return panel, scroll, grid_box
 
@@ -3593,6 +3599,255 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         state["_deselecting"] = False
         state["selected_mount_key"] = None
         state["selected_folder_key"] = None
+
+    def _on_panel_right_clicked(self, gesture, _n, x, y, win: Gtk.Window) -> None:
+        gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+        state = self._windows.get(win)
+        if not state:
+            return
+
+        menu = Gio.Menu()
+        ag = Gio.SimpleActionGroup()
+
+        connect_sec = Gio.Menu()
+        connect_sec.append(_("Connect to Server…"), "panelbg.connect-server")
+        menu.append_section(None, connect_sec)
+
+        settings_sec = Gio.Menu()
+        settings_sec.append(MENU_ITEM_LABEL, "panelbg.settings")
+        menu.append_section(None, settings_sec)
+
+        connect_act = Gio.SimpleAction.new("connect-server", None)
+        connect_act.connect("activate", lambda *_: self._show_connect_dialog(win))
+        ag.add_action(connect_act)
+
+        settings_act = Gio.SimpleAction.new("settings", None)
+        settings_act.connect("activate", lambda *_: self._launch_prefs(win))
+        ag.add_action(settings_act)
+
+        panel = state.get("panel")
+        if panel is None:
+            return
+        panel.insert_action_group("panelbg", ag)
+
+        popover = Gtk.PopoverMenu.new_from_model(menu)
+        popover.set_has_arrow(False)
+        popover.set_parent(panel)
+        rect = Gdk.Rectangle()
+        rect.x, rect.y, rect.width, rect.height = int(x), int(y), 1, 1
+        popover.set_pointing_to(rect)
+        popover.popup()
+
+    # ── Connect to Server dialog ──────────────────────────────────────────────
+
+    # Protocol definitions: (display_label, uri_scheme, default_port, fields)
+    # fields is a tuple of booleans: (share, folder, port, user, domain)
+    _PROTOCOLS = [
+        ("Windows Share (SMB)",  "smb",    None, (True,  True,  False, False, True)),
+        ("SSH / SFTP",          "sftp",   22,   (False, True,  True,  True,  False)),
+        ("FTP",                 "ftp",    21,   (False, True,  True,  True,  False)),
+        ("FTP (" + _("encrypted") + ")", "ftps", 990, (False, True, True, True, False)),
+        ("WebDAV (HTTP)",       "dav",    80,   (False, True,  True,  True,  False)),
+        ("WebDAV (HTTPS)",      "davs",   443,  (False, True,  True,  True,  False)),
+    ]
+
+    def _show_connect_dialog(self, win: Gtk.Window) -> None:
+        """Show a dialog to enter network server details and connect."""
+        dialog = Adw.Dialog()
+        dialog.set_title(_("Connect to Server"))
+        dialog.set_content_width(480)
+        dialog.set_content_height(-1)
+
+        toolbar_view = Adw.ToolbarView()
+        header = Adw.HeaderBar()
+        toolbar_view.add_top_bar(header)
+
+        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        content.set_margin_start(24)
+        content.set_margin_end(24)
+        content.set_margin_top(12)
+        content.set_margin_bottom(24)
+
+        # ── Protocol selector ─────────────────────────────────────────────
+        proto_group = Adw.PreferencesGroup()
+        proto_row = Adw.ComboRow()
+        proto_row.set_title(_("Protocol"))
+        proto_labels = [p[0] for p in self._PROTOCOLS]
+        proto_row.set_model(Gtk.StringList.new(proto_labels))
+        proto_row.set_selected(0)
+        proto_group.add(proto_row)
+        content.append(proto_group)
+
+        # ── Server details group ──────────────────────────────────────────
+        details_group = Adw.PreferencesGroup()
+        details_group.set_margin_top(18)
+
+        server_row = Adw.EntryRow()
+        server_row.set_title(_("Server address"))
+        details_group.add(server_row)
+
+        share_row = Adw.EntryRow()
+        share_row.set_title(_("Share"))
+        details_group.add(share_row)
+
+        folder_row = Adw.EntryRow()
+        folder_row.set_title(_("Folder"))
+        details_group.add(folder_row)
+
+        port_row = Adw.EntryRow()
+        port_row.set_title(_("Port"))
+        details_group.add(port_row)
+
+        content.append(details_group)
+
+        # ── Authentication group ──────────────────────────────────────────
+        auth_group = Adw.PreferencesGroup()
+        auth_group.set_title(_("Authentication"))
+        auth_group.set_margin_top(18)
+
+        user_row = Adw.EntryRow()
+        user_row.set_title(_("User"))
+        auth_group.add(user_row)
+
+        domain_row = Adw.EntryRow()
+        domain_row.set_title(_("Domain"))
+        auth_group.add(domain_row)
+
+        content.append(auth_group)
+
+        # ── Connect button ────────────────────────────────────────────────
+        connect_btn = Gtk.Button(label=_("Connect"))
+        connect_btn.add_css_class("suggested-action")
+        connect_btn.add_css_class("pill")
+        connect_btn.set_margin_top(24)
+        connect_btn.set_halign(Gtk.Align.CENTER)
+        connect_btn.set_size_request(200, -1)
+        content.append(connect_btn)
+
+        # ── Status label (shown on error) ─────────────────────────────────
+        status_label = Gtk.Label()
+        status_label.set_margin_top(12)
+        status_label.set_wrap(True)
+        status_label.add_css_class("error")
+        status_label.set_visible(False)
+        content.append(status_label)
+
+        toolbar_view.set_content(content)
+        dialog.set_child(toolbar_view)
+
+        # ── Field visibility per protocol ─────────────────────────────────
+        def _update_fields(*_args):
+            idx = proto_row.get_selected()
+            _label, _scheme, default_port, (f_share, f_folder, f_port, f_user, f_domain) = (
+                self._PROTOCOLS[idx]
+            )
+            share_row.set_visible(f_share)
+            folder_row.set_visible(f_folder)
+            port_row.set_visible(f_port)
+            user_row.set_visible(f_user)
+            domain_row.set_visible(f_domain)
+            if f_port and default_port is not None:
+                port_row.set_text(str(default_port))
+            elif not f_port:
+                port_row.set_text("")
+
+        proto_row.connect("notify::selected", _update_fields)
+        _update_fields()  # initial state
+
+        # ── Connect action ────────────────────────────────────────────────
+        def _do_connect(*_args):
+            idx = proto_row.get_selected()
+            _label, scheme, default_port, (f_share, f_folder, f_port, f_user, f_domain) = (
+                self._PROTOCOLS[idx]
+            )
+            server = server_row.get_text().strip()
+            if not server:
+                status_label.set_label(_("Server address is required."))
+                status_label.set_visible(True)
+                return
+
+            # Build the URI
+            user_part = ""
+            if f_user:
+                user = user_row.get_text().strip()
+                if f_domain:
+                    domain = domain_row.get_text().strip()
+                    if domain and user:
+                        user_part = f"{domain};{user}@"
+                    elif user:
+                        user_part = f"{user}@"
+                elif user:
+                    user_part = f"{user}@"
+
+            port_part = ""
+            if f_port:
+                port_text = port_row.get_text().strip()
+                if port_text:
+                    try:
+                        port_num = int(port_text)
+                        if port_num != default_port:
+                            port_part = f":{port_num}"
+                    except ValueError:
+                        status_label.set_label(_("Invalid port number."))
+                        status_label.set_visible(True)
+                        return
+
+            path_part = ""
+            if f_share:
+                share = share_row.get_text().strip().strip("/")
+                folder = folder_row.get_text().strip().strip("/")
+                if share:
+                    path_part = f"/{share}"
+                    if folder:
+                        path_part += f"/{folder}"
+            elif f_folder:
+                folder = folder_row.get_text().strip().strip("/")
+                if folder:
+                    path_part = f"/{folder}"
+
+            uri = f"{scheme}://{user_part}{server}{port_part}{path_part}"
+            _log(f"connect-to-server: mounting {uri}")
+
+            status_label.set_visible(False)
+            connect_btn.set_sensitive(False)
+            connect_btn.set_label(_("Connecting…"))
+
+            gfile = Gio.File.new_for_uri(uri)
+            op = Gtk.MountOperation.new(win)
+
+            def _mount_done(source, result):
+                try:
+                    gfile.mount_enclosing_volume_finish(result)
+                except GLib.Error as e:
+                    if e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.ALREADY_MOUNTED):
+                        _log(f"connect-to-server: already mounted, opening {uri}")
+                    elif e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED):
+                        _log("connect-to-server: cancelled by user")
+                        connect_btn.set_sensitive(True)
+                        connect_btn.set_label(_("Connect"))
+                        return
+                    else:
+                        _log(f"connect-to-server: mount failed: {e.message}")
+                        status_label.set_label(str(e.message))
+                        status_label.set_visible(True)
+                        connect_btn.set_sensitive(True)
+                        connect_btn.set_label(_("Connect"))
+                        return
+
+                dialog.close()
+                self._schedule_live_refresh()
+                GLib.idle_add(self._navigate_to, uri, win)
+
+            gfile.mount_enclosing_volume(
+                Gio.MountMountFlags.NONE, op, None, _mount_done
+            )
+
+        connect_btn.connect("clicked", _do_connect)
+        # Also allow Enter in any entry row to trigger connect
+        for entry in (server_row, share_row, folder_row, port_row, user_row, domain_row):
+            entry.connect("entry-activated", _do_connect)
+
+        dialog.present(win)
 
     def _on_disk_right_clicked(self, gesture, _n, x, y, win: Gtk.Window, row: Gtk.Box) -> None:
         mount_key = getattr(row, "_mount_key", None)

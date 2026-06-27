@@ -255,3 +255,52 @@ msgstr "Afegeix a preferides"
 
 msgid "Remove from Preferred"
 msgstr "Elimina de preferides"
+
+#——————————————————————————————
+# Network Drives
+#——————————————————————————————
+
+msgid "Connect to Server…"
+msgstr "Connecta't al servidor…"
+
+msgid "Connect to Server"
+msgstr "Connecta't al servidor"
+
+msgid "Protocol"
+msgstr "Protocol"
+
+msgid "Server address"
+msgstr "Adreça del servidor"
+
+msgid "Share"
+msgstr "Recurs compartit"
+
+msgid "Folder"
+msgstr "Carpeta"
+
+msgid "Port"
+msgstr "Port"
+
+msgid "Authentication"
+msgstr "Autenticació"
+
+msgid "User"
+msgstr "Usuari"
+
+msgid "Domain"
+msgstr "Domini"
+
+msgid "Connect"
+msgstr "Connecta"
+
+msgid "Connecting…"
+msgstr "Connectant…"
+
+msgid "Server address is required."
+msgstr "L'adreça del servidor és obligatòria."
+
+msgid "Invalid port number."
+msgstr "Número de port no vàlid."
+
+msgid "encrypted"
+msgstr "xifrat"

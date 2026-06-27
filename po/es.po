@@ -255,3 +255,52 @@ msgstr "Añadir a preferidas"
 
 msgid "Remove from Preferred"
 msgstr "Quitar de preferidas"
+
+#——————————————————————————————
+# Network Drives
+#——————————————————————————————
+
+msgid "Connect to Server…"
+msgstr "Conectarse al servidor…"
+
+msgid "Connect to Server"
+msgstr "Conectarse al servidor"
+
+msgid "Protocol"
+msgstr "Protocolo"
+
+msgid "Server address"
+msgstr "Dirección del servidor"
+
+msgid "Share"
+msgstr "Recurso compartido"
+
+msgid "Folder"
+msgstr "Carpeta"
+
+msgid "Port"
+msgstr "Puerto"
+
+msgid "Authentication"
+msgstr "Autenticación"
+
+msgid "User"
+msgstr "Usuario"
+
+msgid "Domain"
+msgstr "Dominio"
+
+msgid "Connect"
+msgstr "Conectar"
+
+msgid "Connecting…"
+msgstr "Conectando…"
+
+msgid "Server address is required."
+msgstr "La dirección del servidor es obligatoria."
+
+msgid "Invalid port number."
+msgstr "Número de puerto inválido."
+
+msgid "encrypted"
+msgstr "cifrado"
