@@ -1933,8 +1933,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         # it would reparent/unmap and risk the GTK_IS_STACK crash). Toggle only
         # the panel overlay's visibility. The panel is FILL/FILL and absorbs all
         # pointer events without needing set_sensitive() on the base. Keyboard
-        # type-ahead is blocked separately by the capture-phase key guard
-        # (_on_window_key_capture). Do NOT call set_sensitive() on the base
+        # type-ahead is allowed natively by Nautilus. Do NOT call set_sensitive() on the base
         # (AdwTabView): it covers all tabs, so toggling it disrupts Nautilus
         # keyboard controllers on other tabs and causes freezes in multi-tab.
         panel.set_visible(name == VIEW_DISKINFO)
@@ -2471,43 +2470,9 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             )
         )
 
-        # Capture-phase key guard on the window: Nautilus's "type to search"
-        # type-ahead is hooked above keyboard focus, so neither hiding nor
-        # de-focusing the covered file view stops it. A controller at the top of
-        # the capture chain sees keystrokes first and swallows plain printable
-        # ones while the panel is shown — so typing doesn't reopen the vanilla
-        # computer:/// search. Modified shortcuts (Ctrl/Alt/Super) and control
-        # keys (arrows, Tab, Enter, Esc) always pass through.
-        key_guard = Gtk.EventControllerKey()
-        key_guard.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
-        key_guard.connect("key-pressed", self._on_window_key_capture, nautilus_win)
-        nautilus_win.add_controller(key_guard)
-
         # If this window is headed to computer:///, let the later title-change
         # path do the first populate + switch once Nautilus has settled.
 
-        return True
-
-    def _on_window_key_capture(self, _ctrl, keyval, _keycode, gtk_state, win) -> bool:
-        """Swallow plain printable keystrokes while our panel is shown, so
-        Nautilus's window-level type-ahead search doesn't reopen the file view."""
-        state = self._windows.get(win)
-        if not state or state.get("visible_view") != VIEW_DISKINFO:
-            return False
-        # Let modified shortcuts through (Ctrl+L, Alt+Left, Super, …).
-        if gtk_state & (
-            Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.ALT_MASK | Gdk.ModifierType.SUPER_MASK
-        ):
-            return False
-        # Only swallow printable characters (>= space). Control keys — arrows,
-        # Tab, Enter, Esc, function keys — map to unicode < 0x20 and pass through.
-        if Gdk.keyval_to_unicode(keyval) < 0x20:
-            return False
-        # If the user opened a text entry (Ctrl+L location bar, Ctrl+F search),
-        # the focused widget is an Editable — let it receive the keystroke.
-        focused = win.get_focus()
-        if focused is not None and isinstance(focused, Gtk.Editable):
-            return False
         return True
 
     # ── Panel construction ────────────────────────────────────────────────────
