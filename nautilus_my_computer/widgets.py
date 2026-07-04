@@ -744,7 +744,12 @@ class MyComputerCardSection(Gtk.Box):
         self.flow.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.flow.set_activate_on_single_click(ext._click_policy == "single")
         self.flow.set_hexpand(True)
-        self.flow.set_halign(Gtk.Align.START if justify and not is_list else Gtk.Align.FILL)
+        # GTK 4.16 (used by Nautilus 47) does not allocate spare horizontal
+        # space to an expanding FlowBox whose halign is START. That leaves the
+        # justified folder flow one card wide while its height was measured for
+        # a full-width row, so following sections overlap it. FILL gives the
+        # flow the width its spacing/allocation code expects on 47 and 48+.
+        self.flow.set_halign(Gtk.Align.FILL)
         self.flow.set_valign(Gtk.Align.START)
 
         self.flow.connect("child-activated", ext._on_card_activated, win)

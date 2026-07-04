@@ -150,6 +150,7 @@ My Computer is compatible with almost all custom GTK themes.
 
 | | Distro | GNOME Files | Status |
 |---|--------|-------------|--------|
+| ✅ | stillOS 10.2 | 47.X | Pre-installed |
 | ✅ | Arch | 50.2.2 | Fully working |
 | ✅ | openSUSE Tumbleweed | 50.2.2 | Fully working |
 | ✅ | Fedora 44 Workstation | 50.2.2 | Fully working |
@@ -157,7 +158,7 @@ My Computer is compatible with almost all custom GTK themes.
 | ✅ | Ubuntu 26.04 LTS | 50.0 | Fully working |
 | ☑️ | Zorin OS 18 | 46.4 | Partial, background colors and the My Computer menu entry are not available (Zorin ships a customised build of GNOME Files). Will be improved in a future release |
 
-> GNOME Files versions below 50 may have limited functionality. Full support targets GNOME Files 50+.
+> Full support targets GNOME Files 47–50.
 
 ## Languages
 

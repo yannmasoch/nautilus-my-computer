@@ -1661,32 +1661,41 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         row_tooltip = entry.tooltip
         icon_name = self._get_computer_icon() if entry.uri == DISKS_URI else entry.icon
 
-        # Try to instantiate NautilusSidebarRow directly from the Nautilus GObject
-        # type system. It is registered at runtime when Nautilus loads, so
-        # GObject.type_from_name() can find it. uri is construct-only.
+        # Instantiate the native row directly from Nautilus's GObject type
+        # system. Nautilus 47 calls it NautilusGtkSidebarRow; 48+ calls it
+        # NautilusSidebarRow. Both are registered before extensions load and
+        # expose the same construct-only uri and sidebar properties.
         list_row = None
         try:
             row_gtype = GObject.type_from_name("NautilusSidebarRow")
-            row_props = {
-                "uri": entry.uri,
-                "place-type": 0,  # NAUTILUS_SIDEBAR_ROW_INVALID, sorts before built-in rows
-                "section-type": 1,  # NAUTILUS_SIDEBAR_SECTION_DEFAULT_LOCATIONS
-                "order-index": entry.order_index,
-                "label": row_label,
-                "tooltip": row_tooltip,
-                "eject-tooltip": _("Unmount"),
-                "start-icon": Gio.ThemedIcon.new(icon_name),
-            }
-            if nautilus_sidebar is not None:
-                row_props["sidebar"] = nautilus_sidebar
+        except RuntimeError:
+            # PyGObject raises for unknown names rather than returning
+            # TYPE_INVALID. Nautilus 47 registers only the older name.
+            row_gtype = GObject.type_from_name("NautilusGtkSidebarRow")
+        row_props = {
+            "uri": entry.uri,
+            "place-type": 0,  # NAUTILUS_SIDEBAR_ROW_INVALID, sorts before built-in rows
+            "section-type": 1,  # NAUTILUS_SIDEBAR_SECTION_DEFAULT_LOCATIONS
+            "order-index": entry.order_index,
+            "label": row_label,
+            "tooltip": row_tooltip,
+            "eject-tooltip": _("Unmount"),
+            "start-icon": Gio.ThemedIcon.new(icon_name),
+        }
+        if nautilus_sidebar is not None:
+            row_props["sidebar"] = nautilus_sidebar
 
+        try:
             list_row = GObject.new(row_gtype, **row_props)
             list_row.set_name(f"place_{entry.name}")
             list_row.set_has_tooltip(True)
-            _log(f"_build_place_sidebar_row: NautilusSidebarRow created (uri={entry.uri})")
+            _log(
+                f"_build_place_sidebar_row: {GObject.type_name(row_gtype)} created"
+                f" (uri={entry.uri})"
+            )
         except Exception as e:
             _log(
-                f"_build_place_sidebar_row: NautilusSidebarRow unavailable ({e}),"
+                f"_build_place_sidebar_row: native row construction failed ({e}),"
                 " using GtkListBoxRow"
             )
 
