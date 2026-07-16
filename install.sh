@@ -29,6 +29,44 @@ line()  { printf "%-20s" "$1"; printf '%s%s%s\n' "$CYAN" "$2" "$RESET"; }
 error() { printf '%s[ERROR]%s %s\n' "$RED" "$RESET" "$*" >&2; }
 die()   { error "$*"; exit 1; }
 
+usage() {
+    cat <<'EOF'
+Usage: install.sh [OPTION]
+
+Install or remove the Nautilus My Computer extension.
+
+Options:
+  --uninstall          Remove the extension and its user settings.
+  --version=VERSION    Install a specific release or git ref from GitHub.
+  --branch=BRANCH      Install from a GitHub branch (default: main).
+  -h, --help           Show this help message and exit.
+
+When run from a local clone, the installer uses that clone's files. The
+--version and --branch options select the remote source only; --version takes
+precedence when both are provided.
+
+Examples:
+  ./install.sh
+  ./install.sh --uninstall
+  ./install.sh --version=v0.1.1
+  ./install.sh --branch=dev
+EOF
+}
+
+# --- Argument parsing ---------------------------------------------------------
+MODE="install"
+VERSION="${VERSION:-}"
+BRANCH="${BRANCH:-}"
+for arg in "$@"; do
+    case "$arg" in
+        --uninstall) MODE="uninstall" ;;
+        --version=*) VERSION="${arg#--version=}" ;;
+        --branch=*) BRANCH="${arg#--branch=}" ;;
+        -h|--help) usage; exit 0 ;;
+        *) die "Unknown argument: $arg" ;;
+    esac
+done
+
 # --- Temp dir + cleanup --------------------------------------------------------
 TEMP_DIR=$(mktemp -d)
 cleanup() { rm -rf "$TEMP_DIR"; }
@@ -46,19 +84,6 @@ GETTEXT_DOMAIN="${EXT_FILE%.py}"
 PYCACHE_GLOB="${EXT_FILE%.py}.cpython-"
 SUDO=""
 [ "$(id -u)" -ne 0 ] && SUDO="sudo"
-
-# --- Argument parsing ---
-MODE="install"
-VERSION="${VERSION:-}"
-BRANCH="${BRANCH:-}"
-for arg in "$@"; do
-    case "$arg" in
-        --uninstall) MODE="uninstall" ;;
-        --version=*) VERSION="${arg#--version=}" ;;
-        --branch=*) BRANCH="${arg#--branch=}" ;;
-        *) die "Unknown argument: $arg" ;;
-    esac
-done
 
 # --- Source detection: local clone or remote -----------------------------------
 # Treat this as a local-clone run whenever $0 points at a real file on disk,
