@@ -566,7 +566,9 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         self._folder_icon_poll_timer_id: int | None = None
         self._folder_refresh_cancellable = Gio.Cancellable()
         self._folder_monitors: dict[str, Gio.FileMonitor] = {}  # keyed by parent dir URI
-        self._watched_folder_keys: set[str] = set()
+        # Resolved folder URI -> exact preferred-folders GSettings entry.
+        # These differ for portable file://~/… entries.
+        self._watched_folder_keys: dict[str, str] = {}
         self._last_selected_folder_uri: str | None = None  # see get_file_items()
 
         self._sort_column: str = "name"
