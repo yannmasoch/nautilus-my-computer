@@ -88,7 +88,7 @@ PREFERRED_TOKENS: dict[str, dict] = {
     },
     "recent": {
         "label": _nautilus_string("Recent"),
-        "icon": "folder-temp",
+        "icon": "folder-recent",
         "uri": lambda: "recent:///",
     },
     "starred": {
@@ -98,7 +98,7 @@ PREFERRED_TOKENS: dict[str, dict] = {
     },
     "network": {
         "label": _nautilus_string("Network"),
-        "icon": "folder-html",
+        "icon": "folder-network",
         "uri": lambda: "x-network-view:///",
     },
     # Not wrapped in _(): the real xdg-user-dirs name always overwrites this
@@ -235,15 +235,18 @@ def add_preferred(gsettings, uri: str) -> None:
         return
     entries = get_preferred_entries(gsettings)
     uri = uri.rstrip("/")
-    # The current user's home dir must store as the "home" token, not a raw
-    # URI, so it keeps the translated "Home" label (and the right icon)
-    # instead of GVfs' display-name for that path, which is the username
-    # (e.g. "yann"), not "Home". Other users' home directories under /home/
-    # are unaffected and keep their own real folder name, since this only
-    # matches the current user's own home directory URI.
-    home_uri = GLib.filename_to_uri(GLib.get_home_dir(), None).rstrip("/")
-    if uri == home_uri:
-        uri = "home"
+    # A URI that matches a logical token's fixed location (home, recent,
+    # starred, network) must store as that token, not the raw URI, so it
+    # keeps the translated label and token icon instead of GVfs' generic
+    # resolution for that URI (e.g. "yann" instead of "Home", or the wrong
+    # icon for "recent:" -- issue #79). special_dir tokens (documents,
+    # downloads, ...) resolve to real filesystem paths shared with other
+    # users' home dirs, so they are intentionally excluded here.
+    for token, meta in PREFERRED_TOKENS.items():
+        token_uri = meta.get("uri")
+        if token_uri is not None and uri == token_uri().rstrip("/"):
+            uri = token
+            break
     if uri not in entries:
         entries.append(uri)
         gsettings.set_value("preferred-folders", GLib.Variant("as", entries))

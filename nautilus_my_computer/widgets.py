@@ -296,7 +296,15 @@ class MyComputerFolderCard(Gtk.Widget):
 
     __gtype_name__ = "MyComputerFolderCard"
 
-    def __init__(self, ext, win: Gtk.Window, view_mode: str, model) -> None:
+    def __init__(
+        self,
+        ext,
+        win: Gtk.Window,
+        view_mode: str,
+        model,
+        interactive: bool = True,
+        reorderable: bool = True,
+    ) -> None:
         super().__init__()
         self._ext = ext
         self._win = win
@@ -317,13 +325,22 @@ class MyComputerFolderCard(Gtk.Widget):
         self._build()
         self._apply_hidden_state(model.is_hidden)
 
-        right_click = Gtk.GestureClick()
-        right_click.set_button(3)
-        right_click.connect("pressed", self._ext._on_card_right_clicked, self._win, self)
-        self.add_controller(right_click)
+        # interactive=False skips right-click/drag-source wiring, for clones
+        # that aren't draggable or right-clickable themselves (drag ghost,
+        # reorder placeholder). reorderable=False additionally skips the
+        # drop/motion controllers -- only the drag ghost needs that, as it
+        # floats outside the FlowBox and is never a drop target. See
+        # _build_drag_ghost / _build_reorder_placeholder.
+        if interactive:
+            right_click = Gtk.GestureClick()
+            right_click.set_button(3)
+            right_click.connect("pressed", self._ext._on_card_right_clicked, self._win, self)
+            self.add_controller(right_click)
 
-        self._wire_drag()
-        self._wire_reorder_preview()
+            self._wire_drag()
+
+        if reorderable:
+            self._wire_reorder_preview()
 
     @property
     def is_list(self) -> bool:
@@ -344,6 +361,11 @@ class MyComputerFolderCard(Gtk.Widget):
         self.add_controller(drop)
 
     def _on_reorder_drop(self, _target, value, _x, _y) -> bool:
+        placeholder = getattr(self._ext, "_reorder_placeholder", None)
+        # Without a placeholder the drag never set up (see _on_drag_begin);
+        # committing here would skip `value` and drop it from the order.
+        if placeholder is None:
+            return False
         dst_child = self.get_parent()
         flow = dst_child.get_parent() if dst_child is not None else None
         if not isinstance(flow, Gtk.FlowBox):
@@ -352,7 +374,9 @@ class MyComputerFolderCard(Gtk.Widget):
         child = flow.get_first_child()
         while child is not None:
             card = child.get_child()
-            if isinstance(card, MyComputerFolderCard):
+            if card is placeholder:
+                keys.append(value.model.key)
+            elif isinstance(card, MyComputerFolderCard) and card is not value:
                 keys.append(card.model.key)
             child = child.get_next_sibling()
         _log(
@@ -363,14 +387,18 @@ class MyComputerFolderCard(Gtk.Widget):
         return True
 
     def _on_reorder_enter(self, _ctrl, _x, _y) -> None:
+        """Move only the dimmed placeholder into the landing slot -- the real,
+        stateful dragged card is never reparented mid-drag (see
+        _on_drag_begin), so this can never lose/flicker its highlight the way
+        reparenting the real FlowBoxChild wrapper on every crossing did."""
         if getattr(self._ext, "_folder_reordering", False):
             return
-        src = getattr(self._ext, "_dragging_folder_card", None)
-        if src is None or src is self:
+        placeholder = getattr(self._ext, "_reorder_placeholder", None)
+        if placeholder is None or placeholder is self:
             return
-        src_child = src.get_parent()
+        placeholder_child = placeholder.get_parent()
         dst_child = self.get_parent()
-        if not isinstance(src_child, Gtk.FlowBoxChild) or not isinstance(
+        if not isinstance(placeholder_child, Gtk.FlowBoxChild) or not isinstance(
             dst_child, Gtk.FlowBoxChild
         ):
             return
@@ -378,23 +406,17 @@ class MyComputerFolderCard(Gtk.Widget):
         if not isinstance(flow, Gtk.FlowBox):
             return
         dst_index = dst_child.get_index()
-        if src_child.get_index() == dst_index:
+        if placeholder_child.get_index() == dst_index:
             return
 
         self._ext._folder_reordering = True
         try:
-            src_child.set_child(None)
-            flow.remove(src_child)
-            flow.insert(src, dst_index)
-            new_child = src.get_parent()
+            placeholder_child.set_child(None)
+            flow.remove(placeholder_child)
+            flow.insert(placeholder, dst_index)
+            new_child = placeholder.get_parent()
             if isinstance(new_child, Gtk.FlowBoxChild):
                 new_child.add_css_class("mc-selected")
-            child = flow.get_first_child()
-            while child is not None:
-                card = child.get_child()
-                if isinstance(card, MyComputerFolderCard):
-                    card.model.index = child.get_index()
-                child = child.get_next_sibling()
         finally:
             self._ext._folder_reordering = False
 
@@ -412,35 +434,84 @@ class MyComputerFolderCard(Gtk.Widget):
 
     def _on_drag_begin(self, _source, drag) -> None:
         Gtk.DragIcon.get_for_drag(drag).set_child(self._build_drag_ghost())
-        self._set_content_opacity(0.55)
-        parent = self.get_parent()
-        if parent is not None:
-            parent.add_css_class("mc-selected")
+
+        # Until the drop is confirmed, the drag is only a visual cue: hide
+        # the real card's slot (it stays alive, untouched, off-layout) and
+        # show a dimmed placeholder in its place. The placeholder -- not the
+        # real card -- is what _on_reorder_enter moves between slots.
+        src_wrapper = self.get_parent()
+        placeholder = None
+        if isinstance(src_wrapper, Gtk.FlowBoxChild):
+            flow = src_wrapper.get_parent()
+            if isinstance(flow, Gtk.FlowBox):
+                src_index = src_wrapper.get_index()
+                src_wrapper.set_visible(False)
+                placeholder = self._build_reorder_placeholder()
+                flow.insert(placeholder, src_index)
+                new_child = placeholder.get_parent()
+                if isinstance(new_child, Gtk.FlowBoxChild):
+                    new_child.add_css_class("mc-selected")
+
         _log(
             f"preferred folders dragging started: {self.model.display_name}/ "
             f"position {self.model.index}"
         )
-        self._ext._dragging_folder_card = self
+        self._ext._reorder_placeholder = placeholder
+        self._ext._reorder_source_wrapper = src_wrapper
 
     def _on_drag_end(self, _source, _drag, _delete_data) -> None:
-        if not self.model.is_hidden:
-            self._set_content_opacity(1.0)
-        parent = self.get_parent()
-        if parent is not None:
-            parent.remove_css_class("mc-selected")
-        self._ext._dragging_folder_card = None
+        placeholder = getattr(self._ext, "_reorder_placeholder", None)
+        if placeholder is not None:
+            placeholder_child = placeholder.get_parent()
+            if isinstance(placeholder_child, Gtk.FlowBoxChild):
+                flow = placeholder_child.get_parent()
+                if isinstance(flow, Gtk.FlowBox):
+                    placeholder_child.set_child(None)
+                    flow.remove(placeholder_child)
+
+        # Reveal the real card again. It was only hidden (never dimmed), so
+        # nothing else needs restoring; a committed drop repopulates anyway.
+        src_wrapper = getattr(self._ext, "_reorder_source_wrapper", None)
+        if src_wrapper is not None:
+            src_wrapper.set_visible(True)
+            src_wrapper.remove_css_class("mc-selected")
+
+        self._ext._reorder_placeholder = None
+        self._ext._reorder_source_wrapper = None
 
     def _on_drag_cancel(self, _source, _drag, _reason) -> bool:
         self._on_drag_end(_source, _drag, False)
         return False
 
-    def _build_drag_ghost(self) -> Gtk.Widget:
-        """Return a full-size clone for folder sorting, in the same mode
-        (grid or list) as the card being dragged."""
-        ghost = MyComputerFolderCard(self._ext, self._win, self.view_mode, self.model)
-        ghost.set_focusable(False)
-        ghost.set_captions([None, None, None])
-        return ghost
+    def _build_clone(self, reorderable: bool, dim: bool) -> "MyComputerFolderCard":
+        """Full-size, non-interactive clone of this card in the same view
+        mode. interactive=False drops the right-click/drag-source wiring;
+        `reorderable` and `dim` tailor it for its role (see the two callers)."""
+        clone = MyComputerFolderCard(
+            self._ext,
+            self._win,
+            self.view_mode,
+            self.model,
+            interactive=False,
+            reorderable=reorderable,
+        )
+        clone.set_focusable(False)
+        clone.set_captions([None, None, None])
+        if dim:
+            clone._set_content_opacity(0.55)
+        return clone
+
+    def _build_drag_ghost(self) -> "MyComputerFolderCard":
+        """Clone that floats under the cursor via Gtk.DragIcon. It never sits
+        in the FlowBox, so it needs no reorder controllers."""
+        return self._build_clone(reorderable=False, dim=False)
+
+    def _build_reorder_placeholder(self) -> "MyComputerFolderCard":
+        """Dimmed stand-in shown in the FlowBox at the landing slot. It keeps
+        the reorder drop/motion controllers so a drop landing directly on its
+        own slot still fires _on_reorder_drop, but carries no drag source of
+        its own -- only the real card is ever the drag source."""
+        return self._build_clone(reorderable=True, dim=True)
 
     def do_measure(self, orientation, for_size):
         """Mirror NautilusGridCell's fixed-width, height-for-width measure
@@ -637,8 +708,12 @@ class MyComputerFolderCard(Gtk.Widget):
     def update_metadata(self, pf) -> None:
         """Patch the icon + name label in place; called once async metadata resolves."""
         self.model = pf
-        if self.icon is not None and _gicon_renders(pf.gio_icon):
-            self.icon.set_from_gicon(pf.gio_icon)
+        # Full precedence (gicon -> icon_name -> "folder"), not just set_from_gicon:
+        # a special place (recent/starred/network) whose custom icon was removed
+        # comes back with gio_icon=None and must revert to its token icon_name
+        # default, not keep the stale custom gicon (issue #83).
+        if self.icon is not None:
+            self._set_icon(self.icon)
         if self.name_label is not None:
             self.name_label.set_label(pf.display_name)
         self._apply_hidden_state(pf.is_hidden)
@@ -884,11 +959,39 @@ class MyComputerCardSection(Gtk.Box):
         self.flow.connect("selected-children-changed", ext._on_flow_selection_changed, win)
         ext._attach_flow_shortcuts(self.flow, win)
 
+        self._query = ""
+        self.flow.set_filter_func(self._filter_child)
+
         self.append(self.flow)
 
     def add_card(self, card: Gtk.Widget) -> None:
         self._size_group.add_widget(card)
         self.flow.append(card)
+
+    def _filter_child(self, child: Gtk.FlowBoxChild) -> bool:
+        if not self._query:
+            return True
+        inner = child.get_child()
+        display_name = getattr(getattr(inner, "model", None), "display_name", None)
+        if display_name is None:
+            # Not a card (e.g. the drag-reorder placeholder) -- always show it.
+            return True
+        return self._query in display_name.lower()
+
+    def set_query(self, query: str) -> None:
+        """Filter this section's cards by `query` (case-insensitive substring
+        of the card's display name). Self-hides the whole section (heading
+        included) when nothing matches, so an empty group never lingers."""
+        self._query = query.strip().lower()
+        self.flow.invalidate_filter()
+        child = self.flow.get_first_child()
+        any_match = False
+        while child is not None:
+            if self._filter_child(child):
+                any_match = True
+                break
+            child = child.get_next_sibling()
+        self.set_visible(not self._query or any_match)
 
 
 class MyComputerColumnRow(Gtk.ListBoxRow):

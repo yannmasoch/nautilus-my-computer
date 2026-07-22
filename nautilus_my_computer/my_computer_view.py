@@ -80,7 +80,6 @@ _DIRTY_ACTIVE_THRESHOLD = (
 )  # /proc/meminfo Dirty+Writeback ≥ this → poll fast (above resting journal noise ~1–2 MB)
 _USAGE_POLL_NETWORK_MS = 5000  # async D-Bus usage poll interval for GVfs/network mounts
 _SORT_POLL_MS = 250  # gvfs sort-metadata poll cadence (only while header is hovered)
-_FOLDER_ICON_POLL_MS = 2000  # metadata::custom-icon poll cadence (gvfs metadata isn't inotify)
 _STALE_RELEASE_FRAMES = 2  # keep detached panel generations alive across this many frame ticks
 REAL_FSTYPES = {
     "ext4",
@@ -1179,6 +1178,21 @@ def _poll_sort(ext) -> bool:
     return GLib.SOURCE_CONTINUE
 
 
+def apply_card_filter(ext, win: Gtk.Window, query: str) -> None:
+    """Forward `query` to every section's own filter (see
+    MyComputerCardSection.set_query in widgets.py -- each group filters its
+    own cards and self-hides when empty). Stored on state so _populate()
+    re-applies it after a live refresh or a navigate-away-and-back."""
+    state = ext._windows.get(win)
+    if not state:
+        return
+    state["filter_query"] = query
+    for flow in state.get("section_flows", []):
+        section = flow.get_parent()
+        if section is not None and hasattr(section, "set_query"):
+            section.set_query(query)
+
+
 def _read_view_mode(ext) -> None:
     """Read current view mode and click policy from Nautilus preferences."""
     try:
@@ -1382,23 +1396,38 @@ def _update_card_usage(ext, state: dict, key: str, total: int, free: int) -> Non
         card.update_usage(_disk_data[key])
 
 
-def _folder_icon_poll_tick(ext) -> bool:
-    """GLib timer callback: re-query display-name/icon metadata for every rendered
-    Preferred Folder. Renames and deletes reach us live via the file monitors in
+def _sweep_folder_icons(ext) -> None:
+    """Re-query display-name/icon/caption metadata for every rendered Preferred
+    Folder. Renames and deletes reach us live via the file monitors in
     _sync_folder_rename_watchers, but a custom-icon-only change (Nautilus'
     "Properties > Icon") never fires a file-monitor event at all -- gvfs metadata
     is an mmap-backed store, not inotify-visible (confirmed empirically; same
-    root cause as the sort-metadata polling need). Re-arming this cheap async
-    query on a timer, scoped to "panel visible" exactly like the network usage
-    poll, is the only way to catch it without waiting for the user to navigate
-    away and back (issue #71)."""
+    root cause as the sort-metadata polling need). There is no change signal we
+    can subscribe to either (org.gtk.vfs.Metadata.AttributeChanged does not fire
+    for these writes, confirmed empirically -- issue #78). Firing this cheap
+    async query on window focus-in, scoped to "panel visible", catches the
+    common case (user edits the icon via Properties, then returns to the
+    Nautilus window) without an always-on timer (issue #71, #78)."""
     for pf in list(_folder_data.values()):
         if pf.key not in preferred_folders.PREFERRED_TOKENS:
             _refresh_folder_metadata_async(ext, pf)
-        elif not pf.is_special_place:
+        elif pf.is_special_place:
+            _refresh_special_place_icon_async(ext, pf)
+        else:
             _refresh_folder_icon_async(ext, pf)
         _refresh_folder_captions_async(ext, pf)
-    return GLib.SOURCE_CONTINUE
+
+
+def _on_window_active_changed(ext, win: Gtk.Window) -> None:
+    """notify::is-active handler: sweep folder icons/captions when a window
+    showing the disk panel regains focus (issue #78 -- see _sweep_folder_icons
+    for why this replaces a poll instead of a change signal)."""
+    state = ext._windows.get(win)
+    if not state or not win.get_property("is-active"):
+        return
+    if state.get("visible_view") != VIEW_DISKINFO:
+        return
+    _sweep_folder_icons(ext)
 
 
 def _ensure_usage_poll_running(ext) -> None:
@@ -1414,10 +1443,6 @@ def _ensure_usage_poll_running(ext) -> None:
         _net_usage_tick(ext)
         ext._net_poll_timer_id = GLib.timeout_add(
             _USAGE_POLL_NETWORK_MS, functools.partial(_net_usage_tick, ext)
-        )
-    if ext._folder_icon_poll_timer_id is None:
-        ext._folder_icon_poll_timer_id = GLib.timeout_add(
-            _FOLDER_ICON_POLL_MS, functools.partial(_folder_icon_poll_tick, ext)
         )
 
 
@@ -1439,9 +1464,6 @@ def _stop_usage_poll_if_idle(ext) -> None:
         if ext._net_poll_cancellable is not None:
             ext._net_poll_cancellable.cancel()
             ext._net_poll_cancellable = None
-        if ext._folder_icon_poll_timer_id is not None:
-            GLib.source_remove(ext._folder_icon_poll_timer_id)
-            ext._folder_icon_poll_timer_id = None
 
 
 def _new_grid_box(ext) -> Gtk.Box:
@@ -1626,7 +1648,9 @@ def _populate(ext, win: Gtk.Window) -> None:
         for pf in folders:
             if pf.key not in preferred_folders.PREFERRED_TOKENS:
                 _refresh_folder_metadata_async(ext, pf)
-            elif not pf.is_special_place:
+            elif pf.is_special_place:
+                _refresh_special_place_icon_async(ext, pf)
+            else:
                 _refresh_folder_icon_async(ext, pf)
             _refresh_folder_captions_async(ext, pf)
         _sync_folder_rename_watchers(ext, folders)
@@ -1711,6 +1735,11 @@ def _populate(ext, win: Gtk.Window) -> None:
     state["section_flows"] = section_flows
     state["card_widgets"] = card_widgets
     state["folder_card_widgets"] = folder_card_widgets
+    # Sections are rebuilt from scratch every populate, so a filter active
+    # before a live-refresh (or a navigate-away-and-back) must be re-applied
+    # to the freshly-built section widgets here.
+    if state.get("filter_query"):
+        apply_card_filter(ext, win, state["filter_query"])
     # Render any already-cached caption data immediately (e.g. re-populate
     # after a live-refresh) rather than waiting for the next async fetch.
     for folder_key in folder_card_widgets:
@@ -1775,6 +1804,44 @@ def _on_folder_metadata_ready(
     new_pf = dataclasses.replace(
         pf, display_name=display_name, gio_icon=gio_icon, is_hidden=is_hidden
     )
+    _folder_data[folder_key] = new_pf
+    for state in ext._windows.values():
+        card = state.get("folder_card_widgets", {}).get(folder_key)
+        if card is not None:
+            card.update_metadata(new_pf)
+
+
+def _refresh_special_place_icon_async(ext, pf: "PreferredFolder") -> None:
+    """Custom-icon-only refresh for the Recent/Starred/Network virtual tokens
+    (issue #83). Unlike _refresh_folder_icon_async, this never touches
+    display_name or falls back to standard::icon -- these locations have no
+    real filesystem content-type icon to defer to, only the fixed token icon
+    in PREFERRED_TOKENS (icon_name) and, layered on top of it, whatever the
+    user set via Properties > Icon (gio_icon). metadata::custom-icon(-name)
+    is keyed by URI, so it works for recent:/// exactly like a real folder."""
+    gfile = Gio.File.new_for_uri(pf.nav_uri)
+    gfile.query_info_async(
+        "metadata::custom-icon,metadata::custom-icon-name",
+        Gio.FileQueryInfoFlags.NONE,
+        GLib.PRIORITY_DEFAULT,
+        ext._folder_refresh_cancellable,
+        functools.partial(_on_special_place_icon_ready, ext),
+        pf.key,
+    )
+
+
+def _on_special_place_icon_ready(
+    ext, gfile: Gio.File, result: Gio.AsyncResult, folder_key: str
+) -> None:
+    try:
+        info = gfile.query_info_finish(result)
+    except GLib.Error:
+        return
+    pf = _folder_data.get(folder_key)
+    if pf is None:
+        return
+    gio_icon = _resolve_custom_gicon(info)
+    new_pf = dataclasses.replace(pf, gio_icon=gio_icon)
     _folder_data[folder_key] = new_pf
     for state in ext._windows.values():
         card = state.get("folder_card_widgets", {}).get(folder_key)

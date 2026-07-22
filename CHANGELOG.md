@@ -4,6 +4,38 @@ All notable changes to this project are documented here.
 
 ---
 
+## v0.12.4
+Filter My Computer cards by typing, fix a Preferred Folders drag glitch, and correct virtual folder icons.
+
+### Added
+- My Computer cards can now be filtered by typing while the panel is in
+  focus, matching search-as-you-type in a native Nautilus folder.
+  Navigation keys (/, ~, Ctrl+L) still work as before.
+
+### Changed
+- Custom folder icons set via Properties now update the moment you switch
+  back to the window, instead of on a background timer.
+
+### Fixed
+- Preferred Folders no longer loses its drop-position highlight partway
+  through a drag when reordering.
+- The Recent folder now picks up a custom icon set via Properties > Icon,
+  just like a real folder. Starred and Network fall back to their correct
+  default icons instead of the wrong ones.
+- The Recent folder now shows its correct clock icon instead of an
+  hourglass, and unpinning then re-pinning it no longer corrupts its saved
+  location.
+- Fixed two bugs upstream in [ChromaLeon](https://github.com/Fabito02/ChromaLeon) so folder color
+  tinting also applies correctly to the icons used by Recent, Starred, and Network.
+
+Thanks to @MoshiurRahmanAdib for requesting address-bar card filtering in #47
+and for the detailed diagnosis behind the Recent icon and re-pinning fixes in
+#82; to @parthib-gaugewalker for the icon references and investigation that
+shaped the virtual-folder icon fix in #83; and to @ParadaCarleton for the
+initial virtual-folder icon report in #79.
+
+---
+
 ## v0.12.3
 Add captions and zoom-aware sizing to Preferred Folders, tabbed settings, and
 fix several sizing and translation bugs.

@@ -1,5 +1,5 @@
 Name:           nautilus-my-computer
-Version:        0.12.3
+Version:        0.12.4
 Release:        0
 Summary:        My Computer for Nautilus, what GNOME Files should have always been
 
@@ -42,6 +42,16 @@ make build
 %{_datadir}/glib-2.0/schemas/io.github.yannmasoch.nautilus-my-computer.gschema.xml
 
 %changelog
+* Tue Jul 21 2026 Yann Masoch <231734284+yannmasoch@users.noreply.github.com> - 0.12.4-0
+- Add card filtering in My Computer: type any letter to filter cards live
+- Fix custom folder icons updating instantly instead of on a poll timer
+- Fix Preferred Folders losing drop-position highlight during reorder
+- Fix custom icons and default icons for Recent, Starred, and Network
+- Fix Recent folder showing the wrong icon and re-pin corrupting its saved
+  location
+- Fix two bugs upstream in ChromaLeon so folder color tinting also applies
+  to Recent, Starred, and Network icons
+
 * Sun Jul 19 2026 Yann Masoch <231734284+yannmasoch@users.noreply.github.com> - 0.12.3-0
 - Add captions to Preferred Folders, showing item count and last-modified
   date, toggleable from Settings

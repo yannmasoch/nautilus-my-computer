@@ -1,6 +1,6 @@
 # Maintainer: Yann Masoch <231734284+yannmasoch@users.noreply.github.com>
 pkgname=nautilus-my-computer
-pkgver=0.12.3
+pkgver=0.12.4
 pkgrel=1
 pkgdesc="My Computer for Nautilus, what GNOME Files should have always been"
 arch=('any')

@@ -1,3 +1,16 @@
+nautilus-my-computer (0.12.4-1) UNRELEASED; urgency=medium
+
+  * Add card filtering in My Computer: type any letter to filter cards live
+  * Fix custom folder icons updating instantly instead of on a poll timer
+  * Fix Preferred Folders losing drop-position highlight during reorder
+  * Fix custom icons and default icons for Recent, Starred, and Network
+  * Fix Recent folder showing the wrong icon and re-pin corrupting its saved
+    location
+  * Fix two bugs upstream in ChromaLeon so folder color tinting also applies
+    to Recent, Starred, and Network icons
+
+ -- Yann Masoch <231734284+yannmasoch@users.noreply.github.com>  Tue, 21 Jul 2026 21:12:34 -0700
+
 nautilus-my-computer (0.12.3-1) UNRELEASED; urgency=medium
 
   * Add captions to Preferred Folders, showing item count and last-modified
