@@ -122,7 +122,7 @@ msgid "Start on the Computer view"
 msgstr "In der Computeransicht starten"
 
 msgid "Launch directly to the Computer view instead of Home"
-msgstr "Starte direkt in der Computeransicht statt den persönlichen Ordner zu öffnen"
+msgstr "Direkt in der Computeransicht starten, anstatt im persönlichen Ordner"
 
 #——————————————————————————————
 # Preferences - Bar Color
@@ -230,16 +230,16 @@ msgstr "GitHub"
 #——————————————————————————————
 
 msgid "Change Icon"
-msgstr ""
+msgstr "Symbol ändern"
 
 msgid "Icon"
-msgstr ""
+msgstr "Symbol"
 
 msgid "Search icons…"
-msgstr ""
+msgstr "Symbole suchen…"
 
 msgid "Reset"
-msgstr ""
+msgstr "Zurücksetzen"
 
 #——————————————————————————————
 # Panel - Preferred Folders
@@ -252,10 +252,10 @@ msgid "Show the Preferred Folders group at the top of the view"
 msgstr "Gruppe „Bevorzugte Ordner“ oben in der Ansicht anzeigen"
 
 msgid "Add to Preferred"
-msgstr "Zu Favoriten hinzufügen"
+msgstr "Zu Bevorzugten hinzufügen"
 
 msgid "Remove from Preferred"
-msgstr "Aus Favoriten entfernen"
+msgstr "Aus Bevorzugten entfernen"
 
 #——————————————————————————————
 # Panel - Preferred Folders - Captions
