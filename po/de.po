@@ -462,3 +462,12 @@ msgstr "Frühe Testversion. Sie kann Fehler oder Unstimmigkeiten enthalten."
 
 msgid "View Options"
 msgstr "Ansichtsoptionen"
+
+msgid "Grid View"
+msgstr "Rasteransicht"
+
+msgid "List View"
+msgstr "Listenansicht"
+
+msgid "Column View"
+msgstr "Spaltenansicht"
