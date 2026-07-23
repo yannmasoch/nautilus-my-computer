@@ -230,16 +230,16 @@ msgstr "GitHub"
 #——————————————————————————————
 
 msgid "Change Icon"
-msgstr ""
+msgstr "Symbol ändern"
 
 msgid "Icon"
-msgstr ""
+msgstr "Symbol"
 
 msgid "Search icons…"
-msgstr ""
+msgstr "Symbole suchen…"
 
 msgid "Reset"
-msgstr ""
+msgstr "Zurücksetzen"
 
 #——————————————————————————————
 # Panel - Preferred Folders
@@ -345,3 +345,120 @@ msgid "In {n} year"
 msgid_plural "In {n} years"
 msgstr[0] "in {n} Jahr"
 msgstr[1] "in {n} Jahren"
+
+msgid "Add to Bookmarks"
+msgstr "Zu Lesezeichen hinzufügen"
+
+msgid "Remove from Bookmarks"
+msgstr "Aus Lesezeichen entfernen"
+
+msgid "Pin to My Computer"
+msgstr "An Mein Computer anheften"
+
+msgid "Unpin from My Computer"
+msgstr "Von Mein Computer lösen"
+
+msgid "Cut"
+msgstr "Ausschneiden"
+
+msgid "Copy"
+msgstr "Kopieren"
+
+msgid "Paste"
+msgstr "Einfügen"
+
+msgid "Move to…"
+msgstr "Verschieben nach…"
+
+msgid "Copy to…"
+msgstr "Kopieren nach…"
+
+msgid "New Folder…"
+msgstr "Neuer Ordner…"
+
+msgid "New Folder"
+msgstr "Neuer Ordner"
+
+msgid "New Document"
+msgstr "Neues Dokument"
+
+msgid "Open in Terminal"
+msgstr "Im Terminal öffnen"
+
+msgid "Rename…"
+msgstr "Umbenennen…"
+
+msgid "Rename"
+msgstr "Umbenennen"
+
+msgid "Rename File"
+msgstr "Datei umbenennen"
+
+msgid "Rename Folder"
+msgstr "Ordner umbenennen"
+
+msgid "Compress…"
+msgstr "Komprimieren…"
+
+msgid "Email…"
+msgstr "E-Mail…"
+
+msgid "Move to Trash"
+msgstr "In den Papierkorb verschieben"
+
+msgid "Open File"
+msgstr "Datei öffnen"
+
+msgid "Open Folder"
+msgstr "Ordner öffnen"
+
+msgid "Open With %s"
+msgstr "Öffnen mit %s"
+
+msgid "Choose an app to open <b>%s</b>"
+msgstr "Anwendung zum Öffnen von <b>%s</b> wählen"
+
+msgid "Recommended Apps"
+msgstr "Empfohlene Anwendungen"
+
+msgid "Other Apps"
+msgstr "Andere Anwendungen"
+
+msgid "No applications found."
+msgstr "Keine Anwendungen gefunden."
+
+msgid "Cancel"
+msgstr "Abbrechen"
+
+msgid "Select"
+msgstr "Auswählen"
+
+msgid "Select Copy Destination"
+msgstr "Kopierziel auswählen"
+
+msgid "Select Move Destination"
+msgstr "Verschiebeziel auswählen"
+
+msgid "Folder is Empty"
+msgstr "Ordner ist leer"
+
+msgid "Loading…"
+msgstr "Wird geladen…"
+
+msgid "Created"
+msgstr "Erstellt"
+
+msgid "Modified"
+msgstr "Geändert"
+
+msgid "Dimensions"
+msgstr "Abmessungen"
+
+msgid "Beta"
+msgstr "Beta"
+
+msgid "Early access feature. It may contain bugs or inconsistencies."
+msgstr "Frühe Testversion. Sie kann Fehler oder Unstimmigkeiten enthalten."
+
+msgid "View Options"
+msgstr "Ansichtsoptionen"
