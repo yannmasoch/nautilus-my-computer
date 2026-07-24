@@ -36,6 +36,7 @@ from nautilus_my_computer.common import (
     _,
     _all_widgets,
     _find_widget,
+    _icon_name_renders,
     _log,
     _pin_icon,
     _resolve_gtype,
@@ -1899,9 +1900,21 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
         page_sidebar = Adw.PreferencesPage()
         page_sidebar.set_title(_("Sidebar"))
-        # Base name only -- GTK selects the theme's RTL variant. Hardcoding
-        # "-symbolic-rtl" breaks themes that use a different suffix (e.g. Yaru).
-        page_sidebar.set_icon_name("sidebar-show-symbolic")
+        # Icon RTL handling differs by pack. view-left-pane-symbolic (Colloid,
+        # Papirus, Tela, WhiteSur, kora...) and sidebar-show-symbolic (Adwaita)
+        # name their mirror with a "-rtl" SUFFIX, which GTK swaps in automatically.
+        # Yaru uses a "-rtl" INFIX (sidebar-show-rtl-symbolic) with no suffix
+        # companion, so GTK's auto-lookup never mirrors it -- probe that name
+        # ourselves in RTL. Verify each candidate rather than trusting any single
+        # name to exist.
+        candidates = ["view-left-pane-symbolic"]
+        if Gtk.Widget.get_default_direction() == Gtk.TextDirection.RTL:
+            candidates.append("sidebar-show-rtl-symbolic")
+        candidates.append("sidebar-show-symbolic")
+        for candidate in candidates:
+            if _icon_name_renders(candidate):
+                page_sidebar.set_icon_name(candidate)
+                break
         pref_win.add(page_sidebar)
 
         page_about = Adw.PreferencesPage()
