@@ -20,6 +20,11 @@ __pycache__/
 .claudeignore
 CLAUDE.md
 
+# Codex AI customization (personal workflow)
+.codex/
+.codex-skills/
+AGENTS.md
+
 # Temporary files & working directories
 project/
 tasks/

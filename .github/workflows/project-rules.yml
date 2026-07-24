@@ -1,0 +1,87 @@
+name: Project rules
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  validate:
+    name: Validate contribution
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check target branch, commits, and changed files
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const pull_number = context.payload.pull_request.number;
+            const errors = [];
+
+            // CONTRIBUTING.md requires pull requests to target dev.
+            if (context.payload.pull_request.base.ref !== "dev") {
+              errors.push("Pull requests must target the `dev` branch.");
+            }
+
+            const commits = await github.paginate(
+              github.rest.pulls.listCommits,
+              {owner, repo, pull_number, per_page: 100}
+            );
+
+            // Validate <type>: <short description>, with a 72-character limit.
+            for (const commit of commits) {
+              const subject = commit.commit.message.split("\n")[0];
+
+              if (!/^[a-z][a-z0-9-]*: \S.*$/.test(subject)) {
+                errors.push(
+                  `Commit ${commit.sha.slice(0, 7)} must use ` +
+                  "`<type>: <short description>`."
+                );
+              }
+
+              if (subject.length > 72) {
+                errors.push(
+                  `Commit ${commit.sha.slice(0, 7)} has a ` +
+                  `${subject.length}-character subject; maximum is 72.`
+                );
+              }
+            }
+
+            const files = await github.paginate(
+              github.rest.pulls.listFiles,
+              {owner, repo, pull_number, per_page: 100}
+            );
+
+            const isTranslation =
+              files.length > 0 &&
+              files.every(file => /^po\/[^/]+\.po$/.test(file.filename));
+
+            if (isTranslation) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: pull_number,
+                labels: ["translation"]
+              });
+            } else {
+              try {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: pull_number,
+                  name: "translation"
+                });
+              } catch (error) {
+                // A missing label on this pull request is already the desired state.
+                if (error.status !== 404) throw error;
+              }
+            }
+
+            if (errors.length > 0) {
+              core.setFailed(errors.join("\n"));
+            }

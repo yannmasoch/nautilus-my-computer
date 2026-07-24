@@ -2075,7 +2075,7 @@ def _show_folder_captions(ext, folder_key: str) -> None:
 
 
 def _sync_folder_rename_watchers(ext, folders: list) -> None:
-    """Arm a Gio.FileMonitor (WATCH_MOVES) on the parent directory of each raw-URI
+    """Arm a Gio.FileMonitor (WATCH_MOVES) on the parent directory of each URI
     preferred folder so a rename/move is caught live and the stored GSettings URI
     is corrected -- without this, a renamed folder keeps showing its old name
     forever (the stored URI no longer resolves, so the async metadata refresh just
@@ -2089,11 +2089,13 @@ def _sync_folder_rename_watchers(ext, folders: list) -> None:
     resolved fresh from GLib.get_user_special_dir() every load, so they can't go
     stale the same way.
     """
-    live_keys = {pf.key for pf in folders if pf.key not in preferred_folders.PREFERRED_TOKENS}
-    ext._watched_folder_keys = live_keys
+    live_folders = [pf for pf in folders if pf.key not in preferred_folders.PREFERRED_TOKENS]
+    # Map the resolved URI reported by GIO back to the exact value stored in
+    # GSettings.  They differ for portable file://~/… entries.
+    ext._watched_folder_keys = {pf.nav_uri: pf.key for pf in live_folders}
     live_parents = set()
-    for key in live_keys:
-        parent = Gio.File.new_for_uri(key).get_parent()
+    for pf in live_folders:
+        parent = Gio.File.new_for_uri(pf.nav_uri).get_parent()
         if parent is not None:
             live_parents.add(parent.get_uri())
 
@@ -2140,16 +2142,17 @@ def _on_preferred_folder_file_changed(
     if not ext._gsettings:
         return
     old_uri = file.get_uri()
-    if old_uri not in ext._watched_folder_keys:
+    stored_key = ext._watched_folder_keys.get(old_uri)
+    if stored_key is None:
         return
     entries = ext._get_preferred_folders()
-    if old_uri not in entries:
+    if stored_key not in entries:
         return
 
     if event_type == Gio.FileMonitorEvent.RENAMED and other_file is not None:
-        entries[entries.index(old_uri)] = other_file.get_uri()
+        entries[entries.index(stored_key)] = other_file.get_uri()
     elif event_type in (Gio.FileMonitorEvent.DELETED, Gio.FileMonitorEvent.MOVED_OUT):
-        entries.remove(old_uri)
+        entries.remove(stored_key)
     else:
         return
     ext._gsettings.set_value("preferred-folders", GLib.Variant("as", entries))

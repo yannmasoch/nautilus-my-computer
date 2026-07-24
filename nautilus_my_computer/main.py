@@ -36,6 +36,7 @@ from nautilus_my_computer.common import (
     _,
     _all_widgets,
     _find_widget,
+    _icon_name_renders,
     _log,
     _pin_icon,
     _resolve_gtype,
@@ -581,7 +582,9 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         self._net_poll_cancellable: Gio.Cancellable | None = None
         self._folder_refresh_cancellable = Gio.Cancellable()
         self._folder_monitors: dict[str, Gio.FileMonitor] = {}  # keyed by parent dir URI
-        self._watched_folder_keys: set[str] = set()
+        # Resolved folder URI -> exact preferred-folders GSettings entry.
+        # These differ for portable file://~/… entries.
+        self._watched_folder_keys: dict[str, str] = {}
         self._last_selected_folder_uri: str | None = None  # see get_file_items()
 
         self._sort_column: str = "name"
@@ -1897,12 +1900,23 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         page_computer.set_icon_name("computer-symbolic")
         pref_win.add(page_computer)
 
-        is_rtl = Gtk.Widget.get_default_direction() == Gtk.TextDirection.RTL
         page_sidebar = Adw.PreferencesPage()
         page_sidebar.set_title(_("Sidebar"))
-        page_sidebar.set_icon_name(
-            "sidebar-show-right-symbolic" if is_rtl else "sidebar-show-right-symbolic-rtl"
-        )
+        # Icon RTL handling differs by pack. view-left-pane-symbolic (Colloid,
+        # Papirus, Tela, WhiteSur, kora...) and sidebar-show-symbolic (Adwaita)
+        # name their mirror with a "-rtl" SUFFIX, which GTK swaps in automatically.
+        # Yaru uses a "-rtl" INFIX (sidebar-show-rtl-symbolic) with no suffix
+        # companion, so GTK's auto-lookup never mirrors it -- probe that name
+        # ourselves in RTL. Verify each candidate rather than trusting any single
+        # name to exist.
+        candidates = ["view-left-pane-symbolic"]
+        if Gtk.Widget.get_default_direction() == Gtk.TextDirection.RTL:
+            candidates.append("sidebar-show-rtl-symbolic")
+        candidates.append("sidebar-show-symbolic")
+        for candidate in candidates:
+            if _icon_name_renders(candidate):
+                page_sidebar.set_icon_name(candidate)
+                break
         pref_win.add(page_sidebar)
 
         page_about = Adw.PreferencesPage()
