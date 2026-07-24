@@ -50,28 +50,28 @@ msgid "Open"
 msgstr "Άνοιγμα"
 
 msgid "Open in New Tab"
-msgstr "Άνοιγμα χωρίς καινούργια καρτέλα"
+msgstr "Άνοιγμα σε νέα καρτέλα"
 
 msgid "Open in New Window"
-msgstr "Άνοιγμα σε καινούργιο παράθυρο"
+msgstr "Άνοιγμα σε νέο παράθυρο"
 
 msgid "Open With…"
 msgstr "Άνοιγμα με…"
 
 msgid "Mount"
-msgstr "Μοντάρισμα"
+msgstr "Προσάρτηση"
 
 msgid "Unmount"
-msgstr "Αμοντάρισμα"
+msgstr "Αποπροσάρτηση"
 
 msgid "Eject"
 msgstr "Αποσύνδεση"
 
 msgid "Properties"
-msgstr "Ρυθμίσεις"
+msgstr "Ιδιότητες"
 
 msgid "Format…"
-msgstr "Φορμάτ…"
+msgstr "Διαμόρφωση…"
 
 # ——————————————————————————————
 # Sidebar
@@ -95,7 +95,7 @@ msgid "Starred"
 msgstr "Αγαπημένα"
 
 msgid "Trash"
-msgstr "Απορρίματα"
+msgstr "Απορρίμματα"
 
 # ——————————————————————————————
 # Preferences - Tabs
