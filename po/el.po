@@ -1,0 +1,344 @@
+#
+# yiannis ioannides <git@yioannides.com>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: nautilus-my-computer\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-06-01 00:00+0200\n"
+"PO-Revision-Date: 2026-07-24 18:33+0200\n"
+"Last-Translator: yiannis ioannides <git@yioannides.com>\n"
+"Language-Team: Greek\n"
+"Language: el\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n > 1;\n"
+"X-Generator: Gtranslator 50.0\n"
+
+# ——————————————————————————————
+# Panel - Group labels
+# ——————————————————————————————
+msgid "On this Computer"
+msgstr "Σ'αυτόν τον υπολογιστή"
+
+msgid "System"
+msgstr "Σύστημα"
+
+msgid "Removable"
+msgstr "Αφαιρέσιμο"
+
+msgid "Disc"
+msgstr "Δίσκος"
+
+msgid "Network"
+msgstr "Δίκτυο"
+
+# ——————————————————————————————
+# Panel - Disk card
+# ——————————————————————————————
+msgid "{free} free of {total}"
+msgstr "{free} διαθέσιμο από {total}"
+
+msgid "Not mounted"
+msgstr "Αμοντάριστος"
+
+# ——————————————————————————————
+# Panel - Disk card actions
+# ——————————————————————————————
+msgid "Open"
+msgstr "Άνοιγμα"
+
+msgid "Open in New Tab"
+msgstr "Άνοιγμα χωρίς καινούργια καρτέλα"
+
+msgid "Open in New Window"
+msgstr "Άνοιγμα σε καινούργιο παράθυρο"
+
+msgid "Open With…"
+msgstr "Άνοιγμα με…"
+
+msgid "Mount"
+msgstr "Μοντάρισμα"
+
+msgid "Unmount"
+msgstr "Αμοντάρισμα"
+
+msgid "Eject"
+msgstr "Αποσύνδεση"
+
+msgid "Properties"
+msgstr "Ρυθμίσεις"
+
+msgid "Format…"
+msgstr "Φορμάτ…"
+
+# ——————————————————————————————
+# Sidebar
+# ——————————————————————————————
+msgid "Computer"
+msgstr "Υπολογιστής"
+
+msgid "Open My Computer"
+msgstr "Άνοιγμα του Ο Υπολογιστής Μου"
+
+# ——————————————————————————————
+# Sidebar - Places
+# ——————————————————————————————
+msgid "Home"
+msgstr "Προσωπικός φάκελος"
+
+msgid "Recent"
+msgstr "Πρόσφατα"
+
+msgid "Starred"
+msgstr "Αγαπημένα"
+
+msgid "Trash"
+msgstr "Απορρίματα"
+
+# ——————————————————————————————
+# Preferences - Tabs
+# ——————————————————————————————
+msgid "Computer view"
+msgstr "Προβολή Υπολογιστή"
+
+msgid "Sidebar"
+msgstr "Πλευρική μπάρα"
+
+# ——————————————————————————————
+# Preferences - General
+# ——————————————————————————————
+msgid "My Computer Settings"
+msgstr "Ρυθμίσεις του Ο Υπολογιστής Μου"
+
+msgid "General"
+msgstr "Γενικά"
+
+msgid "Start on the Computer view"
+msgstr "Εκκίνηση σε προβολή Υπολογιστή"
+
+msgid "Launch directly to the Computer view instead of Home"
+msgstr "Εκκίνηση απευθείας στο Ο Υπολογιστής μου αντί για το προσωπικό φάκελο"
+
+# ——————————————————————————————
+# Preferences - Bar Color
+# ——————————————————————————————
+msgid "Bar Color"
+msgstr "Χρώμα μπάρας"
+
+msgid "Select or customize the bar color."
+msgstr "Επιλογή ή διαμόρφωση του χρώματος μπάρας"
+
+msgid "Color mode"
+msgstr "Τύπος χρώματος"
+
+msgid "System accent"
+msgstr "Χρώμα συστήματος"
+
+msgid "Custom color"
+msgstr "Επιλογή χρώματος"
+
+msgid "Custom gradient"
+msgstr "Επιλογή διαβάθμισης χρώματος"
+
+msgid "Color"
+msgstr "Χρώμα"
+
+msgid "Start color"
+msgstr "Χρώμα αρχής"
+
+msgid "End color"
+msgstr "Χρώμα τέλους"
+
+# ——————————————————————————————
+# Preferences - Panel visibility
+# ——————————————————————————————
+msgid "Panel visibility"
+msgstr "Ορατότητα καταχωρίσεων"
+
+msgid ""
+"Choose how each group appears. Visible: shows the group as a normal "
+"separated section. Merged: folds the group into the On this Computer group. "
+"Hidden: hides the group entirely."
+msgstr ""
+"Επιλέξτε την ορατότητα του κάθε γκρούπ. Ορατό: προβολή διαχωρισμένου γκρούπ. "
+"Συγχωνευμένο: συγχωνεύει το γκρούπ με το γκρούπ Ο Υπολογιστής μου. Κρυμμένο: "
+"κρύβει το γκρούπ."
+
+msgid "Visible"
+msgstr "Ορατό"
+
+msgid "Merged"
+msgstr "Συγχωνευμένο"
+
+msgid "Hidden"
+msgstr "Κρυμμένο"
+
+# ——————————————————————————————
+# Preferences - System
+# ——————————————————————————————
+msgid "Show system partitions"
+msgstr "Προβολή διαμερισμάτων συστήματος"
+
+msgid "Include boot and EFI partitions in the System group"
+msgstr "Προσθήκη διαμερισμάτων boot και EFI στο γκρούπ Σύστημα"
+
+# ——————————————————————————————
+# Preferences - Sidebar visibility
+# ——————————————————————————————
+msgid "Sidebar visibility"
+msgstr "Ορατότητα πλευρικής μπάρας"
+
+msgid "Choose which locations appear on the sidebar."
+msgstr "Επιλέξτε ποιοί προορισμοί να είναι ορατοί στη πλευρική μπάρα."
+
+# ——————————————————————————————
+# Preferences - Preferred Folders
+# ——————————————————————————————
+msgid "Show captions"
+msgstr "Προβολή υπότιτλων"
+
+msgid "Shows or hides the caption lines already configured in Nautilus"
+msgstr "Προβολή ή απόκρυψη διαρυθμισμένων υποτίτλων στο Nautilus"
+
+# ——————————————————————————————
+# Preferences - About
+# ——————————————————————————————
+msgid "About"
+msgstr "Σχετικά"
+
+msgid "Extension"
+msgstr "Επέκταση"
+
+msgid "Version"
+msgstr "Έκδοση"
+
+msgid "Author"
+msgstr "Δημιουργός"
+
+msgid "License"
+msgstr "Άδεια"
+
+msgid "Source code"
+msgstr "Πηγή κώδικα"
+
+msgid "GitHub"
+msgstr "GitHub"
+
+# ——————————————————————————————
+# Sidebar - Bookmark icon
+# ——————————————————————————————
+msgid "Change Icon"
+msgstr "Αλαγή εικονιδίου"
+
+msgid "Icon"
+msgstr "Εικονίδιο"
+
+msgid "Search icons…"
+msgstr "Εύρεση εικονιδίων..."
+
+msgid "Reset"
+msgstr "Επαναφορά"
+
+# ——————————————————————————————
+# Panel - Preferred Folders
+# ——————————————————————————————
+msgid "Preferred Folders"
+msgstr "Αγαπημένοι φάκελοι"
+
+msgid "Show the Preferred Folders group at the top of the view"
+msgstr "Προβολή του γκρούπ Αγαπημένοι Φάκελοι στο πάνω μέρος"
+
+msgid "Add to Preferred"
+msgstr "Προσθήκη στα Αγαπημένα"
+
+msgid "Remove from Preferred"
+msgstr "Αφαίρεση από τα Αγαπημένα"
+
+# ——————————————————————————————
+# Panel - Preferred Folders - Captions
+# ——————————————————————————————
+msgid "{n} item"
+msgid_plural "{n} items"
+msgstr[0] "{n} αντικείμενο"
+msgstr[1] "{n} αντικείμενα"
+
+# ——————————————————————————————
+# General - Relative Dates
+# ——————————————————————————————
+msgid "Today"
+msgstr "Σήμερα"
+
+msgid "Yesterday"
+msgstr "Χθές"
+
+msgid "Tomorrow"
+msgstr "Αύριο"
+
+msgid "This week"
+msgstr "Αυτήν την εβδομάδα"
+
+msgid "Last week"
+msgstr "Την περασμένη εβδομάδα"
+
+msgid "Next week"
+msgstr "Την επόμενη εβδομάδα"
+
+msgid "This month"
+msgstr "Αυτόν τον μήνα"
+
+msgid "Last month"
+msgstr "Τον περασμένο μήνα"
+
+msgid "Next month"
+msgstr "Τον επόμενο μήνα"
+
+msgid "This year"
+msgstr "Φέτος"
+
+msgid "Last year"
+msgstr "Πέρισυ"
+
+msgid "Next year"
+msgstr "Τον επόμενο χρόνο"
+
+msgid "{n} day ago"
+msgid_plural "{n} days ago"
+msgstr[0] "Πριν {n} ημέρα"
+msgstr[1] "Πριν {n} ημέρες"
+
+msgid "In {n} day"
+msgid_plural "In {n} days"
+msgstr[0] "Σε {n} ημέρα"
+msgstr[1] "Σε {n} ημέρες"
+
+msgid "{n} week ago"
+msgid_plural "{n} weeks ago"
+msgstr[0] "Πριν {n} εβδομάδα"
+msgstr[1] "Πριν {n} εβδομάδες"
+
+msgid "In {n} week"
+msgid_plural "In {n} weeks"
+msgstr[0] "Σε {n} εβδομάδα"
+msgstr[1] "Σε {n} εβδομάδες"
+
+msgid "{n} month ago"
+msgid_plural "{n} months ago"
+msgstr[0] "Πριν {n} μήνα"
+msgstr[1] "Πριν {n} μήνες"
+
+msgid "In {n} month"
+msgid_plural "In {n} months"
+msgstr[0] "Σε {n} μήνα"
+msgstr[1] "Σε {n} μήνες"
+
+msgid "{n} year ago"
+msgid_plural "{n} years ago"
+msgstr[0] "Πριν {n} χρόνο"
+msgstr[1] "Πριν {n} χρόνια"
+
+msgid "In {n} year"
+msgid_plural "In {n} years"
+msgstr[0] "Σε {n} χρόνο"
+msgstr[1] "Σε {n} χρόνια"
