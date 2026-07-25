@@ -2,20 +2,21 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-24 12:50-0700\n"
-"PO-Revision-Date: 2026-06-22 00:17+0300\n"
-"Last-Translator: Taylan Tatlı\n"
+"POT-Creation-Date: 2026-07-24 12:52-0700\n"
+"PO-Revision-Date: 2026-07-25 03:08\n"
+"Last-Translator: \n"
 "Language-Team: Turkish\n"
-"Language: tr\n"
+"Language: tr_TR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Poedit 3.9\n"
+"X-Crowdin-Project: nautilus-my-computer\n"
+"X-Crowdin-Project-ID: 915521\n"
+"X-Crowdin-Language: tr\n"
+"X-Crowdin-File: /dev/po/nautilus-my-computer.pot\n"
+"X-Crowdin-File-ID: 10\n"
 
-# ——————————————————————————————
-# Sidebar - Bookmark icon
-# ——————————————————————————————
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
 msgstr ""
@@ -37,13 +38,10 @@ msgid "New Folder"
 msgstr ""
 
 #: nautilus_my_computer/column_view.py
-#, fuzzy, python-format
+#, python-format
 msgid "Open With %s"
-msgstr "Birlikte Aç…"
+msgstr ""
 
-# ——————————————————————————————
-# Panel - Disk card actions
-# ——————————————————————————————
 #: nautilus_my_computer/column_view.py nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/main.py
 msgid "Open"
@@ -81,16 +79,10 @@ msgstr ""
 msgid "Column View"
 msgstr ""
 
-# ——————————————————————————————
-# Preferences - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/column_view.py
 msgid "View Options"
 msgstr ""
 
-# ——————————————————————————————
-# Panel - Preferred Folders - Captions
-# ——————————————————————————————
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} item"
@@ -98,9 +90,6 @@ msgid_plural "{n} items"
 msgstr[0] "{n} öge"
 msgstr[1] "{n} öge"
 
-# ——————————————————————————————
-# General - Relative Dates
-# ——————————————————————————————
 #: nautilus_my_computer/common.py
 msgid "Today"
 msgstr "Bugün"
@@ -205,9 +194,6 @@ msgid_plural "In {n} years"
 msgstr[0] "{n} yıl sonra"
 msgstr[1] "{n} yıl sonra"
 
-# ——————————————————————————————
-# Panel - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/components.py
 msgid "Rename Folder"
 msgstr ""
@@ -302,23 +288,14 @@ msgstr ""
 msgid "Properties"
 msgstr "Özellikler"
 
-# ——————————————————————————————
-# Sidebar
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Computer"
 msgstr "Bilgisayar"
 
-# ——————————————————————————————
-# Preferences - General
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
 msgstr "Bilgisayarım Ayarları"
 
-# ——————————————————————————————
-# Sidebar - Places
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Home"
 msgstr "Ev"
@@ -339,7 +316,6 @@ msgstr "Son"
 msgid "Starred"
 msgstr "Yıldızlı"
 
-# Previous translation (before rename from "Network Volumes"): Ağ Birimleri
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Network"
 msgstr "Ağ"
@@ -352,9 +328,6 @@ msgstr "Çöp"
 msgid "Open Folder"
 msgstr ""
 
-# ——————————————————————————————
-# Panel - Disk card actions
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Open File"
 msgstr ""
@@ -384,9 +357,6 @@ msgstr ""
 msgid "General"
 msgstr "Genel"
 
-# ——————————————————————————————
-# Preferences - Tabs
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Computer view"
 msgstr "Bilgisayar görünümü"
@@ -395,9 +365,6 @@ msgstr "Bilgisayar görünümü"
 msgid "Sidebar"
 msgstr "Kenar çubuğu"
 
-# ——————————————————————————————
-# Preferences - About
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "About"
 msgstr "Hakkında"
@@ -410,22 +377,13 @@ msgstr "Bilgisayar görünümünde başlat"
 msgid "Launch directly to the Computer view instead of Home"
 msgstr "Ev yerine doğrudan Bilgisayar görünümünü aç"
 
-# ——————————————————————————————
-# Preferences - Panel visibility
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Panel visibility"
 msgstr "Panel görünürlüğü"
 
 #: nautilus_my_computer/main.py
-msgid ""
-"Choose how each group appears. Visible: shows the group as a normal "
-"separated section. Merged: folds the group into the On this Computer group. "
-"Hidden: hides the group entirely."
-msgstr ""
-"Her grubun nasıl görüneceğini seçin. Görünür: grubu normal, ayrı bir bölüm "
-"olarak gösterir. Birleştirilmiş: grubu Bu Bilgisayarda grubunun içine "
-"toplar. Gizli: grubu tamamen gizler."
+msgid "Choose how each group appears. Visible: shows the group as a normal separated section. Merged: folds the group into the On this Computer group. Hidden: hides the group entirely."
+msgstr "Her grubun nasıl görüneceğini seçin. Görünür: grubu normal, ayrı bir bölüm olarak gösterir. Birleştirilmiş: grubu Bu Bilgisayarda grubunun içine toplar. Gizli: grubu tamamen gizler."
 
 #: nautilus_my_computer/main.py
 msgid "Visible"
@@ -439,16 +397,10 @@ msgstr "Birleştirilmiş"
 msgid "Hidden"
 msgstr "Gizli"
 
-# ——————————————————————————————
-# Panel - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Preferred Folders"
 msgstr "Tercih Edilen Klasörler"
 
-# ——————————————————————————————
-# Preferences - System
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Show system partitions"
 msgstr "Sistem bölümlerini göster"
@@ -457,9 +409,6 @@ msgstr "Sistem bölümlerini göster"
 msgid "Include boot and EFI partitions in the System group"
 msgstr "Önyükleme ve EFI bölümlerini Sistem grubuna dahil et"
 
-# ——————————————————————————————
-# Preferences - Sidebar visibility
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
 msgstr "Kenar çubuğu görünürlüğü"
@@ -468,9 +417,6 @@ msgstr "Kenar çubuğu görünürlüğü"
 msgid "Choose which locations appear on the sidebar."
 msgstr "Kenar çubuğunda hangi konumların görüneceğini seçin."
 
-# ——————————————————————————————
-# Preferences - Bar Color
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Bar Color"
 msgstr "Çubuk Rengi"
@@ -507,17 +453,13 @@ msgstr "Başlangıç rengi"
 msgid "End color"
 msgstr "Bitiş rengi"
 
-# ——————————————————————————————
-# Preferences - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Show captions"
 msgstr "Açıklamaları göster"
 
 #: nautilus_my_computer/main.py
 msgid "Shows or hides the caption lines already configured in Nautilus"
-msgstr ""
-"Nautilus'ta zaten yapılandırılmış açıklama satırlarını gösterir veya gizler"
+msgstr "Nautilus'ta zaten yapılandırılmış açıklama satırlarını gösterir veya gizler"
 
 #: nautilus_my_computer/main.py
 msgid "Extension"
@@ -563,9 +505,6 @@ msgstr "Biçimlendir..."
 msgid "System"
 msgstr "Sistem"
 
-# ——————————————————————————————
-# Panel - Group labels
-# ——————————————————————————————
 #: nautilus_my_computer/my_computer_view.py
 msgid "On this Computer"
 msgstr "Bu Bilgisayarda"
@@ -582,9 +521,6 @@ msgstr "Disk"
 msgid "Not mounted"
 msgstr "Bağlanmamış"
 
-# ——————————————————————————————
-# Panel - Disk card
-# ——————————————————————————————
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{free} free of {total}"
@@ -606,8 +542,3 @@ msgstr ""
 msgid "Dimensions"
 msgstr ""
 
-#~ msgid "Show the Preferred Folders group at the top of the view"
-#~ msgstr "Görünümün üst kısmında Tercih Edilen Klasörler grubunu göster"
-
-#~ msgid "Add to Preferred"
-#~ msgstr "Tercihlere ekle"
