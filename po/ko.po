@@ -2,19 +2,21 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-24 12:50-0700\n"
-"PO-Revision-Date: 2026-06-19 08:21+0900\n"
-"Last-Translator: Saintliy\n"
+"POT-Creation-Date: 2026-07-24 12:52-0700\n"
+"PO-Revision-Date: 2026-07-25 03:08\n"
+"Last-Translator: \n"
 "Language-Team: Korean\n"
-"Language: ko\n"
+"Language: ko_KR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+"X-Crowdin-Project: nautilus-my-computer\n"
+"X-Crowdin-Project-ID: 915521\n"
+"X-Crowdin-Language: ko\n"
+"X-Crowdin-File: /dev/po/nautilus-my-computer.pot\n"
+"X-Crowdin-File-ID: 10\n"
 
-# ——————————————————————————————
-# Sidebar - Bookmark icon
-# ——————————————————————————————
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
 msgstr ""
@@ -36,13 +38,10 @@ msgid "New Folder"
 msgstr ""
 
 #: nautilus_my_computer/column_view.py
-#, fuzzy, python-format
+#, python-format
 msgid "Open With %s"
-msgstr "다른 프로그램으로 열기…"
+msgstr ""
 
-# ——————————————————————————————
-# Panel - Disk card actions
-# ——————————————————————————————
 #: nautilus_my_computer/column_view.py nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/main.py
 msgid "Open"
@@ -80,25 +79,16 @@ msgstr ""
 msgid "Column View"
 msgstr ""
 
-# ——————————————————————————————
-# Preferences - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/column_view.py
 msgid "View Options"
 msgstr ""
 
-# ——————————————————————————————
-# Panel - Preferred Folders - Captions
-# ——————————————————————————————
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} item"
 msgid_plural "{n} items"
 msgstr[0] "항목 {n}개"
 
-# ——————————————————————————————
-# General - Relative Dates
-# ——————————————————————————————
 #: nautilus_my_computer/common.py
 msgid "Today"
 msgstr "오늘"
@@ -195,9 +185,6 @@ msgid "In {n} year"
 msgid_plural "In {n} years"
 msgstr[0] "{n}년 후"
 
-# ——————————————————————————————
-# Panel - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/components.py
 msgid "Rename Folder"
 msgstr ""
@@ -292,23 +279,14 @@ msgstr ""
 msgid "Properties"
 msgstr "속성"
 
-# ——————————————————————————————
-# Sidebar
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Computer"
 msgstr "컴퓨터"
 
-# ——————————————————————————————
-# Preferences - General
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
 msgstr "내 컴퓨터 설정"
 
-# ——————————————————————————————
-# Sidebar - Places
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Home"
 msgstr ""
@@ -329,7 +307,6 @@ msgstr ""
 msgid "Starred"
 msgstr ""
 
-# Previous translation (before rename from "Network Volumes"): 네트워크 볼륨
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Network"
 msgstr ""
@@ -342,9 +319,6 @@ msgstr ""
 msgid "Open Folder"
 msgstr ""
 
-# ——————————————————————————————
-# Panel - Disk card actions
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Open File"
 msgstr ""
@@ -374,9 +348,6 @@ msgstr ""
 msgid "General"
 msgstr "일반"
 
-# ——————————————————————————————
-# Preferences - Tabs
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Computer view"
 msgstr "컴퓨터 보기"
@@ -385,9 +356,6 @@ msgstr "컴퓨터 보기"
 msgid "Sidebar"
 msgstr "사이드바"
 
-# ——————————————————————————————
-# Preferences - About
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "About"
 msgstr "정보"
@@ -400,23 +368,13 @@ msgstr "컴퓨터 보기에서 시작"
 msgid "Launch directly to the Computer view instead of Home"
 msgstr "홈 대신 컴퓨터 보기를 바로 엽니다"
 
-# ——————————————————————————————
-# Preferences - Panel visibility
-# ——————————————————————————————
-# Previous translation (before rename from "Visibility"): 표시 여부
 #: nautilus_my_computer/main.py
 msgid "Panel visibility"
 msgstr ""
 
 #: nautilus_my_computer/main.py
-msgid ""
-"Choose how each group appears. Visible: shows the group as a normal "
-"separated section. Merged: folds the group into the On this Computer group. "
-"Hidden: hides the group entirely."
-msgstr ""
-"각 그룹이 표시되는 방식을 선택합니다. 표시: 그룹을 일반적인 별도 섹션으로 표"
-"시합니다. 병합: 그룹을 이 컴퓨터 그룹 안으로 접어 넣습니다. 숨김: 그룹을 완전"
-"히 숨깁니다."
+msgid "Choose how each group appears. Visible: shows the group as a normal separated section. Merged: folds the group into the On this Computer group. Hidden: hides the group entirely."
+msgstr "각 그룹이 표시되는 방식을 선택합니다. 표시: 그룹을 일반적인 별도 섹션으로 표시합니다. 병합: 그룹을 이 컴퓨터 그룹 안으로 접어 넣습니다. 숨김: 그룹을 완전히 숨깁니다."
 
 #: nautilus_my_computer/main.py
 msgid "Visible"
@@ -430,16 +388,10 @@ msgstr "병합"
 msgid "Hidden"
 msgstr "숨김"
 
-# ——————————————————————————————
-# Panel - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Preferred Folders"
 msgstr "기본 폴더"
 
-# ——————————————————————————————
-# Preferences - System
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Show system partitions"
 msgstr "시스템 파티션 표시"
@@ -448,9 +400,6 @@ msgstr "시스템 파티션 표시"
 msgid "Include boot and EFI partitions in the System group"
 msgstr "부트 및 EFI 파티션을 시스템 그룹에 포함합니다"
 
-# ——————————————————————————————
-# Preferences - Sidebar visibility
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
 msgstr ""
@@ -459,9 +408,6 @@ msgstr ""
 msgid "Choose which locations appear on the sidebar."
 msgstr ""
 
-# ——————————————————————————————
-# Preferences - Bar Color
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Bar Color"
 msgstr "막대 색상"
@@ -498,9 +444,6 @@ msgstr "시작 색상"
 msgid "End color"
 msgstr "끝 색상"
 
-# ——————————————————————————————
-# Preferences - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Show captions"
 msgstr "캡션 표시"
@@ -553,9 +496,6 @@ msgstr "포맷…"
 msgid "System"
 msgstr "시스템"
 
-# ——————————————————————————————
-# Panel - Group labels
-# ——————————————————————————————
 #: nautilus_my_computer/my_computer_view.py
 msgid "On this Computer"
 msgstr "이 컴퓨터"
@@ -572,9 +512,6 @@ msgstr "디스크"
 msgid "Not mounted"
 msgstr "마운트되지 않음"
 
-# ——————————————————————————————
-# Panel - Disk card
-# ——————————————————————————————
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{free} free of {total}"
@@ -596,8 +533,3 @@ msgstr ""
 msgid "Dimensions"
 msgstr ""
 
-#~ msgid "Show the Preferred Folders group at the top of the view"
-#~ msgstr "보기 상단에 기본 폴더 그룹 표시"
-
-#~ msgid "Add to Preferred"
-#~ msgstr "기본 폴더에 추가"
