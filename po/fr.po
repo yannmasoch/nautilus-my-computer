@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-07-24 12:50-0700\n"
-"PO-Revision-Date: 2026-06-01 00:00+0200\n"
+"PO-Revision-Date: 2026-07-25 17:35+0000\n"
 "Last-Translator: Yann Masoch\n"
 "Language-Team: French\n"
 "Language: fr\n"
@@ -67,6 +67,7 @@ msgstr ""
 #: nautilus_my_computer/column_view.py
 msgid "Early access feature. It may contain bugs or inconsistencies."
 msgstr ""
+"Fonctionnalité en avant-première. Peut contenir des bugs ou des incohérences."
 
 #: nautilus_my_computer/column_view.py
 msgid "Grid View"
