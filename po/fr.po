@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-07-24 12:50-0700\n"
-"PO-Revision-Date: 2026-06-01 00:00+0200\n"
+"PO-Revision-Date: 2026-07-25 17:22+0000\n"
 "Last-Translator: Yann Masoch\n"
 "Language-Team: French\n"
 "Language: fr\n"
@@ -33,7 +33,7 @@ msgstr "Réinitialiser"
 
 #: nautilus_my_computer/column_view.py
 msgid "New Folder"
-msgstr ""
+msgstr "Nouveau Dossier"
 
 #: nautilus_my_computer/column_view.py
 #, fuzzy, python-format
@@ -58,11 +58,11 @@ msgstr ""
 
 #: nautilus_my_computer/column_view.py
 msgid "Select"
-msgstr ""
+msgstr "Sélectionner"
 
 #: nautilus_my_computer/column_view.py
 msgid "Beta"
-msgstr ""
+msgstr "Bêta"
 
 #: nautilus_my_computer/column_view.py
 msgid "Early access feature. It may contain bugs or inconsistencies."
