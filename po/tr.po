@@ -3,14 +3,14 @@ msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-07-24 12:50-0700\n"
-"PO-Revision-Date: 2026-06-22 00:17+0300\n"
+"PO-Revision-Date: 2026-07-25 17:22+0000\n"
 "Last-Translator: Taylan Tatlı\n"
 "Language-Team: Turkish\n"
 "Language: tr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
 "X-Generator: Poedit 3.9\n"
 
 # ——————————————————————————————
@@ -18,28 +18,28 @@ msgstr ""
 # ——————————————————————————————
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
-msgstr ""
+msgstr "Simge Değiştir"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Icon"
-msgstr ""
+msgstr "Simge"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Search icons…"
-msgstr ""
+msgstr "Simge ara…"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Reset"
-msgstr ""
+msgstr "Sıfırla"
 
 #: nautilus_my_computer/column_view.py
 msgid "New Folder"
-msgstr ""
+msgstr "Yeni Klasör"
 
 #: nautilus_my_computer/column_view.py
-#, fuzzy, python-format
+#, python-format
 msgid "Open With %s"
-msgstr "Birlikte Aç…"
+msgstr "%s İle Aç"
 
 # ——————————————————————————————
 # Panel - Disk card actions
@@ -51,42 +51,42 @@ msgstr "Aç"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select Move Destination"
-msgstr ""
+msgstr "Taşıma Konumunu Seç"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select Copy Destination"
-msgstr ""
+msgstr "Kopyalama Konumunu Seç"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select"
-msgstr ""
+msgstr "Seç"
 
 #: nautilus_my_computer/column_view.py
 msgid "Beta"
-msgstr ""
+msgstr "Beta"
 
 #: nautilus_my_computer/column_view.py
 msgid "Early access feature. It may contain bugs or inconsistencies."
-msgstr ""
+msgstr "Erken erişim özelliği. Hatalar veya tutarsızlıklar içerebilir."
 
 #: nautilus_my_computer/column_view.py
 msgid "Grid View"
-msgstr ""
+msgstr "Izgara Görünümü"
 
 #: nautilus_my_computer/column_view.py
 msgid "List View"
-msgstr ""
+msgstr "Liste Görünümü"
 
 #: nautilus_my_computer/column_view.py
 msgid "Column View"
-msgstr ""
+msgstr "Sütun Görünümü"
 
 # ——————————————————————————————
 # Preferences - Preferred Folders
 # ——————————————————————————————
 #: nautilus_my_computer/column_view.py
 msgid "View Options"
-msgstr ""
+msgstr "Görünüm Seçenekleri"
 
 # ——————————————————————————————
 # Panel - Preferred Folders - Captions
@@ -210,15 +210,15 @@ msgstr[1] "{n} yıl sonra"
 # ——————————————————————————————
 #: nautilus_my_computer/components.py
 msgid "Rename Folder"
-msgstr ""
+msgstr "Klasörü Yeniden Adlandır"
 
 #: nautilus_my_computer/components.py
 msgid "Rename File"
-msgstr ""
+msgstr "Dosyayı Yeniden Adlandır"
 
 #: nautilus_my_computer/components.py
 msgid "Rename"
-msgstr ""
+msgstr "Yeniden Adlandır"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Tab"
@@ -234,69 +234,69 @@ msgstr "Birlikte Aç…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Remove from Bookmarks"
-msgstr ""
+msgstr "Yer İmlerinden Kaldır"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Add to Bookmarks"
-msgstr ""
+msgstr "Yer İmlerine Ekle"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Unpin from My Computer"
-msgstr ""
+msgstr "Bilgisayarımdan Sabitlemeyi Kaldır"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Pin to My Computer"
-msgstr ""
+msgstr "Bilgisayarıma Sabitle"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Cut"
-msgstr ""
+msgstr "Kes"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Copy"
-msgstr ""
+msgstr "Kopyala"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Paste"
-msgstr ""
+msgstr "Yapıştır"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Move to…"
-msgstr ""
+msgstr "Şuraya taşı…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Copy to…"
-msgstr ""
+msgstr "Şuraya kopyala…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
-msgstr ""
+msgstr "Yeni Klasör…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Document"
-msgstr ""
+msgstr "Yeni Belge"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in Terminal"
-msgstr ""
+msgstr "Uçbirimde Aç"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Rename…"
-msgstr ""
+msgstr "Yeniden Adlandır…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Compress…"
-msgstr ""
+msgstr "Sıkıştır…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Email…"
-msgstr ""
+msgstr "E-posta…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
-msgstr ""
+msgstr "Çöp Kutusuna Taşı"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Properties"
@@ -325,7 +325,7 @@ msgstr "Ev"
 
 #: nautilus_my_computer/main.py
 msgid "Loading…"
-msgstr ""
+msgstr "Yükleniyor…"
 
 #: nautilus_my_computer/main.py
 msgid "Open My Computer"
@@ -350,35 +350,35 @@ msgstr "Çöp"
 
 #: nautilus_my_computer/main.py
 msgid "Open Folder"
-msgstr ""
+msgstr "Klasörü Aç"
 
 # ——————————————————————————————
 # Panel - Disk card actions
 # ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Open File"
-msgstr ""
+msgstr "Dosyayı Aç"
 
 #: nautilus_my_computer/main.py
 msgid "Cancel"
-msgstr ""
+msgstr "İptal"
 
 #: nautilus_my_computer/main.py
 #, python-format
 msgid "Choose an app to open <b>%s</b>"
-msgstr ""
+msgstr "<b>%s</b> açmak için bir uygulama seçin"
 
 #: nautilus_my_computer/main.py
 msgid "Recommended Apps"
-msgstr ""
+msgstr "Tavsiye Edilen Uygulamalar"
 
 #: nautilus_my_computer/main.py
 msgid "Other Apps"
-msgstr ""
+msgstr "Diğer Uygulamalar"
 
 #: nautilus_my_computer/main.py
 msgid "No applications found."
-msgstr ""
+msgstr "Uygulama bulunamadı."
 
 #: nautilus_my_computer/main.py
 msgid "General"
@@ -557,7 +557,7 @@ msgstr "Çıkar"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Format…"
-msgstr "Biçimlendir..."
+msgstr "Biçimlendir…"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "System"
@@ -592,19 +592,19 @@ msgstr "{total} alanda {free} boş"
 
 #: nautilus_my_computer/widgets.py
 msgid "Folder is Empty"
-msgstr ""
+msgstr "Klasör Boş"
 
 #: nautilus_my_computer/widgets.py
 msgid "Created"
-msgstr ""
+msgstr "Oluşturuldu"
 
 #: nautilus_my_computer/widgets.py
 msgid "Modified"
-msgstr ""
+msgstr "Değiştirildi"
 
 #: nautilus_my_computer/widgets.py
 msgid "Dimensions"
-msgstr ""
+msgstr "Boyutlar"
 
 #~ msgid "Show the Preferred Folders group at the top of the view"
 #~ msgstr "Görünümün üst kısmında Tercih Edilen Klasörler grubunu göster"
