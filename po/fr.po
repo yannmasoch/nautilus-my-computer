@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-07-24 12:50-0700\n"
-"PO-Revision-Date: 2026-07-25 17:22+0000\n"
+"PO-Revision-Date: 2026-07-26 23:42+0000\n"
 "Last-Translator: Yann Masoch\n"
 "Language-Team: French\n"
 "Language: fr\n"
@@ -36,9 +36,9 @@ msgid "New Folder"
 msgstr "Nouveau Dossier"
 
 #: nautilus_my_computer/column_view.py
-#, fuzzy, python-format
+#, python-format
 msgid "Open With %s"
-msgstr "Ouvrir avec…"
+msgstr "Ouvrir avec %s"
 
 # ——————————————————————————————
 # Panel - Disk card actions
