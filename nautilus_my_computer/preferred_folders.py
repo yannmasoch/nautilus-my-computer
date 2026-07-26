@@ -101,6 +101,21 @@ PREFERRED_TOKENS: dict[str, dict] = {
         "icon": "folder-network",
         "uri": lambda: "x-network-view:///",
     },
+    # The one token whose icon is not folder-shaped. Nautilus shows a bin in its
+    # own sidebar, so a folder icon here would both diverge from native and hide
+    # which card is the Trash ("folder-trash" exists in some third-party themes
+    # but not in Adwaita, so it cannot be a default). Kept last in
+    # DEFAULT_PREFERRED_FOLDERS so the odd silhouette sits at the grid boundary.
+    # "gio_icon" defers the icon to GIO like a real folder token: trash:/// has a
+    # real standard::icon that GIO already flips between user-trash and
+    # user-trash-full, so the empty/full state needs no watching of our own.
+    # "icon" is only the first-frame placeholder until that query resolves.
+    "trash": {
+        "label": _nautilus_string("Trash"),
+        "icon": "user-trash",
+        "uri": lambda: "trash:///",
+        "gio_icon": True,
+    },
     # Not wrapped in _(): the real xdg-user-dirs name always overwrites this
     # within one async GIO query (see _refresh_folder_icon_async), so it's
     # only ever visible for a single frame -- translating it would be

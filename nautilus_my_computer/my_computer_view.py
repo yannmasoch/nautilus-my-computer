@@ -1412,7 +1412,7 @@ def _sweep_folder_icons(ext) -> None:
     for pf in list(_folder_data.values()):
         if pf.key not in preferred_folders.PREFERRED_TOKENS:
             _refresh_folder_metadata_async(ext, pf)
-        elif pf.is_special_place:
+        elif pf.is_special_place and not preferred_folders.PREFERRED_TOKENS[pf.key].get("gio_icon"):
             _refresh_special_place_icon_async(ext, pf)
         else:
             _refresh_folder_icon_async(ext, pf)
@@ -1649,7 +1649,9 @@ def _populate(ext, win: Gtk.Window) -> None:
         for pf in folders:
             if pf.key not in preferred_folders.PREFERRED_TOKENS:
                 _refresh_folder_metadata_async(ext, pf)
-            elif pf.is_special_place:
+            elif pf.is_special_place and not preferred_folders.PREFERRED_TOKENS[pf.key].get(
+                "gio_icon"
+            ):
                 _refresh_special_place_icon_async(ext, pf)
             else:
                 _refresh_folder_icon_async(ext, pf)
