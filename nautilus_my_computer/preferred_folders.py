@@ -142,16 +142,26 @@ PREFERRED_TOKENS: dict[str, dict] = {
     },
 }
 
+# Mirrors Nautilus' own sidebar: its built-in places in source order
+# (Home, Recent, Starred, Network -- see nautilus-sidebar.c), then the XDG user
+# directories in /etc/xdg/user-dirs.defaults order. Those five are not built-in
+# sidebar places at all: Nautilus reads them from the user's GTK bookmarks, so
+# there is no native sidebar order to copy and the xdg-user-dirs order is the
+# closest canonical one. Trash is the exception to the mirror -- native keeps it
+# with the built-in places, but it is the only non-folder icon, so it goes last
+# where the odd silhouette breaks the grid least. Users can reorder by drag and
+# drop and unpin anything, so this is only a starting point.
 DEFAULT_PREFERRED_FOLDERS: list[str] = [
     "home",
     "recent",
     "starred",
-    "documents",
-    "downloads",
-    "music",
-    "videos",
-    "pictures",
     "network",
+    "downloads",
+    "documents",
+    "music",
+    "pictures",
+    "videos",
+    "trash",
 ]
 
 
