@@ -9,7 +9,7 @@
   <schema id="io.github.yannmasoch.nautilus-my-computer" path="/io/github/yannmasoch/nautilus-my-computer/">
 
     <key name="start-on-disks" type="b">
-      <default>false</default>
+      <default>true</default>
       <summary>Start on Computer view</summary>
       <description>Show the disk panel when Nautilus opens</description>
     </key>
