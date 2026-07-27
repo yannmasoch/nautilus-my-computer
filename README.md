@@ -10,7 +10,7 @@ My Computer for Nautilus, what GNOME Files should have always been
 
 <br>
 
-**My Computer** is a custom view for GNOME Files (Nautilus), showing all your drives, volumes, and network mounts with usage levels in one clean panel.
+**My Computer** is a custom view for Nautilus (GNOME Files), showing all your drives, volumes, and network mounts with usage levels in one clean panel.
 
 *"GNOME dropped the Other Locations view and left nothing in its place. I built what should have always been there, and the GNOME community made it even better with ❤️"*
 
@@ -20,7 +20,7 @@ My Computer for Nautilus, what GNOME Files should have always been
 
 </div>
 
-## Availability
+## Installation
 
 <div align="center">
 
@@ -42,9 +42,7 @@ My Computer for Nautilus, what GNOME Files should have always been
 
 </div>
 
-## Installation
-
-Pick your distribution below and expand it for the commands. No native package? Use the universal script. Nothing is written outside your home directory.
+Expand the section for your distribution for instructions. No native package? Use the universal script. Nothing is written outside your home directory.
 
 <details>
 <summary><img src="https://img.shields.io/badge/-E95420?style=flat&logo=ubuntu&logoColor=white" alt="Ubuntu" height="18" style="vertical-align: middle;"> <b>Ubuntu</b> (PPA)</summary>
@@ -54,8 +52,10 @@ sudo add-apt-repository ppa:yannmasoch/nautilus-my-computer
 sudo apt update
 sudo apt install nautilus-my-computer
 ```
+
 Currently supported series: 26.04 LTS (resolute) and 26.10 (stonking). Non-LTS Ubuntu releases
 only get about 9 months of support, so this list moves forward as older series reach end of life.
+
 </details>
 
 <details>
@@ -65,23 +65,28 @@ only get about 9 months of support, so this list moves forward as older series r
 sudo dnf copr enable yannmasoch/nautilus-my-computer
 sudo dnf install nautilus-my-computer
 ```
+
 </details>
 
 <details>
 <summary><img src="https://img.shields.io/badge/-73BA25?style=flat&logo=opensuse&logoColor=white" alt="openSUSE" height="18" style="vertical-align: middle;"> <b>openSUSE</b> (OBS)</summary>
 
 **Tumbleweed**
+
 ```bash
 sudo zypper addrepo https://download.opensuse.org/repositories/home:yannmasoch/openSUSE_Tumbleweed/home:yannmasoch.repo
 sudo zypper refresh
 sudo zypper install nautilus-my-computer
 ```
+
 **16.0**
+
 ```bash
 sudo zypper addrepo https://download.opensuse.org/repositories/home:yannmasoch/16.0/home:yannmasoch.repo
 sudo zypper refresh
 sudo zypper install nautilus-my-computer
 ```
+
 </details>
 
 <details>
@@ -90,6 +95,7 @@ sudo zypper install nautilus-my-computer
 ```bash
 yay -S nautilus-my-computer
 ```
+
 </details>
 
 <details>
@@ -98,43 +104,60 @@ yay -S nautilus-my-computer
 ```bash
 nix profile install "github:yannmasoch/nautilus-my-computer?dir=packaging/nix"
 ```
+
 </details>
 
 <details>
 <summary><img src="https://img.shields.io/badge/-555555?style=flat&logo=git&logoColor=white" alt="Git" height="18" style="vertical-align: middle;"> <b>Universal install script</b> (any distro)</summary>
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/yannmasoch/nautilus-my-computer/main/install.sh | sh
-```
-Uninstall:
-```bash
-curl -fsSL https://raw.githubusercontent.com/yannmasoch/nautilus-my-computer/main/install.sh | sh -s -- --uninstall
-```
+- **Directly install from remote**
+
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/yannmasoch/nautilus-my-computer/main/install.sh | sh
+  ```
+
+  Uninstall:
+
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/yannmasoch/nautilus-my-computer/main/install.sh | sh -s -- --uninstall
+  ```
+
+<br>
+
+- **Or, install from local clone**
+
+  Clone the repo and run the installer locally. This installs from the local files
+  with no downloads, so it avoids GitHub rate-limits:
+
+  ```bash
+  git clone https://github.com/yannmasoch/nautilus-my-computer.git
+  cd nautilus-my-computer
+  ./install.sh
+  ```
+
+  Uninstall:
+
+  ```bash
+  ./install.sh --uninstall
+  ```
+
+  > [!NOTE]  
+  >
+  > Run it as `./install.sh` (not `bash install.sh`) so it installs from your local clone instead of downloading.
+
 </details>
 
-<details>
-<summary><img src="https://img.shields.io/badge/-555555?style=flat&logo=github&logoColor=white" alt="GitHub" height="18" style="vertical-align: middle;"> <b>Manual install</b> (from source)</summary>
+<br>
 
-Clone the repo and run the installer locally. This installs from the local files
-with no downloads, so it avoids GitHub rate-limits:
-```bash
-git clone https://github.com/yannmasoch/nautilus-my-computer.git
-cd nautilus-my-computer
-./install.sh
-```
-Uninstall:
-```bash
-./install.sh --uninstall
-```
-Run it as `./install.sh` (not `bash install.sh`) so it installs from your local
-clone instead of downloading.
-</details>
+See tested distributions/Nautilus versions [here](#tested-on).
 
-## My Computer
+## Features
+
+My Computer adds a native-feeling "Computer" panel to GNOME Files that shows drives, volumes, removable media, and network mounts grouped by type; including usage bars, mount/eject controls, and a "Preferred Folders" section where you can pin folders and other locations. It also adds customizable visibility and sidebar options, custom bookmark icon options, and a new Column View (Beta).
 
 ### Sidebar integration
 
-Computer sits at the top of the GNOME Files sidebar, click to open the panel and right-click for settings.
+Computer sits at the top of the GNOME Files sidebar; click to open the panel and right-click for more options.
 
 ![Computer button](assets/images/computer-button.png)
 
@@ -142,19 +165,53 @@ Computer sits at the top of the GNOME Files sidebar, click to open the panel and
 
 A "Preferred Folders" group sits at the top of the Computer view, giving you one-click access to your everyday folders without digging through the sidebar.
 
-This group can be hidden if you'd rather not see it. Pin or unpin any folder as you want.
+This group can be hidden if you'd rather not see it. Pin or unpin any folder as you want. You can drag the Preferred Folders to reorder them.
 
 ![Preferred Folders](assets/images/preferred-folders.png)
 
-Reorder your Preferred Folders by dragging cards into place, right in the Computer view, and the new order is saved automatically.
-
-![Preferred Folders drag-and-drop](assets/images/preferred-folders-dnd.png)
-
-Captions follow native Nautilus captions support, show or hide them per your preference.
+Captions follow native Nautilus captions; show or hide them per your preference.
 
 ![Preferred Folders captions](assets/images/preferred-folders-captions.png)
 
-### Settings page
+### Groups visibility
+
+My Computer organizes your storage into five groups:
+
+- **System:** root, boot, EFI, and swap partitions
+- **On this Computer:** your internal drives and partitions
+- **Removable:** USB drives, phones, cameras, and removable media
+- **Disc:** optical drives and mounted ISO images
+- **Network:** network shares and remote filesystems
+
+Each group (except **On this Computer**) has three visibility settings, configurable from the right-click menu on the Computer button:
+
+- **Visible**: shown as its own labeled section
+- **Hidden**: removed from the panel entirely
+- **Merged**: folded into **On this Computer**, keeping everything in one flat list
+
+Make the **My Computer** view your own, and organize it to show only what matters to you.
+
+![Groups Visibility](assets/images/groups-visibility.png)
+
+### Sidebar customization
+
+The default GNOME Files sidebar shows every built-in location whether you use it or not. My Computer gives you the visibility control of each one, so you can keep only what you actually need.
+
+**Computer** is always shown, it's the whole point of the extension. Everything else is up to you, turn off what you never use and your sidebar stays short and clean.
+
+![Sidebar Visibility](assets/images/sidebar-visibility.png)
+
+#### Custom bookmark icons
+
+Right-click any bookmark in the sidebar and choose "Change icon" to pick a custom symbolic icon from a searchable picker.
+
+![Custom bookmark icons](assets/images/custom-bookmark-icons.png)
+
+## Settings
+
+Right-click on _Computer_ in the sidebar to access the settings.
+
+![Computer button](assets/images/computer-button.png)
 
 My Computer Settings let you:
 
@@ -168,72 +225,6 @@ My Computer Settings let you:
 ![Settings Page](assets/images/settings-page.png)
 
 > Settings are stored via GSettings under `io.github.yannmasoch.nautilus-my-computer` and persist across sessions.
-
-## Groups visibility
-
-My Computer organises your storage into five groups:
-
-- **System** - root, boot, EFI, and swap partitions
-- **On this Computer** - your internal drives and partitions
-- **Removable** - USB drives, phones, cameras, and removable media
-- **Disc** - optical drives and mounted ISO images
-- **Network** - network shares and remote filesystems
-
-Each group (except **On this Computer**) has three visibility settings, configurable from the right-click menu on the Computer button:
-
-- **Visible** - shown as its own labelled section
-- **Hidden** - removed from the panel entirely
-- **Merged** - folded into **On this Computer**, keeping everything in one flat list
-
-Make the **My Computer** view your own, and organize it to show only what matters to you.
-
-![Groups Visibility](assets/images/groups-visibility.png)
-
-## Sidebar visibility
-
-The default GNOME Files sidebar shows every built-in location whether you use it or not. My Computer gives you the visibility control of each one, so you can keep only what you actually need.
-
-- **Home**
-- **Recent**
-- **Starred**
-- **Network**
-- **Trash**
-
-**Computer** is always shown, it's the whole point of the extension. Everything else is up to you, turn off what you never use and your sidebar stays short and clean.
-
-![Sidebar Visibility](assets/images/sidebar-visibility.png)
-
-### Custom bookmark icons
-
-Right-click any bookmark in the sidebar and choose "Change icon" to pick a custom symbolic icon from a searchable picker. Your choice persists across Nautilus restarts.
-
-![Custom bookmark icons](assets/images/custom-bookmark-icons.png)
-
-## Style
-
-### Color mode for disk usage bars
-
-Disk usage is shown as a native `Gtk.LevelBar`. Three color modes are available in Settings.
-
-![Color mode preview](assets/images/color-mode.png)
-
-- **Gnome Accent Color** follows your GNOME accent color automatically
-- **Custom Color** a single custom color
-- **Custom Gradient** a two-color custom gradient
-
-### Light and dark mode
-
-The panel follows GNOME's light/dark preference natively, with no extra configuration.
-
-![Light and dark mode](assets/images/light-and-dark-mode.png)
-
-### GNOME icon themes
-
-All icons are native GNOME icons. My Computer works with any custom icon theme.
-
-### GNOME GTK themes
-
-My Computer is compatible with almost all custom GTK themes.
 
 ## Column View (Public Beta)
 
@@ -249,7 +240,15 @@ The old two-state view-mode button is now a segmented Grid/List/Column switcher,
 
 This is an early public beta, marked with a **Beta** badge in the view. The core browsing experience is solid, but it's still fresh and needs real-world use to surface edge cases. Found something rough? [Check details for Column View on GitHub](https://github.com/yannmasoch/nautilus-my-computer/issues/67).
 
-## Features
+## Style
+
+My Computer uses native GNOME visuals throughout. The panel follows the system light/dark preference and respects your icon and GTK themes. You can also set the disk usage bar to follow the system accent color, or choose a custom color or gradient.
+
+![Light and dark mode](assets/images/light-and-dark-mode.png)
+
+![Color mode preview](assets/images/color-mode.png)
+
+## Feature highlights
 
 - **All your storage in one place:** local drives, USB sticks, phones, network mounts, and removable media grouped by type.
 - **Usage bars:** at-a-glance capacity for every mounted volume.
@@ -266,27 +265,29 @@ This is an early public beta, marked with a **Beta** badge in the view. The core
 - **Open With:** pick an app to open a folder or disk with, from a native-feel app chooser.
 - **Live icon theme updates:** disk and folder card icons refresh immediately when you switch icon themes, no restart needed.
 - **Column View (public beta):** browse folders as Miller-style columns, a third view mode alongside list and grid, with its own context menu and previews.
-  
+
 ## Tested on
 
-| Distro | GNOME Files | Status | File Picker |
-|---|---|---|---|
-| Arch | 50.2.2 | ✅ | ✅ |
-| Fedora 44 Workstation | 50.2.2 | ✅ | ✅ |
-| Fedora 44 Workstation | 50.0 | ✅ | ✅ |
-| openSUSE Tumbleweed | 50.2.2 | ✅ | ✅ |
-| Ubuntu 26.04 LTS | 50.0 | ✅ | ✅ |
-| Fedora 41 Workstation | 47.0 | ✅ | ❌ Not supported |
-| Fedora 42 Workstation | 48.0 | ✅ | ❌ Not supported |
-| Zorin OS 18 | 46.4 | ☑️ | ❓ Not tested |
+| Distro                | GNOME Files | Status | File Picker      |
+| --------------------- | ----------- | ------ | ---------------- |
+| Arch                  | 50.2.2      | ✅     | ✅               |
+| Fedora 44 Workstation | 50.2.2      | ✅     | ✅               |
+| Fedora 44 Workstation | 50.0        | ✅     | ✅               |
+| openSUSE Tumbleweed   | 50.2.2      | ✅     | ✅               |
+| Ubuntu 26.04 LTS      | 50.0        | ✅     | ✅               |
+| Fedora 41 Workstation | 47.0        | ✅     | ❌ Not supported |
+| Fedora 42 Workstation | 48.0        | ✅     | ❌ Not supported |
+| Zorin OS 18           | 46.4        | ☑️    | ❓ Not tested    |
 
+> [!NOTE]  
+>
 > GNOME Files versions below 50 may have limited functionality. Full support targets GNOME Files 50+.
 
 ## Languages
 
-My Computer is fully localised. The UI language is picked up automatically from your GNOME locale settings, no configuration required.
+My Computer is fully localized. The UI language is picked up automatically from your GNOME locale settings.
 
-Both left-to-right (LTR) and right-to-left (RTL) layouts are supported. The panel mirrors its layout direction automatically when a RTL language is active.
+Both left-to-right (LTR) and right-to-left (RTL) layouts are supported; the panel mirrors its layout direction automatically when an RTL language is active.
 
 Translations are managed on [Weblate](https://hosted.weblate.org/projects/nautilus-my-computer/):
 
@@ -312,7 +313,7 @@ My Computer is community-built. These people have shaped what it is today.
 
 [![Contributors](https://contrib.rocks/image?repo=yannmasoch/nautilus-my-computer)](https://github.com/yannmasoch/nautilus-my-computer/graphs/contributors)
 
-Thanks also go to everyone who opened issues, reported bugs, and shared feedback on GitHub and social media, this project owes just as much to them as it does to the code.
+Thanks also go to everyone who opened issues, reported bugs, and shared feedback on GitHub and social media. This project owes just as much to them as it does to the code.
 
 Want to contribute? Check out [CONTRIBUTING.md](CONTRIBUTING.md).
 
