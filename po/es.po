@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-07-24 12:50-0700\n"
-"PO-Revision-Date: 2026-06-11 00:00+0200\n"
+"PO-Revision-Date: 2026-07-29 01:32+0000\n"
 "Last-Translator: Unai Lomas\n"
 "Language-Team: Spanish\n"
 "Language: es\n"
@@ -17,28 +17,28 @@ msgstr ""
 # ——————————————————————————————
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
-msgstr ""
+msgstr "Cambiar Icono"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Icon"
-msgstr ""
+msgstr "Icono"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Search icons…"
-msgstr ""
+msgstr "Buscar Iconos…"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Reset"
-msgstr ""
+msgstr "Reiniciar"
 
 #: nautilus_my_computer/column_view.py
 msgid "New Folder"
-msgstr ""
+msgstr "Carpeta Nueva"
 
 #: nautilus_my_computer/column_view.py
-#, fuzzy, python-format
+#, python-format
 msgid "Open With %s"
-msgstr "Abrir con…"
+msgstr "Abrir con %s"
 
 # ——————————————————————————————
 # Panel - Disk card actions
@@ -50,42 +50,43 @@ msgstr "Abrir"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select Move Destination"
-msgstr ""
+msgstr "Seleccionar Destino para Mover"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select Copy Destination"
-msgstr ""
+msgstr "Seleccionar Destino para Copiar"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select"
-msgstr ""
+msgstr "Seleccionar"
 
 #: nautilus_my_computer/column_view.py
 msgid "Beta"
-msgstr ""
+msgstr "Beta"
 
 #: nautilus_my_computer/column_view.py
 msgid "Early access feature. It may contain bugs or inconsistencies."
 msgstr ""
+"Característica de Acceso Anticipado. Puede contener fallos o inconsistencias."
 
 #: nautilus_my_computer/column_view.py
 msgid "Grid View"
-msgstr ""
+msgstr "Vista de Cuadrícula"
 
 #: nautilus_my_computer/column_view.py
 msgid "List View"
-msgstr ""
+msgstr "Vista de Lista"
 
 #: nautilus_my_computer/column_view.py
 msgid "Column View"
-msgstr ""
+msgstr "Vista de Columnas"
 
 # ——————————————————————————————
 # Preferences - Preferred Folders
 # ——————————————————————————————
 #: nautilus_my_computer/column_view.py
 msgid "View Options"
-msgstr ""
+msgstr "Opciones de Vista"
 
 # ——————————————————————————————
 # Panel - Preferred Folders - Captions
@@ -209,15 +210,15 @@ msgstr[1] "dentro de {n} años"
 # ——————————————————————————————
 #: nautilus_my_computer/components.py
 msgid "Rename Folder"
-msgstr ""
+msgstr "Renombrar Carpeta"
 
 #: nautilus_my_computer/components.py
 msgid "Rename File"
-msgstr ""
+msgstr "Renombrar Archivo"
 
 #: nautilus_my_computer/components.py
 msgid "Rename"
-msgstr ""
+msgstr "Renombrar"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Tab"
@@ -233,69 +234,69 @@ msgstr "Abrir con…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Remove from Bookmarks"
-msgstr ""
+msgstr "Quitar de Accesos Rápidos"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Add to Bookmarks"
-msgstr ""
+msgstr "Agregar a Accesos Rápidos"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Unpin from My Computer"
-msgstr ""
+msgstr "Desanclar de Equipo"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Pin to My Computer"
-msgstr ""
+msgstr "Anclar en Equipo"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Cut"
-msgstr ""
+msgstr "Cortar"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Copy"
-msgstr ""
+msgstr "Copiar"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Paste"
-msgstr ""
+msgstr "Pegar"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Move to…"
-msgstr ""
+msgstr "Mover a…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Copy to…"
-msgstr ""
+msgstr "Copiar a…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
-msgstr ""
+msgstr "Nueva Carpeta…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Document"
-msgstr ""
+msgstr "Nuevo Documento"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in Terminal"
-msgstr ""
+msgstr "Abrir en Terminal"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Rename…"
-msgstr ""
+msgstr "Renombrar…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Compress…"
-msgstr ""
+msgstr "Comprimir…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Email…"
-msgstr ""
+msgstr "Correo Eletrónico…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
-msgstr ""
+msgstr "Mover a Papelera"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Properties"
@@ -324,7 +325,7 @@ msgstr "Carpeta personal"
 
 #: nautilus_my_computer/main.py
 msgid "Loading…"
-msgstr ""
+msgstr "Cargando…"
 
 #: nautilus_my_computer/main.py
 msgid "Open My Computer"
@@ -348,35 +349,35 @@ msgstr "Papelera"
 
 #: nautilus_my_computer/main.py
 msgid "Open Folder"
-msgstr ""
+msgstr "Abrir Carpeta"
 
 # ——————————————————————————————
 # Panel - Disk card actions
 # ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Open File"
-msgstr ""
+msgstr "Abrir Archivo"
 
 #: nautilus_my_computer/main.py
 msgid "Cancel"
-msgstr ""
+msgstr "Cancelar"
 
 #: nautilus_my_computer/main.py
 #, python-format
 msgid "Choose an app to open <b>%s</b>"
-msgstr ""
+msgstr "Seleccione una aplicación para abrir <b>%s</b>"
 
 #: nautilus_my_computer/main.py
 msgid "Recommended Apps"
-msgstr ""
+msgstr "Aplicaciones Recomendadas"
 
 #: nautilus_my_computer/main.py
 msgid "Other Apps"
-msgstr ""
+msgstr "Otras Aplicaciones"
 
 #: nautilus_my_computer/main.py
 msgid "No applications found."
-msgstr ""
+msgstr "No se encontraron aplicaciones."
 
 #: nautilus_my_computer/main.py
 msgid "General"
@@ -589,19 +590,19 @@ msgstr "{free} libre de {total}"
 
 #: nautilus_my_computer/widgets.py
 msgid "Folder is Empty"
-msgstr ""
+msgstr "La carpeta esta vacía"
 
 #: nautilus_my_computer/widgets.py
 msgid "Created"
-msgstr ""
+msgstr "Creado"
 
 #: nautilus_my_computer/widgets.py
 msgid "Modified"
-msgstr ""
+msgstr "Modificado"
 
 #: nautilus_my_computer/widgets.py
 msgid "Dimensions"
-msgstr ""
+msgstr "Dimensiones"
 
 #~ msgid "Show the Preferred Folders group at the top of the view"
 #~ msgstr ""
