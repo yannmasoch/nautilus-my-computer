@@ -762,10 +762,12 @@ class MyComputerToggleButton(Gtk.Box):
     __gsignals__ = {"changed": (GObject.SignalFlags.RUN_FIRST, None, (str,))}
 
     def __init__(self, segments, height: int = -1) -> None:
-        """segments: iterable of (name, icon_name, tooltip_text). height
-        defaults to -1 (natural size, stretched to fill via valign=FILL below
-        so it matches the containing toolbar's height); pass an explicit
-        value to pin it instead."""
+        """segments: iterable of (name, icon, tooltip_text), where icon is
+        either an icon name (str) or a Gio.Icon (e.g. a bundled fallback SVG,
+        see column_view._resolve_column_icon). height defaults to -1 (natural
+        size, stretched to fill via valign=FILL below so it matches the
+        containing toolbar's height); pass an explicit value to pin it
+        instead."""
         # 1px spacing matches the separator's own stroke width, so the gap
         # between buttons stays visually constant whether the separator is
         # shown or hidden (opacity toggle in _update_separators).
@@ -791,14 +793,7 @@ class MyComputerToggleButton(Gtk.Box):
                 self.append(sep)
                 self._separators.append(sep)
 
-            image = Gtk.Image.new_from_icon_name(icon)
-            image.set_pixel_size(-1)
-            image.set_margin_start(8)
-            image.set_margin_end(8)
-            image.set_valign(Gtk.Align.CENTER)
-            image.set_halign(Gtk.Align.CENTER)
-
-            btn = Gtk.ToggleButton(child=image, tooltip_text=tooltip)
+            btn = Gtk.ToggleButton(child=self._make_segment_image(icon), tooltip_text=tooltip)
             btn.add_css_class("flat")
             btn.add_css_class("mc-toggle-btn")
             if first_btn is None:
@@ -818,6 +813,22 @@ class MyComputerToggleButton(Gtk.Box):
             self._order.append(name)
 
         self._update_separators()
+
+    @staticmethod
+    def _make_segment_image(icon) -> Gtk.Image:
+        """icon: an icon name (str) or a Gio.Icon (e.g. a bundled fallback
+        SVG, see column_view._resolve_column_icon)."""
+        image = (
+            Gtk.Image.new_from_gicon(icon)
+            if isinstance(icon, Gio.Icon)
+            else Gtk.Image.new_from_icon_name(icon)
+        )
+        image.set_pixel_size(-1)
+        image.set_margin_start(8)
+        image.set_margin_end(8)
+        image.set_valign(Gtk.Align.CENTER)
+        image.set_halign(Gtk.Align.CENTER)
+        return image
 
     def _on_button_enter(self, _ctrl, _x, _y, name: str) -> None:
         self._hovered[name] = True
@@ -868,6 +879,15 @@ class MyComputerToggleButton(Gtk.Box):
         btn = self._buttons.get(name)
         if btn is not None:
             btn.set_sensitive(enabled)
+
+    def set_segment_icon(self, name: str, icon) -> None:
+        """Re-resolve a segment's icon after construction (icon: name or
+        Gio.Icon, same contract as __init__'s segments) -- e.g. when the
+        active icon theme changes live, see
+        column_view._refresh_column_icon_all_windows."""
+        btn = self._buttons.get(name)
+        if btn is not None:
+            btn.set_child(self._make_segment_image(icon))
 
 
 class MyComputerCappedGridFlowBox(Gtk.FlowBox):
@@ -969,20 +989,33 @@ class MyComputerCardSection(Gtk.Box):
         self.flow.append(card)
 
     def _filter_child(self, child: Gtk.FlowBoxChild) -> bool:
-        if not self._query:
-            return True
         inner = child.get_child()
-        display_name = getattr(getattr(inner, "model", None), "display_name", None)
-        if display_name is None:
+        model = getattr(inner, "model", None)
+        if model is None:
             # Not a card (e.g. the drag-reorder placeholder) -- always show it.
             return True
-        return self._query in display_name.lower()
+        # Issue #115: a disk whose mount root is hidden (dot-prefixed mountpoint,
+        # .hidden entry) follows Nautilus' Show Hidden Files. Folder cards are
+        # exempt: the user pinned those deliberately, as with sidebar bookmarks.
+        if isinstance(inner, MyComputerDiskCard) and model.is_hidden:
+            if not self._ext._nautilus_prefs.hidden_files():
+                return False
+        if not self._query:
+            return True
+        display_name = getattr(model, "display_name", None)
+        return display_name is not None and self._query in display_name.lower()
 
     def set_query(self, query: str) -> None:
         """Filter this section's cards by `query` (case-insensitive substring
         of the card's display name). Self-hides the whole section (heading
         included) when nothing matches, so an empty group never lingers."""
         self._query = query.strip().lower()
+        self.refresh_filter()
+
+    def refresh_filter(self) -> None:
+        """Re-evaluate the filter without changing the query (e.g. after cards
+        are (re)built, or the Show Hidden Files preference changes). Self-hides
+        the whole section (heading included) when nothing matches."""
         self.flow.invalidate_filter()
         child = self.flow.get_first_child()
         any_match = False
@@ -991,7 +1024,7 @@ class MyComputerCardSection(Gtk.Box):
                 any_match = True
                 break
             child = child.get_next_sibling()
-        self.set_visible(not self._query or any_match)
+        self.set_visible(any_match)
 
 
 class MyComputerColumnRow(Gtk.ListBoxRow):

@@ -61,6 +61,9 @@ install: build
 	@for f in $(PKG_DIR)/*.py; do \
 		install -Dm644 "$$f" "$(NAUTILUS_EXT_DIR)/$$f"; \
 	done
+	@for f in $(PKG_DIR)/icons/*.svg; do \
+		install -Dm644 "$$f" "$(NAUTILUS_EXT_DIR)/$$f"; \
+	done
 	install -Dm644 $(SCHEMA_FILE) "$(SCHEMA_DIR)/$(SCHEMA_FILE)"
 	@for mo in $(MO_FILES); do \
 		lang=$$(echo "$$mo" | sed -n 's|build/locale/\(.*\)/LC_MESSAGES/.*|\1|p'); \

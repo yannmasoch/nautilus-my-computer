@@ -1,3 +1,15 @@
+nautilus-my-computer (0.12.6-1) UNRELEASED; urgency=medium
+
+  * Fix hidden (dot-prefixed) disks not respecting the Show Hidden Files setting
+  * Fix hidden disks not grouping together in Name/Type sort
+  * Bundle a proper Miller View icon fallback for icon themes missing their own (Adwaita, Yaru, Breeze)
+  * Fix Miller View icon not updating live on icon theme change
+  * Add Portuguese (Brazil) translation
+  * Update French, German, and Spanish translations
+  * Reorganize and clean up the README
+
+ -- Yann Masoch <231734284+yannmasoch@users.noreply.github.com>  Wed, 29 Jul 2026 08:37:15 -0700
+
 nautilus-my-computer (0.12.5-1) UNRELEASED; urgency=medium
 
   * Publish to the AUR (Arch User Repository)

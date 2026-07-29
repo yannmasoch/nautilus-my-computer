@@ -18,6 +18,7 @@ from nautilus_my_computer.common import (
     N_,
     _,
     _all_widgets,
+    _bundled_gicon,
     _icon_name_renders,
     _log,
 )
@@ -106,10 +107,14 @@ _COLUMN_RESIZE_ENABLED = True
 # binding (nautilus_files_view_get_toggle_icon_name) is currently showing:
 # "view-grid-symbolic" while list is showing, "view-list-symbolic" while grid
 # is showing.
+# Most third-party packs ship view-column-symbolic (Papirus, Colloid, Tela,
+# WhiteSur, kora, MacTahoe, Reversal, Vimix, elementary, Qogir, Fluent,
+# Numix); Adwaita, Yaru and Breeze do not (issue #101, see
+# tmp/issue-101-icon-theme-research.md). Those fall through to our own
+# bundled copy of the same name (_resolve_column_icon() below) rather than
+# to view-dual-symbolic -- that name resolves everywhere but Yaru draws it
+# as an open book, and we cannot audit every icon pack in existence.
 _COLUMN_ICON_NAME = "view-column-symbolic"
-# Not every icon theme ships view-column-symbolic (absent from Adwaita as of
-# GNOME 48) -- resolved against the live icon theme in _resolve_column_icon().
-_COLUMN_ICON_FALLBACK = "view-dual-symbolic"
 _ICON_TARGET_GRID = "view-grid-symbolic"  # shown while sitting on list
 _ICON_TARGET_LIST = "view-list-symbolic"  # shown while sitting on grid (default fallback)
 _NATIVE_TOGGLE_ACTION = "slot.files-view-mode-toggle"
@@ -2206,10 +2211,41 @@ def _ancestor_split_button(widget: Gtk.Widget) -> Adw.SplitButton | None:
     return None
 
 
-def _resolve_column_icon() -> str:
-    """view-column-symbolic is missing from some icon themes (e.g. Adwaita as
-    of GNOME 48); fall back to a name every theme in practice ships."""
-    return _COLUMN_ICON_NAME if _icon_name_renders(_COLUMN_ICON_NAME) else _COLUMN_ICON_FALLBACK
+def _resolve_column_icon() -> str | Gio.Icon:
+    """The active theme's own view-column-symbolic when it has one, else our
+    bundled copy of the same name (see common._bundled_gicon). Returns an
+    icon name or a Gio.Icon -- MyComputerToggleButton accepts either."""
+    if _icon_name_renders(_COLUMN_ICON_NAME):
+        return _COLUMN_ICON_NAME
+    return _bundled_gicon(_COLUMN_ICON_NAME) or _COLUMN_ICON_NAME
+
+
+def _refresh_column_icon_all_windows(ext) -> bool:
+    """Icon theme changed live (GNOME Settings). The Grid/List/Column
+    switcher's column segment is resolved once at construction time
+    (_build_view_switcher), so without this watcher it would keep showing
+    whatever it resolved to at last build -- the old theme's own icon, or
+    our bundled fallback -- even after the user switches packs. The
+    switcher itself is always present in the toolbar regardless of which
+    of Grid/List/Column is currently active, so every window is updated
+    here, not just ones currently showing Column View."""
+    icon = _resolve_column_icon()
+    # list() copy: this runs from an idle callback, and _on_window_destroyed
+    # pops from _windows in the same main loop.
+    for _win, state in list(ext._windows.items()):
+        switcher = state.get("view_switcher")
+        if switcher is not None:
+            switcher.set_segment_icon("column", icon)
+    return GLib.SOURCE_REMOVE
+
+
+def init_icon_watcher(ext) -> None:
+    """Called once from MyComputerExtension.__init__. See
+    _refresh_column_icon_all_windows for why this is needed."""
+    icon_theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
+    icon_theme.connect(
+        "changed", lambda *_a, ext=ext: GLib.idle_add(_refresh_column_icon_all_windows, ext)
+    )
 
 
 def _build_view_switcher(ext, win: Gtk.Window) -> Gtk.Widget:

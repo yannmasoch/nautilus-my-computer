@@ -4,6 +4,35 @@ All notable changes to this project are documented here.
 
 ---
 
+## v0.12.6
+Fix hidden disks respecting Show Hidden Files, bundle a proper Miller View icon, and add
+Portuguese (Brazil) translation.
+
+### Added
+- Portuguese (Brazil) translation.
+
+### Changed
+- README reorganized and cleaned up for clarity.
+- Updated French, German, and Spanish translations.
+
+### Fixed
+- Disks mounted at a hidden (dot-prefixed) path are now hidden by the Show Hidden Files setting,
+  like other hidden items.
+- Hidden disks are now grouped together when sorting by Name or Type, matching Column View's
+  behavior.
+- Miller View's icon no longer looks wrong (an open book, or a 2-column box) on icon themes that
+  don't ship their own column icon (Adwaita, Yaru, Breeze) - a matching fallback icon is now
+  bundled with the extension.
+- Miller View's icon now updates immediately when you switch icon themes, instead of requiring a
+  restart.
+
+Thanks to @guilmm for reporting the hidden-disk issue in #115 and for the Portuguese (Brazil)
+translation in #117; to @taprobane99 for reporting the Miller View icon issue in #101; to @uwe-ss
+for the German terminology fixes reported in #114 and updated in #110; to @rabarkar for updating
+the Spanish translation in #110; and to @MoshiurRahmanAdib for reorganizing the README in #111.
+
+---
+
 ## v0.12.5
 Publish to the AUR, move translations to Weblate, start on the Computer view by default, and add
 Greek plus updated German translations.

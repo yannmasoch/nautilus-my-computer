@@ -329,6 +329,7 @@ download_files() {
     cp "$src/$SCHEMA_FILE" "$TEMP_DIR/$SCHEMA_FILE"
     mkdir -p "$TEMP_DIR/$PKG_DIR"
     cp "$src/$PKG_DIR"/*.py "$TEMP_DIR/$PKG_DIR/"
+    [ -d "$src/$PKG_DIR/icons" ] && cp -r "$src/$PKG_DIR/icons" "$TEMP_DIR/$PKG_DIR/icons"
     [ -d "$src/po" ] && cp -r "$src/po" "$TEMP_DIR/po"
 
     python3 -m py_compile "$TEMP_DIR/$EXT_FILE" "$TEMP_DIR/$PKG_DIR"/*.py \
