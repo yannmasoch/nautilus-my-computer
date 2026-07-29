@@ -793,18 +793,7 @@ class MyComputerToggleButton(Gtk.Box):
                 self.append(sep)
                 self._separators.append(sep)
 
-            image = (
-                Gtk.Image.new_from_gicon(icon)
-                if isinstance(icon, Gio.Icon)
-                else Gtk.Image.new_from_icon_name(icon)
-            )
-            image.set_pixel_size(-1)
-            image.set_margin_start(8)
-            image.set_margin_end(8)
-            image.set_valign(Gtk.Align.CENTER)
-            image.set_halign(Gtk.Align.CENTER)
-
-            btn = Gtk.ToggleButton(child=image, tooltip_text=tooltip)
+            btn = Gtk.ToggleButton(child=self._make_segment_image(icon), tooltip_text=tooltip)
             btn.add_css_class("flat")
             btn.add_css_class("mc-toggle-btn")
             if first_btn is None:
@@ -824,6 +813,22 @@ class MyComputerToggleButton(Gtk.Box):
             self._order.append(name)
 
         self._update_separators()
+
+    @staticmethod
+    def _make_segment_image(icon) -> Gtk.Image:
+        """icon: an icon name (str) or a Gio.Icon (e.g. a bundled fallback
+        SVG, see column_view._resolve_column_icon)."""
+        image = (
+            Gtk.Image.new_from_gicon(icon)
+            if isinstance(icon, Gio.Icon)
+            else Gtk.Image.new_from_icon_name(icon)
+        )
+        image.set_pixel_size(-1)
+        image.set_margin_start(8)
+        image.set_margin_end(8)
+        image.set_valign(Gtk.Align.CENTER)
+        image.set_halign(Gtk.Align.CENTER)
+        return image
 
     def _on_button_enter(self, _ctrl, _x, _y, name: str) -> None:
         self._hovered[name] = True
@@ -874,6 +879,15 @@ class MyComputerToggleButton(Gtk.Box):
         btn = self._buttons.get(name)
         if btn is not None:
             btn.set_sensitive(enabled)
+
+    def set_segment_icon(self, name: str, icon) -> None:
+        """Re-resolve a segment's icon after construction (icon: name or
+        Gio.Icon, same contract as __init__'s segments) -- e.g. when the
+        active icon theme changes live, see
+        column_view._refresh_column_icon_all_windows."""
+        btn = self._buttons.get(name)
+        if btn is not None:
+            btn.set_child(self._make_segment_image(icon))
 
 
 class MyComputerCappedGridFlowBox(Gtk.FlowBox):

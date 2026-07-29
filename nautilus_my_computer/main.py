@@ -632,6 +632,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             style_manager.connect("notify::accent-color", lambda *_a: self._apply_bar_color())
 
         my_computer_view.init_data_watchers(self)
+        column_view.init_icon_watcher(self)
         GLib.idle_add(self._late_init)
 
     # ── My Computer view delegation ─────────────────────────────────────────────

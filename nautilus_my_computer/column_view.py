@@ -2220,6 +2220,34 @@ def _resolve_column_icon() -> str | Gio.Icon:
     return _bundled_gicon(_COLUMN_ICON_NAME) or _COLUMN_ICON_NAME
 
 
+def _refresh_column_icon_all_windows(ext) -> bool:
+    """Icon theme changed live (GNOME Settings). The Grid/List/Column
+    switcher's column segment is resolved once at construction time
+    (_build_view_switcher), so without this watcher it would keep showing
+    whatever it resolved to at last build -- the old theme's own icon, or
+    our bundled fallback -- even after the user switches packs. The
+    switcher itself is always present in the toolbar regardless of which
+    of Grid/List/Column is currently active, so every window is updated
+    here, not just ones currently showing Column View."""
+    icon = _resolve_column_icon()
+    # list() copy: this runs from an idle callback, and _on_window_destroyed
+    # pops from _windows in the same main loop.
+    for _win, state in list(ext._windows.items()):
+        switcher = state.get("view_switcher")
+        if switcher is not None:
+            switcher.set_segment_icon("column", icon)
+    return GLib.SOURCE_REMOVE
+
+
+def init_icon_watcher(ext) -> None:
+    """Called once from MyComputerExtension.__init__. See
+    _refresh_column_icon_all_windows for why this is needed."""
+    icon_theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
+    icon_theme.connect(
+        "changed", lambda *_a, ext=ext: GLib.idle_add(_refresh_column_icon_all_windows, ext)
+    )
+
+
 def _build_view_switcher(ext, win: Gtk.Window) -> Gtk.Widget:
     """Build the Grid/List/Column segmented control (see
     widgets.MyComputerToggleButton)."""
