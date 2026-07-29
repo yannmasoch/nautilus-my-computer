@@ -42,6 +42,14 @@ from nautilus_my_computer.widgets import (
 
 VIEW_COLUMN = "column"
 
+# Name Column View is added under on each slot's own GtkStack (see
+# watch_tab_view/_do_inject_into_slot below). Nautilus's own two stack
+# children (vbox, global_search_page) are added via gtk_stack_add_child
+# with no name, so this name can never collide with anything of theirs.
+_SLOT_STACK_CHILD_NAME = "mc-column"
+_SLOT_INIT_RETRY_MS = 20  # retry interval while waiting for a new slot to settle
+_SLOT_INIT_MAX_ATTEMPTS = 100  # ~2s budget, mirrors main.py's _WIN_INIT_MAX_ATTEMPTS
+
 # Whether a navigation event moves into a subfolder of where browsing
 # currently is (NAV_DOWN), back toward a parent (NAV_UP), or re-selects
 # within the same column that was already focused (NAV_SELF). Detected from
@@ -1194,10 +1202,10 @@ class _ColumnViewHost:
 
     def _sync_slot_location(self, uri: str) -> None:
         """Push the Miller chain's new deepest folder to Nautilus's real slot
-        location (see main.py's _on_title_changed VIEW_COLUMN branch for the
-        reverse direction, sync_to_uri below). The "slot." prefix is
-        required or the action fails silently (see CLAUDE.md's fragility
-        table / main.py's existing tab-open callers).
+        location (see _on_slot_location_changed below for the reverse
+        direction, sync_to_uri below). The "slot." prefix is required or the
+        action fails silently (see CLAUDE.md's fragility table / main.py's
+        existing tab-open callers).
 
         This navigates Nautilus's live-underneath native slot, which
         begins to re-enumerate the folder. Measured (2026-07-11): the call
@@ -1205,7 +1213,7 @@ class _ColumnViewHost:
         the main thread), and real drills land 0.7-9s apart, not in
         coalescable bursts. A debounce was rejected on that data because it
         would buy nothing and risk the sync-loop echo guard. Once Nautilus
-        commits the new location and chrome, main.py's _on_title_changed
+        commits the new location and chrome, _on_slot_location_changed
         activates slot.stop to cancel the hidden native view's remaining
         metadata, model, monitor, and thumbnail work. Ctrl+1/Ctrl+2 reloads
         that model before exposing the native view again."""
@@ -1223,8 +1231,8 @@ class _ColumnViewHost:
     def sync_to_uri(self, new_uri: str) -> None:
         """Reconcile the Miller chain with Nautilus's real location -- called
         when it changes while Column View is already showing (address bar,
-        pathbar, back/forward, a bookmark, the sidebar; see main.py's
-        _on_title_changed VIEW_COLUMN branch).
+        pathbar, back/forward, a bookmark, the sidebar; see
+        _on_slot_location_changed below).
 
         Only ever preserves columns that are already open: an exact match
         against one of them is either our own drill-down's
@@ -1948,79 +1956,66 @@ class _ColumnViewHost:
         animation.play()
 
 
-def stays_active(ext, win: Gtk.Window) -> bool:
-    return ext._slot_location(win) is not None
+def slot_is_showing_column(slot: Gtk.Widget | None) -> bool:
+    """Whether `slot`'s own GtkStack currently shows Column View -- the
+    single source of truth for "is this slot in Column View", read straight
+    from the tree rather than tracked in any dict (issue #118)."""
+    view = getattr(slot, "_mc_column_view", None) if slot is not None else None
+    if view is None:
+        return False
+    stack = view.get_parent()
+    return isinstance(stack, Gtk.Stack) and stack.get_visible_child() is view
 
 
-def sync_column_view_to_location(ext, win: Gtk.Window, new_uri: str) -> None:
-    """Rebuild the Miller chain to follow Nautilus's real location -- called
-    from main.py's _on_title_changed when the real slot navigates while
-    Column View is showing (address bar, pathbar, back/forward, a
-    bookmark). See _ColumnViewHost.sync_to_uri for the echo guard
-    that keeps this from fighting our own drill-down navigation."""
-    state = ext._windows.get(win)
-    scroller = state.get("column_panel") if state else None
-    host = getattr(scroller, "_mc_column_host", None) if scroller else None
-    if host is None:
-        return
-    host.sync_to_uri(new_uri)
+def is_active_slot_showing_column(ext, win: Gtk.Window) -> bool:
+    return slot_is_showing_column(ext._active_slot_widget(win))
+
+
+def _host_for_window(ext, win: Gtk.Window):
+    """The active slot's Miller host, or None -- keyboard-shortcut dispatch
+    (rename/trash/copy/paste/new-folder) always targets whatever the user is
+    actually looking at."""
+    slot = ext._active_slot_widget(win)
+    view = getattr(slot, "_mc_column_view", None) if slot is not None else None
+    return getattr(view, "_mc_column_host", None) if view is not None else None
 
 
 def rename_focused_folder(ext, win: Gtk.Window) -> bool:
-    """Dispatch the window-level F2 shortcut to the live Miller host."""
-    state = ext._windows.get(win)
-    scroller = state.get("column_panel") if state else None
-    host = getattr(scroller, "_mc_column_host", None) if scroller else None
+    """Dispatch the window-level F2 shortcut to the active slot's Miller host."""
+    host = _host_for_window(ext, win)
     return host.rename_focused_folder() if host is not None else False
 
 
 def trash_focused_folder(ext, win: Gtk.Window) -> bool:
-    """Dispatch the window-level Delete shortcut to the live Miller host."""
-    state = ext._windows.get(win)
-    scroller = state.get("column_panel") if state else None
-    host = getattr(scroller, "_mc_column_host", None) if scroller else None
+    """Dispatch the window-level Delete shortcut to the active slot's Miller host."""
+    host = _host_for_window(ext, win)
     return host.trash_focused_folder() if host is not None else False
 
 
-def set_native_cut_observer_active(ext, win: Gtk.Window, active: bool) -> None:
-    """Toggle native model observation for one window's Miller host."""
-    state = ext._windows.get(win)
-    scroller = state.get("column_panel") if state else None
-    host = getattr(scroller, "_mc_column_host", None) if scroller else None
-    if host is not None:
-        host.set_native_cut_observer_active(active)
-
-
 def copy_focused_folder_to_clipboard(ext, win: Gtk.Window, *, cut: bool) -> bool:
-    """Dispatch Ctrl+X/Ctrl+C to the live Miller host."""
-    state = ext._windows.get(win)
-    scroller = state.get("column_panel") if state else None
-    host = getattr(scroller, "_mc_column_host", None) if scroller else None
+    """Dispatch Ctrl+X/Ctrl+C to the active slot's Miller host."""
+    host = _host_for_window(ext, win)
     return host.copy_focused_folder_to_clipboard(cut=cut) if host is not None else False
 
 
 def paste_into_focused_folder(ext, win: Gtk.Window) -> bool:
-    """Dispatch Ctrl+V to the live Miller host."""
-    state = ext._windows.get(win)
-    scroller = state.get("column_panel") if state else None
-    host = getattr(scroller, "_mc_column_host", None) if scroller else None
+    """Dispatch Ctrl+V to the active slot's Miller host."""
+    host = _host_for_window(ext, win)
     return host.paste_into_focused_folder() if host is not None else False
 
 
 def create_folder_in_focused_column(ext, win: Gtk.Window) -> bool:
-    """Dispatch Shift+Ctrl+N to the live Miller host."""
-    state = ext._windows.get(win)
-    scroller = state.get("column_panel") if state else None
-    host = getattr(scroller, "_mc_column_host", None) if scroller else None
+    """Dispatch Shift+Ctrl+N to the active slot's Miller host."""
+    host = _host_for_window(ext, win)
     return host.create_folder_in_focused_column() if host is not None else False
 
 
-def build_column_view(ext, win: Gtk.Window) -> Gtk.Widget:
-    # Runs once at window-overlay-injection time, generally before navigation
-    # has settled -- this initial root is a throwaway placeholder, never seen
-    # by the user in practice: enter_column_view() always reseeds from the
-    # real current location on the next Ctrl+3 press.
-    loc = ext._slot_location(win)
+def build_column_view(ext, win: Gtk.Window, slot: Gtk.Widget) -> Gtk.Widget:
+    # Runs once per slot at injection time, generally before navigation has
+    # settled -- this initial root is a throwaway placeholder, never seen by
+    # the user in practice: enter_column_view() always reseeds from the
+    # slot's real current location on the next Ctrl+3 press.
+    loc = slot.get_property("location")
     root_uri = loc.get_uri() if loc is not None else default_root_uri()
     host = _ColumnViewHost(ext, win, win.get_display(), root_uri)
 
@@ -2042,89 +2037,261 @@ def build_column_view(ext, win: Gtk.Window) -> Gtk.Widget:
     beta_badge.set_tooltip_text(_("Early access feature. It may contain bugs or inconsistencies."))
     view.add_overlay(beta_badge)
 
-    # Public helpers retrieve the host from the widget stored in per-window
-    # state. Keep that contract while wrapping the scroller in the overlay.
+    # Public helpers retrieve the host from this widget, stored on the owning
+    # slot as slot._mc_column_view (see _do_inject_into_slot below).
     view._mc_column_host = host
     return view
 
 
 def enter_column_view(ext, win: Gtk.Window, root_uri: str) -> None:
-    """Show Column View, reconciled to root_uri -- called from the Ctrl+3
-    shortcut (see main.py's _show_column_view). Drill-downs commit
+    """Show Column View for the active slot, reconciled to root_uri --
+    called from the Ctrl+3 shortcut / column-segment click (see main.py's
+    _show_column_view / _on_view_segment_activated). Drill-downs commit
     slot.open-location (see _sync_slot_location), so root_uri is normally the
     deepest column already open here: reusing host.sync_to_uri() (rather than
     host.reset()) means round-tripping through Ctrl+1/Ctrl+2 and back keeps
     the whole chain instead of collapsing it to a single column at the
     deepest folder. An ancestor location truncates to it; anything else
     re-roots fresh, same as a brand new Column View entry."""
-    state = ext._windows.get(win)
-    if not state:
-        _log("enter_column_view: no state for win")
+    slot = ext._active_slot_widget(win)
+    if slot is None:
+        _log("enter_column_view: no active slot")
         return
-    scroller = state.get("column_panel")
-    host = getattr(scroller, "_mc_column_host", None) if scroller else None
-    _log(f"enter_column_view: root_uri={root_uri!r} host_found={host is not None}")
-    if host is not None:
-        host.sync_to_uri(root_uri)
-    if not ext._set_visible_view(state, VIEW_COLUMN, "ctrl+3 toggle on"):
-        _log("enter_column_view: _set_visible_view failed")
+    view = getattr(slot, "_mc_column_view", None)
+    if view is None:
+        _log("enter_column_view: active slot not yet injected")
         return
+    host = view._mc_column_host
+    _log(f"enter_column_view: root_uri={root_uri!r}")
+    host.sync_to_uri(root_uri)
+    stack = view.get_parent()
+    current_child = stack.get_visible_child()
+    if current_child is not view:
+        slot._mc_column_previous_child = current_child
+    slot._mc_column_elected = True
+    stack.set_visible_child(view)
+    host.set_native_cut_observer_active(True)
     populate_column_view(ext, win)
 
 
-def refresh_column_view(ext, win: Gtk.Window) -> None:
-    """Re-enumerate every open column in place, e.g. after a Nautilus setting
-    (show-hidden-files, sort order) changes. A single global setting change
-    applies to the whole Miller chain, not per-folder -- but reloads each
-    column where it stands rather than collapsing the chain back to root."""
-    state = ext._windows.get(win)
-    scroller = state.get("column_panel") if state else None
-    if scroller is None:
+def leave_column_view(slot: Gtk.Widget) -> None:
+    """Reveal whichever child was showing on `slot`'s own stack before
+    Column View. Called from Ctrl+1/Ctrl+2 (main.py's
+    _leave_column_view_for_native_mode) and from the per-slot location
+    watcher when navigation lands somewhere Column View doesn't support
+    (see _on_slot_location_changed)."""
+    view = getattr(slot, "_mc_column_view", None)
+    if view is None:
         return
-    host = getattr(scroller, "_mc_column_host", None)
+    stack = view.get_parent()
+    slot._mc_column_elected = False
+    host = getattr(view, "_mc_column_host", None)
+    if host is not None:
+        host.set_native_cut_observer_active(False)
+    previous = getattr(slot, "_mc_column_previous_child", None)
+    if previous is None or previous.get_parent() is not stack:
+        # Nautilus always adds its own vbox first (nautilus-window-slot.c),
+        # so it's the stack's first child; fall back to it if we never
+        # captured what was showing before Column View.
+        previous = stack.get_first_child()
+    if previous is not None and stack.get_visible_child() is not previous:
+        stack.set_visible_child(previous)
+
+
+def _refresh_slot_sort(ext, slot: Gtk.Widget) -> None:
+    view = getattr(slot, "_mc_column_view", None)
+    host = getattr(view, "_mc_column_host", None) if view is not None else None
     if host is None:
         return
-    # Re-resolve from Nautilus's real current location rather than trusting
+    # Re-resolve from the slot's real current location rather than trusting
     # host._root_uri: drill-downs commit slot.open-location (see
-    # _sync_slot_location), so while Column View is showing the real slot is
-    # normally at the deepest open column, not host._root_uri. Reading it
-    # live also catches the case where the user changed sort in a normal
-    # Nautilus window before Column View was ever opened.
-    loc = ext._slot_location(win)
+    # _sync_slot_location), so while Column View is showing, the slot is
+    # normally at the deepest open column, not host._root_uri.
+    loc = slot.get_property("location")
     root_uri = loc.get_uri() if loc is not None else host._root_uri
     host._sort = ext._nautilus_prefs.resolve_column_sort(root_uri)
     for column in host.columns:
         column.set_sort(host._sort)
 
 
+def refresh_column_view(ext, win: Gtk.Window) -> None:
+    """Re-enumerate the active slot's open columns in place, e.g. right
+    before Column View becomes visible again for that slot."""
+    slot = ext._active_slot_widget(win)
+    if slot is not None:
+        _refresh_slot_sort(ext, slot)
+
+
+def refresh_all_column_views(ext, win: Gtk.Window) -> None:
+    """Re-enumerate every open column in every tab of `win`, e.g. after a
+    Nautilus setting (show-hidden-files, sort order) changes. Each tab's
+    Column View is now an independent per-slot instance (issue #118), so a
+    global setting change must reach all of them, not just whichever tab
+    happens to be active."""
+    for slot in _iter_injected_slots(win):
+        _refresh_slot_sort(ext, slot)
+
+
 def populate_column_view(ext, win: Gtk.Window) -> None:
-    """Called every time Column View becomes visible. The chain is already
-    built (build_column_view, at window init) -- this just re-syncs every
-    open column to the live prefs (hidden-files, etc.), since a setting may
-    have changed while Column View was off-screen and thus never reached the
-    per-window repopulate_visible check in NautilusPrefs's watchers."""
+    """Called every time Column View becomes visible for a slot. The chain
+    is already built (build_column_view, at slot injection time) -- this
+    just re-syncs the open columns to the live prefs (hidden-files, etc.),
+    since a setting may have changed while Column View was off-screen for
+    this tab."""
     refresh_column_view(ext, win)
+
+    slot = ext._active_slot_widget(win)
+    view = getattr(slot, "_mc_column_view", None) if slot is not None else None
+    if view is None:
+        return
 
     if not _COLUMN_KEYBOARD_NAV:
         # Focus the view itself so its local capture controller owns regular
         # Column View keys. This does not intercept keyboard input elsewhere
         # in the window once the user focuses a toolbar or location widget.
-        state = ext._windows.get(win)
-        scroller = state.get("column_panel") if state else None
-        if scroller is not None:
-            scroller.grab_focus()
+        view.grab_focus()
         return
 
     # Arm arrow-key nav without requiring a preliminary click: focus the
     # column at host.focused_index (0 on a fresh reset()) as soon as the view
     # is actually visible/mapped.
-    state = ext._windows.get(win)
-    scroller = state.get("column_panel") if state else None
-    host = getattr(scroller, "_mc_column_host", None) if scroller else None
+    host = getattr(view, "_mc_column_host", None)
     if host is not None:
         col = host._focused_column()
         if col is not None:
             col.grab_list_focus()
+
+
+def _find_tab_view(win: Gtk.Window) -> Adw.TabView | None:
+    return next((w for w in _all_widgets(win) if isinstance(w, Adw.TabView)), None)
+
+
+def _find_slot_stack(slot: Gtk.Widget) -> Gtk.Stack | None:
+    """The slot's own top-level GtkStack (nautilus-window-slot.c: self->stack,
+    the slot's only direct child). The first Gtk.Stack found in a depth-first
+    walk from the slot is always this one, before any stack nested deeper in
+    its content view."""
+    return next((w for w in _all_widgets(slot) if isinstance(w, Gtk.Stack)), None)
+
+
+def _iter_injected_slots(win: Gtk.Window):
+    tab_view = _find_tab_view(win)
+    if tab_view is None:
+        return
+    for i in range(tab_view.get_n_pages()):
+        page = tab_view.get_nth_page(i)
+        slot = page.get_child() if page is not None else None
+        if slot is not None and getattr(slot, "_mc_column_view", None) is not None:
+            yield slot
+
+
+def watch_tab_view(ext, win: Gtk.Window) -> None:
+    """Inject Column View into every current and future tab of `win`.
+
+    Nautilus creates one NautilusWindowSlot per tab, each owning its own
+    GtkStack that already holds two sibling children of its own (vbox and
+    global_search_page, nautilus-window-slot.c:869-892). We add Column View
+    as a third sibling of that same stack instead of the single window-wide
+    overlay used before, so tab switching needs no resync: each tab's Column
+    View state (chain, scroll, selection) lives on its own slot and is
+    untouched by switching away from it. See issue #118."""
+    tab_view = _find_tab_view(win)
+    if tab_view is None:
+        _log("watch_tab_view: no Adw.TabView found")
+        return
+    for i in range(tab_view.get_n_pages()):
+        page = tab_view.get_nth_page(i)
+        slot = page.get_child() if page is not None else None
+        if slot is not None:
+            _schedule_slot_init(ext, win, slot)
+    tab_view.connect(
+        "page-attached",
+        lambda _tv, page, _pos, ext=ext, win=win: _schedule_slot_init(ext, win, page.get_child()),
+    )
+
+
+def _schedule_slot_init(ext, win: Gtk.Window, slot: Gtk.Widget | None) -> None:
+    """Defer Column View injection into `slot` until its location settles,
+    mirroring main.py's _schedule_window_init/_deferred_init_window (issue
+    #4: widget-tree changes during files_view_begin_loading can race
+    Nautilus-core's templates-menu rebuild). stack.add_named() here does not
+    reparent anything of Nautilus's, unlike the old overlay injection, but
+    the same deferred timing is kept out of caution."""
+    if slot is None or getattr(slot, "_mc_column_view", None) is not None:
+        return
+    attempts = [0]
+
+    def _try() -> bool:
+        if getattr(slot, "_mc_column_view", None) is not None:
+            return GLib.SOURCE_REMOVE
+        attempts[0] += 1
+        try:
+            settled = slot.get_property("location") is not None
+        except TypeError:
+            settled = True
+        if not settled and attempts[0] <= _SLOT_INIT_MAX_ATTEMPTS:
+            return GLib.SOURCE_CONTINUE
+        GLib.idle_add(_do_inject_into_slot, ext, win, slot, priority=GLib.PRIORITY_LOW)
+        return GLib.SOURCE_REMOVE
+
+    GLib.timeout_add(_SLOT_INIT_RETRY_MS, _try)
+
+
+def _do_inject_into_slot(ext, win: Gtk.Window, slot: Gtk.Widget) -> bool:
+    if getattr(slot, "_mc_column_view", None) is not None:
+        return GLib.SOURCE_REMOVE
+    stack = _find_slot_stack(slot)
+    if stack is None:
+        _log("_do_inject_into_slot: no GtkStack found on slot")
+        return GLib.SOURCE_REMOVE
+    view = build_column_view(ext, win, slot)
+    stack.add_named(view, _SLOT_STACK_CHILD_NAME)
+    slot._mc_column_view = view
+    slot._mc_column_elected = False
+    slot._mc_column_native_stopped = False
+    slot._mc_column_previous_child = None
+    slot._mc_reasserting = False
+    stack.connect("notify::visible-child", _on_slot_stack_child_changed, slot)
+    slot.connect("notify::location", _on_slot_location_changed, ext, win)
+    return GLib.SOURCE_REMOVE
+
+
+def _on_slot_stack_child_changed(stack, _pspec, slot: Gtk.Widget) -> None:
+    """Nautilus reasserts its own stack child on its own initiative (e.g.
+    leaving global search, nautilus-window-slot.c:1045/1091). Reassert
+    Column View if the user elected it for this slot and it hasn't been
+    explicitly left (see enter_column_view/leave_column_view)."""
+    if getattr(slot, "_mc_reasserting", False):
+        return
+    if not getattr(slot, "_mc_column_elected", False):
+        return
+    view = slot._mc_column_view
+    if stack.get_visible_child() is view:
+        return
+    slot._mc_reasserting = True
+    stack.set_visible_child(view)
+    slot._mc_reasserting = False
+
+
+def _on_slot_location_changed(slot, _pspec, ext, win: Gtk.Window) -> None:
+    """Keep this slot's own Column View in sync with real Nautilus
+    navigation on it (address bar, pathbar, back/forward, a bookmark, our
+    own drill-down echo) -- scoped to exactly the slot that navigated,
+    unlike the window-wide resync this replaces (issue #118)."""
+    if not slot_is_showing_column(slot):
+        return
+    loc = slot.get_property("location")
+    if loc is None:
+        return
+    if not ext._column_view_available_at(loc):
+        _log(f"_on_slot_location_changed: {loc.get_uri()!r} unavailable, leaving column view")
+        leave_column_view(slot)
+        slot._mc_column_native_stopped = False
+        return
+    host = slot._mc_column_view._mc_column_host
+    host.sync_to_uri(loc.get_uri())
+    if ext._stop_hidden_native_slot(win, slot):
+        slot._mc_column_native_stopped = True
 
 
 _SEGMENTS = (
@@ -2283,12 +2450,12 @@ def _on_view_segment_activated(ext, win: Gtk.Window, name: str | None) -> None:
     if name == "column":
         ext._show_column_view(win)
     elif name == "grid":
-        if state.get("visible_view") == VIEW_COLUMN:
+        if is_active_slot_showing_column(ext, win):
             ext._leave_column_view_for_native_mode(win)
         if native_on_list:
             win.activate_action(_NATIVE_TOGGLE_ACTION, None)
     elif name == "list":
-        if state.get("visible_view") == VIEW_COLUMN:
+        if is_active_slot_showing_column(ext, win):
             ext._leave_column_view_for_native_mode(win)
         if not native_on_list:
             win.activate_action(_NATIVE_TOGGLE_ACTION, None)
@@ -2296,9 +2463,10 @@ def _on_view_segment_activated(ext, win: Gtk.Window, name: str | None) -> None:
 
 
 def _sync_view_switcher(ext, win: Gtk.Window) -> None:
-    """Reflect visible_view / the native split button's frozen icon back onto
-    the segmented control. MyComputerToggleButton.set_active_name() does not
-    emit "changed", so this never re-triggers _on_view_segment_activated."""
+    """Reflect the active slot's Column View state / the native split
+    button's frozen icon back onto the segmented control.
+    MyComputerToggleButton.set_active_name() does not emit "changed", so
+    this never re-triggers _on_view_segment_activated."""
     state = ext._windows.get(win)
     switcher = state.get("view_switcher") if state is not None else None
     if switcher is None:
@@ -2307,7 +2475,7 @@ def _sync_view_switcher(ext, win: Gtk.Window) -> None:
     column_available = ext._column_view_available_for_window(win)
     _set_segment_enabled(switcher, "column", column_available)
 
-    if state.get("visible_view") == VIEW_COLUMN and column_available:
+    if column_available and is_active_slot_showing_column(ext, win):
         active = "column"
     else:
         split_button = state.get("native_split_button")
