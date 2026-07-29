@@ -18,6 +18,7 @@ from nautilus_my_computer.common import (
     N_,
     _,
     _all_widgets,
+    _bundled_gicon,
     _icon_name_renders,
     _log,
 )
@@ -106,10 +107,14 @@ _COLUMN_RESIZE_ENABLED = True
 # binding (nautilus_files_view_get_toggle_icon_name) is currently showing:
 # "view-grid-symbolic" while list is showing, "view-list-symbolic" while grid
 # is showing.
+# Most third-party packs ship view-column-symbolic (Papirus, Colloid, Tela,
+# WhiteSur, kora, MacTahoe, Reversal, Vimix, elementary, Qogir, Fluent,
+# Numix); Adwaita, Yaru and Breeze do not (issue #101, see
+# tmp/issue-101-icon-theme-research.md). Those fall through to our own
+# bundled copy of the same name (_resolve_column_icon() below) rather than
+# to view-dual-symbolic -- that name resolves everywhere but Yaru draws it
+# as an open book, and we cannot audit every icon pack in existence.
 _COLUMN_ICON_NAME = "view-column-symbolic"
-# Not every icon theme ships view-column-symbolic (absent from Adwaita as of
-# GNOME 48) -- resolved against the live icon theme in _resolve_column_icon().
-_COLUMN_ICON_FALLBACK = "view-dual-symbolic"
 _ICON_TARGET_GRID = "view-grid-symbolic"  # shown while sitting on list
 _ICON_TARGET_LIST = "view-list-symbolic"  # shown while sitting on grid (default fallback)
 _NATIVE_TOGGLE_ACTION = "slot.files-view-mode-toggle"
@@ -2206,10 +2211,13 @@ def _ancestor_split_button(widget: Gtk.Widget) -> Adw.SplitButton | None:
     return None
 
 
-def _resolve_column_icon() -> str:
-    """view-column-symbolic is missing from some icon themes (e.g. Adwaita as
-    of GNOME 48); fall back to a name every theme in practice ships."""
-    return _COLUMN_ICON_NAME if _icon_name_renders(_COLUMN_ICON_NAME) else _COLUMN_ICON_FALLBACK
+def _resolve_column_icon() -> str | Gio.Icon:
+    """The active theme's own view-column-symbolic when it has one, else our
+    bundled copy of the same name (see common._bundled_gicon). Returns an
+    icon name or a Gio.Icon -- MyComputerToggleButton accepts either."""
+    if _icon_name_renders(_COLUMN_ICON_NAME):
+        return _COLUMN_ICON_NAME
+    return _bundled_gicon(_COLUMN_ICON_NAME) or _COLUMN_ICON_NAME
 
 
 def _build_view_switcher(ext, win: Gtk.Window) -> Gtk.Widget:

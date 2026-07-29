@@ -281,6 +281,22 @@ def _icon_name_renders(icon_name: str) -> bool:
     return theme.has_icon(icon_name)
 
 
+_ICONS_DIR = os.path.join(os.path.dirname(__file__), "icons")
+
+
+def _bundled_gicon(icon_name: str) -> Gio.FileIcon | None:
+    """Gio.FileIcon for an SVG bundled under nautilus_my_computer/icons/, for
+    use when no installed icon theme has icon_name. The file must be named
+    "*-symbolic.svg" -- GtkIconPaintable.is_symbolic() is true for any
+    *-symbolic.svg loaded from a plain file, so GTK repaints it with the
+    widget's foreground color like any other symbolic icon (no light/dark
+    handling needed here)."""
+    path = os.path.join(_ICONS_DIR, f"{icon_name}.svg")
+    if not os.path.exists(path):
+        return None
+    return Gio.FileIcon.new(Gio.File.new_for_path(path))
+
+
 def _resolve_custom_gicon(info: Gio.FileInfo) -> Gio.Icon | None:
     """Mirrors Nautilus's own get_custom_icon() precedence (nautilus-file.c):
     metadata::custom-icon (a URI) then metadata::custom-icon-name, ahead of

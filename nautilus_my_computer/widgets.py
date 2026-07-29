@@ -762,10 +762,12 @@ class MyComputerToggleButton(Gtk.Box):
     __gsignals__ = {"changed": (GObject.SignalFlags.RUN_FIRST, None, (str,))}
 
     def __init__(self, segments, height: int = -1) -> None:
-        """segments: iterable of (name, icon_name, tooltip_text). height
-        defaults to -1 (natural size, stretched to fill via valign=FILL below
-        so it matches the containing toolbar's height); pass an explicit
-        value to pin it instead."""
+        """segments: iterable of (name, icon, tooltip_text), where icon is
+        either an icon name (str) or a Gio.Icon (e.g. a bundled fallback SVG,
+        see column_view._resolve_column_icon). height defaults to -1 (natural
+        size, stretched to fill via valign=FILL below so it matches the
+        containing toolbar's height); pass an explicit value to pin it
+        instead."""
         # 1px spacing matches the separator's own stroke width, so the gap
         # between buttons stays visually constant whether the separator is
         # shown or hidden (opacity toggle in _update_separators).
@@ -791,7 +793,11 @@ class MyComputerToggleButton(Gtk.Box):
                 self.append(sep)
                 self._separators.append(sep)
 
-            image = Gtk.Image.new_from_icon_name(icon)
+            image = (
+                Gtk.Image.new_from_gicon(icon)
+                if isinstance(icon, Gio.Icon)
+                else Gtk.Image.new_from_icon_name(icon)
+            )
             image.set_pixel_size(-1)
             image.set_margin_start(8)
             image.set_margin_end(8)
