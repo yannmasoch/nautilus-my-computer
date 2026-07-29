@@ -2253,6 +2253,7 @@ def _do_inject_into_slot(ext, win: Gtk.Window, slot: Gtk.Widget) -> bool:
     slot._mc_reasserting = False
     stack.connect("notify::visible-child", _on_slot_stack_child_changed, slot)
     slot.connect("notify::location", _on_slot_location_changed, ext, win)
+    _maybe_auto_elect_column_view(ext, win, slot)
     return GLib.SOURCE_REMOVE
 
 
@@ -2273,12 +2274,52 @@ def _on_slot_stack_child_changed(stack, _pspec, slot: Gtk.Widget) -> None:
     slot._mc_reasserting = False
 
 
+def _maybe_auto_elect_column_view(ext, win: Gtk.Window, slot: Gtk.Widget) -> None:
+    """Open `slot` in Column View when it is the persisted default-view
+    (issue #102). Cannot fight the user: every explicit grid/list pick
+    writes 'native' to the key (see main.py
+    _leave_column_view_for_native_mode), and a slot already showing Column
+    View short-circuits here, so this only ever acts once per slot."""
+    if slot_is_showing_column(slot):
+        return
+    if ext._auto_elect_view_for_slot(win) != VIEW_COLUMN:
+        return
+    loc = slot.get_property("location")
+    if loc is None or not ext._column_view_available_at(loc):
+        return
+    if ext._active_slot_widget(win) is slot:
+        enter_column_view(ext, win, loc.get_uri())
+        refresh_column_view_chrome(ext, win)
+    else:
+        # Background tab: elect the stack child directly, without
+        # populate_column_view()/enter_column_view() -- both resolve the
+        # *active* slot internally and would act on (and focus) the wrong tab.
+        view = slot._mc_column_view
+        stack = view.get_parent()
+        if stack.get_visible_child() is not view:
+            slot._mc_column_previous_child = stack.get_visible_child()
+        slot._mc_column_elected = True
+        stack.set_visible_child(view)
+        view._mc_column_host.set_native_cut_observer_active(True)
+    if ext._stop_hidden_native_slot(win, slot):
+        slot._mc_column_native_stopped = True
+
+
 def _on_slot_location_changed(slot, _pspec, ext, win: Gtk.Window) -> None:
     """Keep this slot's own Column View in sync with real Nautilus
     navigation on it (address bar, pathbar, back/forward, a bookmark, our
     own drill-down echo) -- scoped to exactly the slot that navigated,
-    unlike the window-wide resync this replaces (issue #118)."""
+    unlike the window-wide resync this replaces (issue #118).
+
+    Also the main trigger for the persisted default-view (issue #102): a
+    slot's very first location at injection time is very often
+    computer:/// (Miller-unavailable, since start-on-disks defaults to
+    true), so _maybe_auto_elect_column_view's call from
+    _do_inject_into_slot alone would never fire for most users. This is
+    where it gets its real chance, on the first navigation that lands
+    somewhere Column View actually supports."""
     if not slot_is_showing_column(slot):
+        _maybe_auto_elect_column_view(ext, win, slot)
         return
     loc = slot.get_property("location")
     if loc is None:

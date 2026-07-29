@@ -1186,6 +1186,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         column_view.enter_column_view(self, win, root_uri)
         column_view.refresh_column_view_chrome(self, win)
         self._arm_sort_watch(win)
+        self._set_default_view(column_view.VIEW_COLUMN)
 
     @staticmethod
     def _column_view_available_at(location: Gio.File | None) -> bool:
@@ -1194,6 +1195,20 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
     def _column_view_available_for_window(self, win: Gtk.Window) -> bool:
         return self._column_view_available_at(_active_slot_location(win))
+
+    def _auto_elect_view_for_slot(self, win: Gtk.Window) -> str | None:
+        """Which of our own views a slot should open into, or None to leave
+        Nautilus's native view alone. File choosers must never be auto-elected
+        into a non-native view -- they carry a single NautilusWindowSlot and
+        need their native model for file selection (see _is_file_chooser_window)."""
+        if _is_file_chooser_window(win) or not self._gsettings:
+            return None
+        value = self._gsettings.get_string("default-view")
+        return None if value == "native" else value
+
+    def _set_default_view(self, value: str) -> None:
+        if self._gsettings and self._gsettings.get_string("default-view") != value:
+            self._gsettings.set_string("default-view", value)
 
     def _rename_column_focused_folder(self, win: Gtk.Window) -> bool:
         """F2: rename the selected local item in the focused Miller column."""
@@ -1284,6 +1299,14 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         Nautilus. The extension-owned three-state primary action also calls it
         before explicitly activating Nautilus's untouched native toggle.
         """
+        # Every caller here is an explicit "I want native" pick, so this is
+        # written unconditionally, not only when slot_is_showing_column below
+        # is true -- e.g. the user forced-fallback to a Column-unavailable
+        # location (trash:///) and then presses Ctrl+1 there. If the write
+        # were gated on slot_is_showing_column, the key would stay 'column'
+        # and leaving that location would silently re-elect Column View
+        # against the explicit pick just made.
+        self._set_default_view("native")
         slot = self._active_slot_widget(win)
         if slot is not None and column_view.slot_is_showing_column(slot):
             _log("_leave_column_view_for_native_mode: dropping back to native view")
