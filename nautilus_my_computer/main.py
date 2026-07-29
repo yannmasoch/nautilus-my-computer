@@ -114,9 +114,8 @@ SCHEMA_ID = "io.github.yannmasoch.nautilus-my-computer"
 
 VIEW_FILES = "files"  # visible_view token — files view (Overlay base)
 VIEW_DISKINFO = "diskinfo"  # noqa: F811 -- intentional local redefinition; token — our panel (Overlay child)
-VIEW_COLUMN = (
-    column_view.VIEW_COLUMN
-)  # visible_view token — Column View placeholder (Overlay child)
+# Column View no longer participates in visible_view (issue #118): it lives on
+# each slot's own GtkStack, tracked via column_view.slot_is_showing_column().
 
 DBUS_FILE_MANAGER = "org.freedesktop.FileManager1"
 DBUS_PATH_FILE_MANAGER = "/org/freedesktop/FileManager1"
@@ -457,12 +456,13 @@ def _get_gsettings() -> Gio.Settings | None:
         return None
 
 
-def _active_slot_location(win) -> Gio.File | None:
-    """The window's active slot's current location, or None.
+def _active_slot(win) -> Gtk.Widget | None:
+    """The window's active NautilusWindowSlot widget, or None.
 
-    Reads the NautilusWindowSlot "location" GFile property on demand. No
-    persistent signal, no set_child (safe re: issue #11). Prefers the active
-    slot so tabs are handled; falls back to the first slot with a location.
+    Reads the "active"/"location" GObject properties on demand. No
+    persistent signal, no set_child (safe re: issue #11). Prefers the slot
+    flagged active so tabs are handled; falls back to the last slot found
+    with a resolved location.
     """
     fallback = None
     for w in _all_widgets(win):
@@ -476,11 +476,17 @@ def _active_slot_location(win) -> Gio.File | None:
             continue
         try:
             if w.get_property("active"):
-                return loc
+                return w
         except TypeError:
             pass
-        fallback = loc
+        fallback = w
     return fallback
+
+
+def _active_slot_location(win) -> Gio.File | None:
+    """The window's active slot's current location, or None. See _active_slot."""
+    slot = _active_slot(win)
+    return slot.get_property("location") if slot is not None else None
 
 
 def _is_file_chooser_window(win: Gtk.Window) -> bool:
@@ -670,7 +676,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _schedule_live_refresh(self) -> None:
         my_computer_view._schedule_live_refresh(self)
 
-    # _repopulate_visible is defined further below, extended for VIEW_COLUMN.
+    # _repopulate_visible is defined further below; it also refreshes every
+    # tab's Column View via column_view.refresh_all_column_views.
 
     def _ensure_usage_poll_running(self) -> None:
         my_computer_view._ensure_usage_poll_running(self)
@@ -846,6 +853,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             self._attach_pathbar_menu_watch(win)
             self._attach_file_view_context_menu(win)
             self._inject_column_view_entry(win)
+            column_view.watch_tab_view(self, win)
             win.connect("notify::is-active", lambda w, _pspec: self._on_window_active_changed(w))
             self._on_navigation(win)
 
@@ -970,9 +978,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         # (AdwTabView): it covers all tabs, so toggling it disrupts Nautilus
         # keyboard controllers on other tabs and causes freezes in multi-tab.
         panel.set_visible(name == VIEW_DISKINFO)
-        column_panel = state.get("column_panel")
-        if column_panel is not None:
-            column_panel.set_visible(name == VIEW_COLUMN)
 
         if state.get("visible_view") == VIEW_DISKINFO and name != VIEW_DISKINFO:
             # Leaving the panel — drop any active address-bar filter so a
@@ -982,15 +987,14 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             state["filter_query"] = ""
             state["location_filter_owned"] = False
         state["visible_view"] = name
-        column_view.set_native_cut_observer_active(self, state["window"], name == VIEW_COLUMN)
         # While the panel is shown, hide the vanilla computer:/// contents
         # (icons/labels) underneath via opacity. The vanilla view is itself a
         # .nautilus-grid-view, so its theme background/radius/margin/shadow stay
         # intact and serve as the opaque backdrop behind the panel's transparent
         # heading rows and card gaps. Un-blank when we land on a normal folder.
-        # The Column View placeholder needs the same backdrop treatment: it also
-        # fully covers the underlying files_widget.
-        self._blank_vanilla_view(state, name in (VIEW_DISKINFO, VIEW_COLUMN))
+        # Column View is unrelated to this state machine now (issue #118): it
+        # lives on each slot's own GtkStack, not this window-wide overlay.
+        self._blank_vanilla_view(state, name == VIEW_DISKINFO)
         return True
 
     def _blank_vanilla_view(self, state: dict, hidden: bool) -> None:
@@ -1092,8 +1096,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                 continue
             if state.get("visible_view") == VIEW_DISKINFO:
                 self._populate(win)
-            elif state.get("visible_view") == VIEW_COLUMN:
-                column_view.refresh_column_view(self, win)
+            column_view.refresh_all_column_views(self, win)
         return GLib.SOURCE_REMOVE
 
     def _reapply_folder_captions(self) -> None:
@@ -1122,6 +1125,12 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _slot_location(self, win: Gtk.Window) -> Gio.File | None:
         return _active_slot_location(win)
 
+    def _active_slot_widget(self, win: Gtk.Window) -> Gtk.Widget | None:
+        return _active_slot(win)
+
+    def _active_slot_showing_column(self, win: Gtk.Window) -> bool:
+        return column_view.is_active_slot_showing_column(self, win)
+
     def _resolve_sort_target(self, win: Gtk.Window):
         """(uri, on_changed) for whichever of our views is visible in `win`
         right now, or None if neither is -- see NautilusPrefs.watch_sort_button.
@@ -1133,12 +1142,9 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         chain from the real current location, and internal drill-down never
         moves the real Nautilus slot)."""
         state = self._windows.get(win)
-        if not state:
-            return None
-        visible = state.get("visible_view")
-        if visible == VIEW_DISKINFO:
+        if state and state.get("visible_view") == VIEW_DISKINFO:
             return (DISKS_URI, self._repopulate_visible)
-        if visible == VIEW_COLUMN:
+        if self._active_slot_showing_column(win):
             loc = _active_slot_location(win)
             if loc is None:
                 return None
@@ -1167,11 +1173,9 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         collapsing it to a single column (see _ColumnViewHost.sync_to_uri for
         the ancestor-truncate / re-root cases). See
         _leave_column_view_for_native_mode for the mirror-image case."""
-        state = self._windows.get(win)
-        if not state:
-            _log("_show_column_view: no state for win")
-            return
-        if not self._has_live_overlay(state, "show column view"):
+        slot = self._active_slot_widget(win)
+        if slot is None or getattr(slot, "_mc_column_view", None) is None:
+            _log("_show_column_view: active slot not ready")
             return
         loc = _active_slot_location(win)
         if not self._column_view_available_at(loc):
@@ -1182,6 +1186,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         column_view.enter_column_view(self, win, root_uri)
         column_view.refresh_column_view_chrome(self, win)
         self._arm_sort_watch(win)
+        self._set_default_view(column_view.VIEW_COLUMN)
 
     @staticmethod
     def _column_view_available_at(location: Gio.File | None) -> bool:
@@ -1191,10 +1196,23 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _column_view_available_for_window(self, win: Gtk.Window) -> bool:
         return self._column_view_available_at(_active_slot_location(win))
 
+    def _auto_elect_view_for_slot(self, win: Gtk.Window) -> str | None:
+        """Which of our own views a slot should open into, or None to leave
+        Nautilus's native view alone. File choosers must never be auto-elected
+        into a non-native view -- they carry a single NautilusWindowSlot and
+        need their native model for file selection (see _is_file_chooser_window)."""
+        if _is_file_chooser_window(win) or not self._gsettings:
+            return None
+        value = self._gsettings.get_string("default-view")
+        return None if value == "native" else value
+
+    def _set_default_view(self, value: str) -> None:
+        if self._gsettings and self._gsettings.get_string("default-view") != value:
+            self._gsettings.set_string("default-view", value)
+
     def _rename_column_focused_folder(self, win: Gtk.Window) -> bool:
         """F2: rename the selected local item in the focused Miller column."""
-        state = self._windows.get(win)
-        if not state or state.get("visible_view") != VIEW_COLUMN:
+        if not self._active_slot_showing_column(win):
             return False
         # While the rename entry itself owns focus, leave F2 to that editor
         # rather than creating a second popover.
@@ -1204,8 +1222,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
     def _trash_column_focused_folder(self, win: Gtk.Window) -> bool:
         """Delete: move the selected local Miller item to Nautilus's trash."""
-        state = self._windows.get(win)
-        if not state or state.get("visible_view") != VIEW_COLUMN:
+        if not self._active_slot_showing_column(win):
             return False
         if isinstance(win.get_focus(), Gtk.Editable):
             return False
@@ -1217,8 +1234,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
     def _copy_column_focused_folder(self, win: Gtk.Window, *, cut: bool = False) -> bool:
         """Ctrl+C: copy the selected Miller item to the system clipboard."""
-        state = self._windows.get(win)
-        if not state or state.get("visible_view") != VIEW_COLUMN:
+        if not self._active_slot_showing_column(win):
             return False
         if isinstance(win.get_focus(), Gtk.Editable):
             return False
@@ -1226,8 +1242,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
     def _paste_into_column_focused_folder(self, win: Gtk.Window) -> bool:
         """Ctrl+V: paste the Miller clipboard into the selected folder."""
-        state = self._windows.get(win)
-        if not state or state.get("visible_view") != VIEW_COLUMN:
+        if not self._active_slot_showing_column(win):
             return False
         if isinstance(win.get_focus(), Gtk.Editable):
             return False
@@ -1235,8 +1250,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
     def _new_folder_in_column_focused_folder(self, win: Gtk.Window) -> bool:
         """Shift+Ctrl+N: create a folder in the focused Miller column."""
-        state = self._windows.get(win)
-        if not state or state.get("visible_view") != VIEW_COLUMN:
+        if not self._active_slot_showing_column(win):
             return False
         if isinstance(win.get_focus(), Gtk.Editable):
             return False
@@ -1250,19 +1264,32 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             return False
         return win.activate_action("slot.stop", None)
 
-    def _reload_native_view_after_column(self, win: Gtk.Window, state: dict) -> bool:
-        """Reload a native model that Column View previously stopped.
+    def _stop_hidden_native_slot(self, win: Gtk.Window, slot: Gtk.Widget) -> bool:
+        """Same as _stop_hidden_native_view but targets `slot` directly, since
+        Column View's per-slot injection (issue #118) means the slot whose
+        native view needs stopping is not necessarily the window's current
+        active slot."""
+        if _is_file_chooser_window(win):
+            return False
+        return slot.activate_action("slot.stop", None)
+
+    def _reload_native_slot_after_column(self, win: Gtk.Window, slot: Gtk.Widget) -> bool:
+        """Reload a native model that Column View previously stopped for `slot`.
 
         This runs from an idle after Ctrl+1/Ctrl+2 propagation, so Nautilus
         changes the inner List/Grid widget before reloading its shared model.
         If Column View became visible again first, keep the stopped marker for
         the next real exit instead of restarting hidden native work.
         """
-        if self._windows.get(win) is not state or state.get("visible_view") != VIEW_FILES:
+        if not getattr(slot, "_mc_column_native_stopped", False):
             return GLib.SOURCE_REMOVE
-        activated = win.activate_action("slot.reload", None)
+        if column_view.slot_is_showing_column(slot):
+            return GLib.SOURCE_REMOVE
+        if _is_file_chooser_window(win):
+            return GLib.SOURCE_REMOVE
+        activated = slot.activate_action("slot.reload", None)
         if activated:
-            state["column_native_stopped"] = False
+            slot._mc_column_native_stopped = False
         return GLib.SOURCE_REMOVE
 
     def _leave_column_view_for_native_mode(self, win: Gtk.Window) -> bool:
@@ -1272,12 +1299,20 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         Nautilus. The extension-owned three-state primary action also calls it
         before explicitly activating Nautilus's untouched native toggle.
         """
-        state = self._windows.get(win)
-        if state is not None and state.get("visible_view") == VIEW_COLUMN:
-            _log("_leave_column_view_for_native_mode: dropping back to VIEW_FILES")
-            self._set_visible_view(state, VIEW_FILES, "ctrl+1/2 native view-mode switch")
-            if state.get("column_native_stopped"):
-                GLib.idle_add(self._reload_native_view_after_column, win, state)
+        # Every caller here is an explicit "I want native" pick, so this is
+        # written unconditionally, not only when slot_is_showing_column below
+        # is true -- e.g. the user forced-fallback to a Column-unavailable
+        # location (trash:///) and then presses Ctrl+1 there. If the write
+        # were gated on slot_is_showing_column, the key would stay 'column'
+        # and leaving that location would silently re-elect Column View
+        # against the explicit pick just made.
+        self._set_default_view("native")
+        slot = self._active_slot_widget(win)
+        if slot is not None and column_view.slot_is_showing_column(slot):
+            _log("_leave_column_view_for_native_mode: dropping back to native view")
+            column_view.leave_column_view(slot)
+            if getattr(slot, "_mc_column_native_stopped", False):
+                GLib.idle_add(self._reload_native_slot_after_column, win, slot)
         return False
 
     def _inject_overlay(self, nautilus_win: Gtk.Window) -> bool:
@@ -1299,9 +1334,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                     break
 
         panel, grid_host, grid_box = self._build_panel(nautilus_win)
-        column_panel = column_view.build_column_view(self, nautilus_win)
-        column_panel.set_halign(Gtk.Align.FILL)
-        column_panel.set_valign(Gtk.Align.FILL)
         # Use Gtk.Overlay: files view is the always-present base; our panel floats
         # on top as an overlay child, visible only on computer:///. The Overlay type
         # is opaque to Nautilus's gtk_widget_get_ancestor(view, GTK_TYPE_STACK) walk,
@@ -1325,7 +1357,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             toolbar_view.set_content(overlay)
             overlay.set_child(files_widget)
             overlay.add_overlay(panel)
-            overlay.add_overlay(column_panel)
         else:
             files_widget = right
             if not files_widget:
@@ -1333,12 +1364,10 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             split_view.set_content(overlay)
             overlay.set_child(files_widget)
             overlay.add_overlay(panel)
-            overlay.add_overlay(column_panel)
 
         # Start with the files view — panel hidden until title changes to computer:///.
         self._trace_view_set(overlay, VIEW_FILES, "inject_overlay initial")
         panel.set_visible(False)
-        column_panel.set_visible(False)
 
         self._windows[nautilus_win] = {
             "window": nautilus_win,
@@ -1347,8 +1376,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             "visible_view": VIEW_FILES,
             "files_widget": files_widget,
             "panel": panel,
-            "column_panel": column_panel,
-            "column_native_stopped": False,
             "native_split_button": None,
             "view_switcher": None,
             "view_options_menu_button": None,
@@ -1531,34 +1558,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                 GLib.idle_add(lambda w=win: self._attach_sort_button_watch(w) or False)
             if DEBUG_LOCATION_FILTER_ACTIVE:
                 GLib.idle_add(lambda w=win: self._attach_location_filter_watch(w) or False)
-        elif (
-            not in_view
-            and current == VIEW_COLUMN
-            and self._column_view_available_for_window(win)
-            and column_view.stays_active(self, win)
-        ):
-            # Location changed while Column View is active (our own row-click
-            # navigation, or external navigation -- pathbar, back/forward, a
-            # typed path): rebuild the column chain from the new URI and stay
-            # in Column View, rather than falling back to VIEW_FILES like any
-            # other location change would (see the elif below). sync_to_uri's
-            # own echo guard is what skips the rebuild for our own row-click
-            # navigation (column_view._ColumnViewHost._sync_slot_location).
-            loc = _active_slot_location(win)
-            if loc is not None:
-                uri = loc.get_uri()
-                column_view.sync_column_view_to_location(self, win, uri)
-                # At this point Nautilus has committed the slot location,
-                # title, pathbar, sidebar state, and history, but its native
-                # files view can still be loading underneath Column View.
-                # Stop that load through Nautilus's own slot action. Unlike
-                # hiding/unmapping files_widget, this cancels metadata
-                # callbacks, model updates, and directory monitors without
-                # mutating the widget tree. Ctrl+1/Ctrl+2 reloads the native
-                # model before exposing it again.
-                activated = self._stop_hidden_native_view(win)
-                if activated:
-                    state["column_native_stopped"] = True
         elif not in_view and current != VIEW_FILES:
             if state:
                 state["_deselecting"] = True
