@@ -1,5 +1,5 @@
 Name:           nautilus-my-computer
-Version:        0.12.5
+Version:        0.12.6
 Release:        0
 Summary:        My Computer for Nautilus, what GNOME Files should have always been
 
@@ -42,6 +42,15 @@ make build
 %{_datadir}/glib-2.0/schemas/io.github.yannmasoch.nautilus-my-computer.gschema.xml
 
 %changelog
+* Wed Jul 29 2026 Yann Masoch <231734284+yannmasoch@users.noreply.github.com> - 0.12.6-0
+- Fix hidden (dot-prefixed) disks not respecting the Show Hidden Files setting
+- Fix hidden disks not grouping together in Name/Type sort
+- Bundle a proper Miller View icon fallback for icon themes missing their own (Adwaita, Yaru, Breeze)
+- Fix Miller View icon not updating live on icon theme change
+- Add Portuguese (Brazil) translation
+- Update French, German, and Spanish translations
+- Reorganize and clean up the README
+
 * Sun Jul 26 2026 Yann Masoch <231734284+yannmasoch@users.noreply.github.com> - 0.12.5-0
 - Publish to the AUR (Arch User Repository)
 - Expand ~/ to the home directory in Preferred Folders paths
