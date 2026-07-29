@@ -989,20 +989,33 @@ class MyComputerCardSection(Gtk.Box):
         self.flow.append(card)
 
     def _filter_child(self, child: Gtk.FlowBoxChild) -> bool:
-        if not self._query:
-            return True
         inner = child.get_child()
-        display_name = getattr(getattr(inner, "model", None), "display_name", None)
-        if display_name is None:
+        model = getattr(inner, "model", None)
+        if model is None:
             # Not a card (e.g. the drag-reorder placeholder) -- always show it.
             return True
-        return self._query in display_name.lower()
+        # Issue #115: a disk whose mount root is hidden (dot-prefixed mountpoint,
+        # .hidden entry) follows Nautilus' Show Hidden Files. Folder cards are
+        # exempt: the user pinned those deliberately, as with sidebar bookmarks.
+        if isinstance(inner, MyComputerDiskCard) and model.is_hidden:
+            if not self._ext._nautilus_prefs.hidden_files():
+                return False
+        if not self._query:
+            return True
+        display_name = getattr(model, "display_name", None)
+        return display_name is not None and self._query in display_name.lower()
 
     def set_query(self, query: str) -> None:
         """Filter this section's cards by `query` (case-insensitive substring
         of the card's display name). Self-hides the whole section (heading
         included) when nothing matches, so an empty group never lingers."""
         self._query = query.strip().lower()
+        self.refresh_filter()
+
+    def refresh_filter(self) -> None:
+        """Re-evaluate the filter without changing the query (e.g. after cards
+        are (re)built, or the Show Hidden Files preference changes). Self-hides
+        the whole section (heading included) when nothing matches."""
         self.flow.invalidate_filter()
         child = self.flow.get_first_child()
         any_match = False
@@ -1011,7 +1024,7 @@ class MyComputerCardSection(Gtk.Box):
                 any_match = True
                 break
             child = child.get_next_sibling()
-        self.set_visible(not self._query or any_match)
+        self.set_visible(any_match)
 
 
 class MyComputerColumnRow(Gtk.ListBoxRow):

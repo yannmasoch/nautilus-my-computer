@@ -1740,9 +1740,10 @@ def _populate(ext, win: Gtk.Window) -> None:
     state["folder_card_widgets"] = folder_card_widgets
     # Sections are rebuilt from scratch every populate, so a filter active
     # before a live-refresh (or a navigate-away-and-back) must be re-applied
-    # to the freshly-built section widgets here.
-    if state.get("filter_query"):
-        apply_card_filter(ext, win, state["filter_query"])
+    # to the freshly-built section widgets here. Unconditional: even with no
+    # search query, sections must re-evaluate visibility (a hidden disk may
+    # be a group's only card, and Show Hidden Files may have changed).
+    apply_card_filter(ext, win, state.get("filter_query") or "")
     # Render any already-cached caption data immediately (e.g. re-populate
     # after a live-refresh) rather than waiting for the next async fetch.
     for folder_key in folder_card_widgets:
