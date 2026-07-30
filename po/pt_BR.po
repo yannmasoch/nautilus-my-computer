@@ -405,7 +405,7 @@ msgstr "Oculto"
 
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Preferred Folders"
-msgstr "Pastas Favoritas"
+msgstr "Pastas Preferidas"
 
 #: nautilus_my_computer/main.py
 msgid "Show system partitions"
