@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-07-24 12:50-0700\n"
-"PO-Revision-Date: 2026-07-30 04:51+0000\n"
+"PO-Revision-Date: 2026-07-30 05:06+0000\n"
 "Last-Translator: Yann Masoch\n"
 "Language-Team: French\n"
 "Language: fr\n"
@@ -292,7 +292,7 @@ msgstr "Compresser…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Email…"
-msgstr "Couirriel…"
+msgstr "Courriel…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
@@ -595,7 +595,7 @@ msgstr "Le dossier est vide"
 
 #: nautilus_my_computer/widgets.py
 msgid "Created"
-msgstr "Crée"
+msgstr "Créé"
 
 #: nautilus_my_computer/widgets.py
 msgid "Modified"
