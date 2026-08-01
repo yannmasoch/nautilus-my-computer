@@ -533,9 +533,9 @@ class _ColumnViewHost:
         # The menu itself is still built on demand below, keeping bookmark
         # and Preferred Folder state current at the instant it opens.
         for row in _column.rows():
-            right_click = Gtk.GestureClick(button=3)
-            right_click.connect("pressed", self._on_row_right_clicked, _column, row)
-            row.add_controller(right_click)
+            click = Gtk.GestureClick(button=0)
+            click.connect("pressed", self._on_row_pressed, _column, row)
+            row.add_controller(click)
         self._set_cut_rows()
 
     def _on_column_background_right_clicked(
@@ -663,6 +663,63 @@ class _ColumnViewHost:
             return False
         self._create_folder(column)
         return True
+
+    def _on_row_pressed(
+        self,
+        gesture: Gtk.GestureClick,
+        n_press: int,
+        x: float,
+        y: float,
+        column: Gtk.Widget,
+        row: Gtk.Widget,
+    ) -> None:
+        """Dispatch a Miller row press by button, mirroring the single
+        button=0 GtkGestureClick native cells install (nautilus-list-base.c
+        on_item_click_pressed, :242-296) instead of one gesture per button.
+
+        Ctrl+middle on a folder row opens a new window, the same affordance
+        the injected sidebar row got in #116 (nautilus-sidebar.c:3236-3241).
+        Native file-view cells do not do this -- they ignore modifiers on
+        middle-click (:284-291, activate_selection(self, TRUE) is called
+        unconditionally) -- but Miller rows are a browsing surface, so the
+        sidebar's modifier reads more naturally here than cell parity.
+
+        Unlike native's select_single_item_if_not_selected before
+        activating, middle-click here does not select or :active-anchor the
+        row. A blue :selected row means "part of the committed Miller path"
+        (_sync_column_selections) and would be wrong for a row being opened
+        elsewhere; there is also no popover to anchor to, unlike the
+        right-click case below.
+        """
+        button = gesture.get_current_button()
+        if button == Gdk.BUTTON_MIDDLE and n_press == 1:
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+            ctrl = bool(gesture.get_current_event_state() & Gdk.ModifierType.CONTROL_MASK)
+            if not row.is_dir:
+                # A file has no location to open a window on, so Ctrl is
+                # irrelevant: hand it to its default application either way.
+                self._open_file(row.uri)
+            elif ctrl:
+                self._ext._do_open_window(row.uri)
+            else:
+                self._ext._do_open_tab(row.uri, self._win, make_active=False)
+            return
+        if button == Gdk.BUTTON_SECONDARY and n_press == 1:
+            self._on_row_right_clicked(gesture, n_press, x, y, column, row)
+            return
+
+        # Every other button, primary above all, belongs to Gtk.ListBox's own
+        # gesture (row-activated drives Miller navigation). Deny rather than
+        # just return: a GtkGestureSingle with button=0 tracks the first
+        # button pressed and ignores the rest until that sequence ends, and
+        # primary activation rebuilds the paned chain (_rebuild_chain), which
+        # can swallow the matching release. An undenied sequence would then
+        # linger and make the gesture drop the next secondary/middle press --
+        # the menu-needs-two-clicks symptom. DENIED resets it at once and
+        # leaves the event free to propagate. Native has no equivalent branch
+        # because its cell gesture handles primary itself
+        # (nautilus-list-base.c on_item_click_released).
+        gesture.set_state(Gtk.EventSequenceState.DENIED)
 
     def _on_row_right_clicked(
         self,
