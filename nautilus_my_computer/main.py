@@ -1770,12 +1770,20 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _do_open(self, nav_uri: str, win: Gtk.Window) -> None:
         GLib.idle_add(self._navigate_to, nav_uri, win)
 
-    def _do_open_tab(self, nav_uri: str, win: Gtk.Window) -> None:
+    def _do_open_tab(self, nav_uri: str, win: Gtk.Window, make_active: bool = True) -> None:
         """Open nav_uri in a new tab, built the way Nautilus itself builds one
         (nautilus_window_create_and_init_slot, nautilus-window.c:406): create a
         NautilusWindowSlot directly and hand it to AdwTabView, rather than firing
         the "new-tab" action (the Ctrl+T path) and polling for the resulting slot.
-        Falls back to the action+poll path if the slot type can't be resolved."""
+        Falls back to the action+poll path if the slot type can't be resolved.
+
+        make_active=False mirrors NAUTILUS_OPEN_FLAG_DONT_MAKE_ACTIVE
+        (nautilus-window.c:471): the tab is created and navigated but never
+        selected, matching every native middle-click and "Open in New Tab" site.
+        Nautilus itself defaults to leaving a freshly created tab unselected
+        (adw_tab_view_add_page never selects); selecting happens only in
+        set_active_slot, which we skip here when make_active is False.
+        """
         uri = nav_uri
 
         tab_view = next(
@@ -1787,7 +1795,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
         slot_gtype = _resolve_gtype("NautilusWindowSlot")
         if slot_gtype is None:
-            self._do_open_tab_via_action(uri, win, tab_view)
+            self._do_open_tab_via_action(uri, win, tab_view, make_active)
             return
 
         slot = GObject.new(slot_gtype, mode=0)  # NAUTILUS_MODE_BROWSE
@@ -1801,10 +1809,14 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         slot.bind_property("allow-stop", page, "loading", GObject.BindingFlags.SYNC_CREATE)
 
         slot.activate_action("slot.open-location", GLib.Variant("s", uri))
-        tab_view.set_selected_page(page)
+        if make_active:
+            tab_view.set_selected_page(page)
 
-    def _do_open_tab_via_action(self, uri: str, win: Gtk.Window, tab_view: Adw.TabView) -> None:
+    def _do_open_tab_via_action(
+        self, uri: str, win: Gtk.Window, tab_view: Adw.TabView, make_active: bool = True
+    ) -> None:
         pages_before = tab_view.get_n_pages()
+        previous_page = None if make_active else tab_view.get_selected_page()
 
         # Switch to the files view first — new-tab action requires the TabView to be visible.
         state = self._windows.get(win)
@@ -1830,6 +1842,11 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                 if page:
                     slot = page.get_child()
                     if slot and slot.activate_action("slot.open-location", GLib.Variant("s", uri)):
+                        # The "new-tab" action always selects the new tab (it's
+                        # the Ctrl+T path) — restore the previous selection to
+                        # emulate DONT_MAKE_ACTIVE in this fallback.
+                        if previous_page is not None:
+                            tab_view.set_selected_page(previous_page)
                         return GLib.SOURCE_REMOVE
 
                 attempt[0] += 1
@@ -2369,11 +2386,19 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         # Click dispatch, mirroring NautilusSidebar (nautilus-sidebar.c:3215): one
         # gesture on all buttons, dispatched from "released" (not "pressed" - the
         # sidebar's "pressed" handler only records drag-reorder coordinates), no
-        # n_press guard. Secondary opens the row's popover menu (Computer carries
-        # _computer_context_menu).
+        # n_press guard. Middle opens a background tab (Ctrl+middle a new window,
+        # nautilus-sidebar.c:3237); secondary opens the row's popover menu
+        # (Computer carries _computer_context_menu).
         def _on_place_released(gesture, _n, x, y):
             button = gesture.get_current_button()
-            if button == Gdk.BUTTON_SECONDARY:
+            if button == Gdk.BUTTON_MIDDLE:
+                gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+                state = gesture.get_current_event_state()
+                if state & Gdk.ModifierType.CONTROL_MASK:
+                    self._do_open_window(entry.uri)
+                else:
+                    self._do_open_tab(entry.uri, win, make_active=False)
+            elif button == Gdk.BUTTON_SECONDARY:
                 if not callable(entry.menu):
                     return
                 gesture.set_state(Gtk.EventSequenceState.CLAIMED)
