@@ -1771,13 +1771,40 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         GLib.idle_add(self._navigate_to, nav_uri, win)
 
     def _do_open_tab(self, nav_uri: str, win: Gtk.Window) -> None:
+        """Open nav_uri in a new tab, built the way Nautilus itself builds one
+        (nautilus_window_create_and_init_slot, nautilus-window.c:406): create a
+        NautilusWindowSlot directly and hand it to AdwTabView, rather than firing
+        the "new-tab" action (the Ctrl+T path) and polling for the resulting slot.
+        Falls back to the action+poll path if the slot type can't be resolved."""
         uri = nav_uri
 
         tab_view = next(
             (w for w in _all_widgets(win) if isinstance(w, Adw.TabView)),
             None,
         )
-        pages_before = tab_view.get_n_pages() if tab_view else 0
+        if tab_view is None:
+            return
+
+        slot_gtype = _resolve_gtype("NautilusWindowSlot")
+        if slot_gtype is None:
+            self._do_open_tab_via_action(uri, win, tab_view)
+            return
+
+        slot = GObject.new(slot_gtype, mode=0)  # NAUTILUS_MODE_BROWSE
+        current_page = tab_view.get_selected_page()
+        page = tab_view.add_page(slot, current_page)
+
+        # Without these bindings the tab has no title and never shows the
+        # loading spinner — nautilus_window_create_and_init_slot binds the same
+        # two properties (nautilus-window.c:417-421).
+        slot.bind_property("title", page, "title", GObject.BindingFlags.SYNC_CREATE)
+        slot.bind_property("allow-stop", page, "loading", GObject.BindingFlags.SYNC_CREATE)
+
+        slot.activate_action("slot.open-location", GLib.Variant("s", uri))
+        tab_view.set_selected_page(page)
+
+    def _do_open_tab_via_action(self, uri: str, win: Gtk.Window, tab_view: Adw.TabView) -> None:
+        pages_before = tab_view.get_n_pages()
 
         # Switch to the files view first — new-tab action requires the TabView to be visible.
         state = self._windows.get(win)
@@ -1790,8 +1817,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             Gio.ActionGroup.activate_action(win, "new-tab", None)
 
             def _wait_for_tab():
-                n = tab_view.get_n_pages() if tab_view else 0
-                if not (tab_view and n > pages_before):
+                n = tab_view.get_n_pages()
+                if n <= pages_before:
                     attempt[0] += 1
                     if attempt[0] >= 20:
                         return GLib.SOURCE_REMOVE
