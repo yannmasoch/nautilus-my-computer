@@ -2263,15 +2263,19 @@ def _on_card_pressed(
     if button == Gdk.BUTTON_SECONDARY and n_press == 1:
         _on_card_right_clicked(ext, gesture, n_press, x, y, win, card)
     elif button == Gdk.BUTTON_MIDDLE and n_press == 1:
-        # Middle always opens a background tab, unconditionally -- native's
-        # activate_selection(self, TRUE) sets NEW_TAB | DONT_MAKE_ACTIVE with
-        # no modifier check (nautilus-list-base.c:175-187, 285-291). Ctrl+middle
-        # -> new window is sidebar-only (nautilus-sidebar.c:3236-3241, #116);
-        # cards ignore Ctrl on middle-click to match native cells.
+        # Middle opens a background tab; Ctrl+middle opens a new window. Native
+        # cells never honor Ctrl+middle (nautilus-list-base.c:175-187, 285-291)
+        # -- only the sidebar does (nautilus-sidebar.c:3236-3241, #116) -- but
+        # Column View rows already diverged from cell parity for this exact
+        # reason (#131): cards, like Miller rows, are a browsing surface where
+        # the sidebar's modifier reads more naturally than strict cell parity.
         gesture.set_state(Gtk.EventSequenceState.CLAIMED)
         _select_single_card(card)
+        ctrl = bool(gesture.get_current_event_state() & Gdk.ModifierType.CONTROL_MASK)
         if isinstance(card, MyComputerDiskCard) and not card.model.is_mounted:
-            _do_mount_then_open(ext, card.model, win, "tab")
+            _do_mount_then_open(ext, card.model, win, "window" if ctrl else "tab")
+        elif ctrl:
+            ext._do_open_window(card.nav_uri)
         else:
             ext._do_open_tab(card.nav_uri, win, make_active=False)
 
