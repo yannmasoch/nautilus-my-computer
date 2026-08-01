@@ -2223,14 +2223,18 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             if state is not None:
                 self._blank_vanilla_view(state, True)
 
-        for w in _all_widgets(win):
-            if "Slot" in type(w).__name__:
-                try:
-                    if w.activate_action("open-location", GLib.Variant("s", uri)):
-                        _arm_blank()
-                        return False
-                except Exception:
-                    pass
+        # Target the active slot directly rather than walking every "Slot"
+        # widget in the window: with 2+ tabs open, a blind walk can hand the
+        # action to a background tab's slot first, silently navigating the
+        # wrong tab while the visible one looks frozen (issue #132).
+        slot = _active_slot(win)
+        if slot is not None:
+            try:
+                if slot.activate_action("open-location", GLib.Variant("s", uri)):
+                    _arm_blank()
+                    return False
+            except Exception:
+                pass
         try:
             if win.activate_action("slot.open-location", GLib.Variant("s", uri)):
                 _arm_blank()
