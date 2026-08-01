@@ -2339,10 +2339,16 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
         GLib.idle_add(_pin_row_icon)
 
-        # Right-click context menu (Computer carries _computer_context_menu).
-        if callable(entry.menu):
-
-            def _on_place_right_clicked(gesture, _n, x, y):
+        # Click dispatch, mirroring NautilusSidebar (nautilus-sidebar.c:3215): one
+        # gesture on all buttons, dispatched from "released" (not "pressed" - the
+        # sidebar's "pressed" handler only records drag-reorder coordinates), no
+        # n_press guard. Secondary opens the row's popover menu (Computer carries
+        # _computer_context_menu).
+        def _on_place_released(gesture, _n, x, y):
+            button = gesture.get_current_button()
+            if button == Gdk.BUTTON_SECONDARY:
+                if not callable(entry.menu):
+                    return
                 gesture.set_state(Gtk.EventSequenceState.CLAIMED)
                 ctx_menu = entry.menu(self, win, entry)
                 popover = ctx_menu.build_popover(list_row, f"place_{entry.name}")
@@ -2351,10 +2357,10 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                 popover.set_pointing_to(rect)
                 popover.popup()
 
-            right_click = Gtk.GestureClick()
-            right_click.set_button(3)
-            right_click.connect("pressed", _on_place_right_clicked)
-            list_row.add_controller(right_click)
+        click = Gtk.GestureClick()
+        click.set_button(0)
+        click.connect("released", _on_place_released)
+        list_row.add_controller(click)
 
         # Hide the eject button - not applicable for our injected entries.
         btn = _find_widget(list_row, buildable_id="eject_button")
