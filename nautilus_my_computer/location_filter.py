@@ -62,10 +62,8 @@ def _has_focus_within(nautilus_win: Gtk.Window, entry: Gtk.Widget) -> bool:
 
 
 def _on_location_text_changed(ext, entry: Gtk.Editable, nautilus_win: Gtk.Window) -> None:
-    state = ext._windows.get(nautilus_win)
-    if not state or not ext._has_live_overlay(state, "location filter"):
-        return
-    if state.get("visible_view") != VIEW_DISKINFO:
+    state = ext._active_panel_state(nautilus_win)
+    if not state or state.get("visible_view") != VIEW_DISKINFO:
         return
     # "/", "~" and Ctrl+L open this same entry for real navigation, not card
     # filtering -- _on_window_key_capture disowns the entry (see
@@ -90,8 +88,8 @@ def _on_location_cancel(ext, _entry: Gtk.Editable, nautilus_win: Gtk.Window) -> 
     not go through the focus-gated _on_location_text_changed, since the
     focus-within check can otherwise race with the entry's own close/blur
     handling and leave a stale filter applied."""
-    state = ext._windows.get(nautilus_win)
-    if not state or not ext._has_live_overlay(state, "location filter cancel"):
+    state = ext._active_panel_state(nautilus_win)
+    if not state:
         return
     _log("location filter cancelled -> reset to default view")
     state["location_filter_owned"] = False

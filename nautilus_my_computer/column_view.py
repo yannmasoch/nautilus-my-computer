@@ -1,5 +1,6 @@
 """Column View: Miller (macOS Finder-style) columns injected into Nautilus."""
 
+import functools
 import os
 
 import gi
@@ -10,7 +11,7 @@ gi.require_version("Gio", "2.0")
 gi.require_version("Gtk", "4.0")
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 
-from nautilus_my_computer import bookmarks, components, preferred_folders
+from nautilus_my_computer import bookmarks, common, components, preferred_folders
 from nautilus_my_computer.common import (
     _COLUMN_MAX_WIDTH,
     _COLUMN_PREVIEW_WIDTH,
@@ -2219,20 +2220,8 @@ def populate_column_view(ext, win: Gtk.Window) -> None:
             col.grab_list_focus()
 
 
-def _find_tab_view(win: Gtk.Window) -> Adw.TabView | None:
-    return next((w for w in _all_widgets(win) if isinstance(w, Adw.TabView)), None)
-
-
-def _find_slot_stack(slot: Gtk.Widget) -> Gtk.Stack | None:
-    """The slot's own top-level GtkStack (nautilus-window-slot.c: self->stack,
-    the slot's only direct child). The first Gtk.Stack found in a depth-first
-    walk from the slot is always this one, before any stack nested deeper in
-    its content view."""
-    return next((w for w in _all_widgets(slot) if isinstance(w, Gtk.Stack)), None)
-
-
 def _iter_injected_slots(win: Gtk.Window):
-    tab_view = _find_tab_view(win)
+    tab_view = common._find_tab_view(win)
     if tab_view is None:
         return
     for i in range(tab_view.get_n_pages()):
@@ -2252,52 +2241,25 @@ def watch_tab_view(ext, win: Gtk.Window) -> None:
     overlay used before, so tab switching needs no resync: each tab's Column
     View state (chain, scroll, selection) lives on its own slot and is
     untouched by switching away from it. See issue #118."""
-    tab_view = _find_tab_view(win)
-    if tab_view is None:
-        _log("watch_tab_view: no Adw.TabView found")
-        return
-    for i in range(tab_view.get_n_pages()):
-        page = tab_view.get_nth_page(i)
-        slot = page.get_child() if page is not None else None
-        if slot is not None:
-            _schedule_slot_init(ext, win, slot)
-    tab_view.connect(
-        "page-attached",
-        lambda _tv, page, _pos, ext=ext, win=win: _schedule_slot_init(ext, win, page.get_child()),
-    )
+    common.watch_slots(win, lambda w, slot, ext=ext: _schedule_slot_init(ext, w, slot))
 
 
 def _schedule_slot_init(ext, win: Gtk.Window, slot: Gtk.Widget | None) -> None:
-    """Defer Column View injection into `slot` until its location settles,
-    mirroring main.py's _schedule_window_init/_deferred_init_window (issue
-    #4: widget-tree changes during files_view_begin_loading can race
-    Nautilus-core's templates-menu rebuild). stack.add_named() here does not
-    reparent anything of Nautilus's, unlike the old overlay injection, but
-    the same deferred timing is kept out of caution."""
-    if slot is None or getattr(slot, "_mc_column_view", None) is not None:
+    if slot is None:
         return
-    attempts = [0]
-
-    def _try() -> bool:
-        if getattr(slot, "_mc_column_view", None) is not None:
-            return GLib.SOURCE_REMOVE
-        attempts[0] += 1
-        try:
-            settled = slot.get_property("location") is not None
-        except TypeError:
-            settled = True
-        if not settled and attempts[0] <= _SLOT_INIT_MAX_ATTEMPTS:
-            return GLib.SOURCE_CONTINUE
-        GLib.idle_add(_do_inject_into_slot, ext, win, slot, priority=GLib.PRIORITY_LOW)
-        return GLib.SOURCE_REMOVE
-
-    GLib.timeout_add(_SLOT_INIT_RETRY_MS, _try)
+    common.schedule_slot_init(
+        slot,
+        "_mc_column_view",
+        functools.partial(_do_inject_into_slot, ext, win),
+        retry_ms=_SLOT_INIT_RETRY_MS,
+        max_attempts=_SLOT_INIT_MAX_ATTEMPTS,
+    )
 
 
 def _do_inject_into_slot(ext, win: Gtk.Window, slot: Gtk.Widget) -> bool:
     if getattr(slot, "_mc_column_view", None) is not None:
         return GLib.SOURCE_REMOVE
-    stack = _find_slot_stack(slot)
+    stack = common._find_slot_stack(slot)
     if stack is None:
         _log("_do_inject_into_slot: no GtkStack found on slot")
         return GLib.SOURCE_REMOVE

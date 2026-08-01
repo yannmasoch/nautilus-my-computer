@@ -264,7 +264,7 @@ class NautilusPrefs:
         self, btn: Gtk.MenuButton, _param, ext, nautilus_win: Gtk.Window
     ) -> None:
         state = ext._windows.get(nautilus_win)
-        if not state or not ext._has_live_overlay(state, "sort button"):
+        if not state:
             return
         if self._resolve_sort_target(ext, nautilus_win) is None:
             return  # none of our views is currently visible in this window

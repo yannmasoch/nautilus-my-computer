@@ -12,12 +12,13 @@ from xml.etree import ElementTree
 
 import gi
 
+gi.require_version("Adw", "1")
 gi.require_version("Gdk", "4.0")
 gi.require_version("Gio", "2.0")
 gi.require_version("GLib", "2.0")
 gi.require_version("GObject", "2.0")
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gdk, Gio, GLib, GObject, Gtk
+from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 
 _custom_translation = None
 for _localedir in (os.path.expanduser("~/.local/share/locale"), None):
@@ -351,6 +352,79 @@ def _all_widgets(widget):
     while child:
         yield from _all_widgets(child)
         child = child.get_next_sibling()
+
+
+def _find_tab_view(win: Gtk.Window) -> Adw.TabView | None:
+    return next((w for w in _all_widgets(win) if isinstance(w, Adw.TabView)), None)
+
+
+def _find_slot_stack(slot: Gtk.Widget) -> Gtk.Stack | None:
+    """The slot's own top-level GtkStack (nautilus-window-slot.c: self->stack,
+    the slot's only direct child). The first Gtk.Stack found in a depth-first
+    walk from the slot is always this one, before any stack nested deeper in
+    its content view."""
+    return next((w for w in _all_widgets(slot) if isinstance(w, Gtk.Stack)), None)
+
+
+def watch_slots(win: Gtk.Window, on_slot) -> None:
+    """Call on_slot(win, slot) for every current tab of `win` and for every
+    future tab (Adw.TabView "page-attached"). Shared by any feature that
+    injects a stack child into each NautilusWindowSlot's own GtkStack
+    (Column View, issue #118; Computer View, issue #133)."""
+    tab_view = _find_tab_view(win)
+    if tab_view is None:
+        _log("watch_slots: no Adw.TabView found")
+        return
+    for i in range(tab_view.get_n_pages()):
+        page = tab_view.get_nth_page(i)
+        slot = page.get_child() if page is not None else None
+        if slot is not None:
+            on_slot(win, slot)
+    tab_view.connect(
+        "page-attached",
+        lambda _tv, page, _pos, win=win, on_slot=on_slot: on_slot(win, page.get_child()),
+    )
+
+
+def _slot_settled(slot: Gtk.Widget) -> bool:
+    try:
+        return slot.get_property("location") is not None
+    except TypeError:
+        return True
+
+
+def schedule_slot_init(
+    slot: Gtk.Widget,
+    marker_attr: str,
+    do_inject,
+    *,
+    retry_ms: int = 20,
+    max_attempts: int = 100,
+    is_settled=_slot_settled,
+) -> None:
+    """Defer `do_inject(slot)` until `is_settled(slot)` (by default, once
+    `slot`'s location resolves), mirroring main.py's
+    _schedule_window_init/_deferred_init_window (issue #4: widget-tree
+    changes during files_view_begin_loading race Nautilus-core's
+    templates-menu rebuild). Idempotent via marker_attr, an attribute
+    `do_inject` itself sets on `slot` once injection succeeds -- callers pass
+    a distinct attribute name per feature so two features can each inject
+    into the same slot independently."""
+    if getattr(slot, marker_attr, None) is not None:
+        return
+    attempts = [0]
+
+    def _try() -> bool:
+        if getattr(slot, marker_attr, None) is not None:
+            return GLib.SOURCE_REMOVE
+        attempts[0] += 1
+        settled = is_settled(slot)
+        if not settled and attempts[0] <= max_attempts:
+            return GLib.SOURCE_CONTINUE
+        GLib.idle_add(do_inject, slot, priority=GLib.PRIORITY_LOW)
+        return GLib.SOURCE_REMOVE
+
+    GLib.timeout_add(retry_ms, _try)
 
 
 _NAUTILUS_VERSION_CACHE = None

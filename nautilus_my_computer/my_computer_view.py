@@ -8,9 +8,10 @@ same convention as bookmarks.py/preferred_folders.py. No app state of its own
 beyond the module-level mount/folder/network caches below -- everything else
 lives on `ext`, set up once by init_data_watchers(). Must not import main.py.
 
-The first of what is meant to become a family of view modules swapped into
-the Gtk.Overlay/Gtk.Stack that main.py manages generically (a future
-miller_view.py would follow the same shape).
+The panel is injected per-slot, as an extra named child of each
+NautilusWindowSlot's own GtkStack (issue #133), the same approach Column
+View uses (column_view.py, issue #118): every tab gets its own panel
+instance (selection, filter, scroll), keyed off `slot._mc_computer`.
 """
 
 from __future__ import annotations
@@ -31,7 +32,7 @@ gi.require_version("GLib", "2.0")
 gi.require_version("Gtk", "4.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
-from nautilus_my_computer import preferred_folders
+from nautilus_my_computer import common, preferred_folders
 from nautilus_my_computer.common import (
     _CARD_WIDTH,
     _DISK_CARD_ROW_SPACING,
@@ -124,7 +125,16 @@ NETWORK_FSTYPES = {
 OPTICAL_FSTYPES = {"iso9660", "udf"}
 EXTERNAL_PREFIXES = ("/media/", "/run/media/", "/mnt/")
 
-VIEW_DISKINFO = "diskinfo"  # visible_view token — our panel (Overlay child), shared with main.py
+VIEW_FILES = "files"  # visible_view token -- slot's own native content
+VIEW_DISKINFO = "diskinfo"  # visible_view token -- our panel, elected on this slot's own GtkStack
+
+# Name the panel is added under on each slot's own GtkStack (see
+# watch_tab_view/_do_inject_into_slot below). Nautilus's own two stack
+# children (vbox, global_search_page) are added via gtk_stack_add_child
+# with no name, so this name can never collide with anything of theirs.
+_SLOT_STACK_CHILD_NAME = "mc-computer"
+_SLOT_INIT_RETRY_MS = 20  # retry interval while waiting for a new slot to settle
+_SLOT_INIT_MAX_ATTEMPTS = 100  # ~2s budget, mirrors main.py's _WIN_INIT_MAX_ATTEMPTS
 
 
 def _disk_context_menu(ext, win, m) -> ContextMenu:
@@ -487,9 +497,6 @@ _CSS = b"""
    inside Nautilus's own view widget tree. */
 .hidden-file {
     opacity: 0.55;
-}
-.vanilla-diskinfo-view-hidden > * {
-    opacity: 0;
 }
 /* For testing/debugging: shows injected panel outline vs native sidebar. */
 .debug {
@@ -1006,6 +1013,177 @@ def _window_is_at_disks(win) -> bool:
     return fallback is not None and fallback.equal(_DISKS_FILE)
 
 
+def _slot_panel_state(slot) -> dict | None:
+    """The per-slot panel state dict injected by _do_inject_into_slot, or
+    None if `slot` hasn't been injected yet (or is None)."""
+    return getattr(slot, "_mc_computer", None) if slot is not None else None
+
+
+def watch_tab_view(ext, win: Gtk.Window) -> None:
+    """Inject the Computer panel into every current and future tab of `win`.
+
+    Nautilus creates one NautilusWindowSlot per tab, each owning its own
+    GtkStack that already holds two sibling children of its own (vbox and
+    global_search_page, nautilus-window-slot.c:869-892). We add the panel as
+    a third sibling of that same stack instead of the single window-wide
+    overlay used before, so tab switching needs no resync: each tab's panel
+    state (selection, filter, scroll) lives on its own slot and is untouched
+    by switching away from it. See issue #133 (mirrors Column View, #118)."""
+    common.watch_slots(win, lambda w, slot, ext=ext: _schedule_slot_init(ext, w, slot))
+
+
+def _slot_idle(slot: Gtk.Widget) -> bool:
+    """Location resolved AND the slot's initial native load has finished
+    (allow-stop false). Column View only waits on location (its own
+    injection predates this and has not shown the issue this guards
+    against), but adding a second stack child (add_named does not change
+    the visible child, but still triggers a size/layout pass) while the
+    slot's *initial* native enumeration for a real folder is still in
+    flight has been observed to produce a burst of Nautilus-core
+    "Unexpected plugin response" warnings (stale async context-menu-provider
+    jobs) -- most visible right after a background tab is opened straight to
+    a real folder (e.g. "Open in New Tab" on a Preferred Folder card).
+    Waiting for the load to finish avoids injecting into that window."""
+    try:
+        if slot.get_property("location") is None:
+            return False
+        return not slot.get_property("allow-stop")
+    except TypeError:
+        return True
+
+
+def _schedule_slot_init(ext, win: Gtk.Window, slot: Gtk.Widget | None) -> None:
+    if slot is None:
+        return
+    common.schedule_slot_init(
+        slot,
+        "_mc_computer",
+        functools.partial(_do_inject_into_slot, ext, win),
+        retry_ms=_SLOT_INIT_RETRY_MS,
+        max_attempts=_SLOT_INIT_MAX_ATTEMPTS,
+        is_settled=_slot_idle,
+    )
+
+
+def _do_inject_into_slot(ext, win: Gtk.Window, slot: Gtk.Widget) -> bool:
+    if getattr(slot, "_mc_computer", None) is not None:
+        return GLib.SOURCE_REMOVE
+    stack = common._find_slot_stack(slot)
+    if stack is None:
+        _log("_do_inject_into_slot: no GtkStack found on slot")
+        return GLib.SOURCE_REMOVE
+    panel, grid_host, grid_box = _build_panel(ext, win)
+    stack.add_named(panel, _SLOT_STACK_CHILD_NAME)
+    slot._mc_computer = {
+        "window": win,
+        "slot": slot,
+        "panel": panel,
+        "grid_host": grid_host,
+        "grid_box": grid_box,
+        "section_flows": [],
+        "card_widgets": {},  # key → MyComputerDiskCard
+        "folder_card_widgets": {},
+        "stale_generations": [],
+        "stale_release_tick_id": None,
+        "stale_release_ticks": 0,
+        "_deselecting": False,
+        "selected_mount_key": None,
+        "selected_folder_key": None,
+        "filter_query": "",
+        "location_filter_owned": False,
+        "visible_view": VIEW_FILES,
+        "previous_child": None,  # stack child to restore when leaving the panel
+    }
+    ext._panel_slots.add(slot)
+    stack.connect("notify::visible-child", _on_slot_stack_child_changed, slot)
+    slot.connect("notify::location", _on_slot_location_changed, ext, win)
+    loc = slot.get_property("location")
+    if loc is not None and loc.equal(_DISKS_FILE):
+        _enter_panel(ext, win, slot)
+    return GLib.SOURCE_REMOVE
+
+
+def _on_slot_stack_child_changed(stack, _pspec, slot: Gtk.Widget) -> None:
+    """Nautilus reasserts its own stack child on its own initiative (e.g.
+    leaving global search, nautilus-window-slot.c:1045/1091). Reassert the
+    panel if it is currently elected for this slot (mirrors Column View's
+    _on_slot_stack_child_changed, issue #118)."""
+    if getattr(slot, "_mc_computer_reasserting", False):
+        return
+    state = getattr(slot, "_mc_computer", None)
+    if state is None or state.get("visible_view") != VIEW_DISKINFO:
+        return
+    panel = state["panel"]
+    if stack.get_visible_child() is panel:
+        return
+    slot._mc_computer_reasserting = True
+    stack.set_visible_child(panel)
+    slot._mc_computer_reasserting = False
+
+
+def _on_slot_location_changed(slot, _pspec, ext, win: Gtk.Window) -> None:
+    """Keep this slot's own panel in sync with real Nautilus navigation on it
+    (address bar, pathbar, back/forward, a bookmark, our own navigation
+    echo) -- scoped to exactly the slot that navigated, unlike the
+    window-wide title watch this replaces (issue #133)."""
+    state = getattr(slot, "_mc_computer", None)
+    if state is None:
+        return
+    loc = slot.get_property("location")
+    at_disks = loc is not None and loc.equal(_DISKS_FILE)
+    stack = state["panel"].get_parent()
+    showing = stack is not None and stack.get_visible_child() is state["panel"]
+    if at_disks:
+        if not showing:
+            _enter_panel(ext, win, slot)
+    elif showing:
+        _leave_panel(ext, win, slot)
+
+
+def _enter_panel(ext, win: Gtk.Window, slot: Gtk.Widget) -> None:
+    """Show the panel for `slot`, populated fresh. Works the same whether
+    `slot` is the window's active tab or a background one (e.g. "Open in New
+    Tab" on the Computer sidebar row) -- window-singleton chrome (sidebar
+    highlight, pathbar chip, sort watch) is handled separately by
+    main.py's _on_navigation, scoped to the active slot only."""
+    state = slot._mc_computer
+    stack = state["panel"].get_parent()
+    if stack is None:
+        return
+    state["previous_child"] = stack.get_visible_child()
+    _populate_slot(ext, slot)
+    # Cancel the covered native load before unmapping it (stack.set_visible_child
+    # below unmaps every non-visible child) -- gives Nautilus's own job-cancellation
+    # machinery a clean chance to tear down in-flight per-file async work (e.g.
+    # context-menu-provider queries) before the forced unmap, rather than after.
+    ext._stop_hidden_native_slot(win, slot)
+    stack.set_visible_child(state["panel"])
+    state["visible_view"] = VIEW_DISKINFO
+    state["location_filter_owned"] = False
+    ext._ensure_usage_poll_running()
+
+
+def _leave_panel(ext, win: Gtk.Window, slot: Gtk.Widget) -> None:
+    """Hide the panel for `slot`, restoring whatever stack child was showing
+    before it was elected."""
+    state = slot._mc_computer
+    stack = state["panel"].get_parent()
+    if stack is not None and stack.get_visible_child() is state["panel"]:
+        previous = state.get("previous_child")
+        if previous is not None:
+            stack.set_visible_child(previous)
+    state["visible_view"] = VIEW_FILES
+    state["filter_query"] = ""
+    state["location_filter_owned"] = False
+    state["_deselecting"] = True
+    for flow in state.get("section_flows", []):
+        flow.unselect_all()
+    state["_deselecting"] = False
+    state["selected_mount_key"] = None
+    state["selected_folder_key"] = None
+    ext._stop_usage_poll_if_idle()
+
+
 def init_data_watchers(ext) -> None:
     """Initial mount scan + live-watch wiring: /proc/mounts POLLPRI and
     VolumeMonitor signals, called once from MyComputerExtension.__init__."""
@@ -1153,10 +1331,8 @@ def _find_sort_button(ext, nautilus_win: Gtk.Window):
 
 
 def _on_sort_button_active(ext, btn: Gtk.MenuButton, _param, nautilus_win: Gtk.Window) -> None:
-    state = ext._windows.get(nautilus_win)
-    if not state or not ext._has_live_overlay(state, "sort button"):
-        return
-    if state.get("visible_view") != VIEW_DISKINFO:
+    state = ext._active_panel_state(nautilus_win)
+    if not state or state.get("visible_view") != VIEW_DISKINFO:
         return
     if btn.get_active():
         ext._sort_hover = True
@@ -1186,7 +1362,7 @@ def apply_card_filter(ext, win: Gtk.Window, query: str) -> None:
     MyComputerCardSection.set_query in widgets.py -- each group filters its
     own cards and self-hides when empty). Stored on state so _populate()
     re-applies it after a live refresh or a navigate-away-and-back."""
-    state = ext._windows.get(win)
+    state = ext._active_panel_state(win)
     if not state:
         return
     state["filter_query"] = query
@@ -1263,16 +1439,6 @@ def _do_live_refresh(ext) -> bool:
     # Re-discover network places in background; callback will repopulate
     _refresh_network_places(on_done=ext._repopulate_visible)
     ext._repopulate_visible()
-    return GLib.SOURCE_REMOVE
-
-
-def _repopulate_visible(ext) -> bool:
-    """Repopulate whichever windows are showing the disk view."""
-    for win, state in list(ext._windows.items()):
-        if not ext._has_live_overlay(state, "repopulate_visible"):
-            continue
-        if state.get("visible_view") == VIEW_DISKINFO:
-            ext._populate(win)
     return GLib.SOURCE_REMOVE
 
 
@@ -1383,9 +1549,7 @@ def _apply_usage_updates(ext, updates: dict) -> bool:
         if key not in _disk_data:
             continue
         _disk_data[key] = dataclasses.replace(_disk_data[key], total=total, free=free)
-        for state in ext._windows.values():
-            if not ext._has_live_overlay(state, "apply_usage_updates"):
-                continue
+        for state in ext._iter_panel_states():
             if state.get("visible_view") != VIEW_DISKINFO:
                 continue
             _update_card_usage(ext, state, key, total, free)
@@ -1425,7 +1589,7 @@ def _on_window_active_changed(ext, win: Gtk.Window) -> None:
     """notify::is-active handler: sweep folder icons/captions when a window
     showing the disk panel regains focus (issue #78 -- see _sweep_folder_icons
     for why this replaces a poll instead of a change signal)."""
-    state = ext._windows.get(win)
+    state = ext._active_panel_state(win)
     if not state or not win.get_property("is-active"):
         return
     if state.get("visible_view") != VIEW_DISKINFO:
@@ -1450,13 +1614,8 @@ def _ensure_usage_poll_running(ext) -> None:
 
 
 def _stop_usage_poll_if_idle(ext) -> None:
-    """Disarm poll workers when no window is showing the disk panel."""
-    any_visible = any(
-        st.get("overlay") is not None
-        and st.get("overlay_alive", True)
-        and st.get("visible_view") == VIEW_DISKINFO
-        for st in ext._windows.values()
-    )
+    """Disarm poll workers when no slot anywhere has the panel elected."""
+    any_visible = any(st.get("visible_view") == VIEW_DISKINFO for st in ext._iter_panel_states())
     if not any_visible:
         if ext._local_poll_stop is not None:
             ext._local_poll_stop.set()
@@ -1494,7 +1653,7 @@ def _queue_stale_generation_release(ext, state: dict, root: Gtk.Widget) -> None:
     if state.get("stale_release_tick_id") is not None:
         return
 
-    owner = state.get("overlay")
+    owner = state.get("panel")
     if owner is None or not hasattr(owner, "add_tick_callback"):
         GLib.timeout_add(50, lambda st=state, ext=ext: _release_stale_generations(ext, st))
         return
@@ -1562,9 +1721,20 @@ def _on_ctrl_scroll_zoom(
 
 
 def _populate(ext, win: Gtk.Window) -> None:
-    state = ext._windows.get(win)
+    """Populate whichever panel the window's active slot owns. Most call
+    sites only ever care about "the panel currently in front of the user in
+    this window" -- direct per-slot population (background tabs, the
+    enter/leave machinery above) goes through _populate_slot instead."""
+    slot = ext._active_slot_widget(win)
+    if slot is not None:
+        _populate_slot(ext, slot)
+
+
+def _populate_slot(ext, slot) -> None:
+    state = getattr(slot, "_mc_computer", None)
     if state is None:
         return
+    win = state["window"]
 
     grid_box = _new_grid_box(ext)
     section_flows: list[Gtk.FlowBox] = []
@@ -1819,7 +1989,7 @@ def _on_folder_metadata_ready(
         pf, display_name=display_name, gio_icon=gio_icon, is_hidden=is_hidden
     )
     _folder_data[folder_key] = new_pf
-    for state in ext._windows.values():
+    for state in ext._iter_panel_states():
         card = state.get("folder_card_widgets", {}).get(folder_key)
         if card is not None:
             card.update_metadata(new_pf)
@@ -1857,7 +2027,7 @@ def _on_special_place_icon_ready(
     gio_icon = _resolve_custom_gicon(info)
     new_pf = dataclasses.replace(pf, gio_icon=gio_icon)
     _folder_data[folder_key] = new_pf
-    for state in ext._windows.values():
+    for state in ext._iter_panel_states():
         card = state.get("folder_card_widgets", {}).get(folder_key)
         if card is not None:
             card.update_metadata(new_pf)
@@ -1904,7 +2074,7 @@ def _on_folder_icon_ready(ext, gfile: Gio.File, result: Gio.AsyncResult, folder_
     gio_icon = _resolve_custom_gicon(info) or info.get_icon()
     new_pf = dataclasses.replace(pf, display_name=display_name, gio_icon=gio_icon)
     _folder_data[folder_key] = new_pf
-    for state in ext._windows.values():
+    for state in ext._iter_panel_states():
         card = state.get("folder_card_widgets", {}).get(folder_key)
         if card is not None:
             card.update_metadata(new_pf)
@@ -2082,7 +2252,7 @@ def _show_folder_captions(ext, folder_key: str) -> None:
         if pf.is_special_place or not show_captions
         else [_resolve_caption_line(tok, pf, data) for tok in tokens]
     )
-    for state in ext._windows.values():
+    for state in ext._iter_panel_states():
         card = state.get("folder_card_widgets", {}).get(folder_key)
         if card is not None:
             card.set_captions(lines)
@@ -2183,7 +2353,7 @@ def _on_card_activated(ext, _flow_box, child: Gtk.FlowBoxChild, win: Gtk.Window)
 
 
 def _on_flow_selection_changed(ext, flow_box: Gtk.FlowBox, win: Gtk.Window) -> None:
-    state = ext._windows.get(win)
+    state = ext._active_panel_state(win)
     if not state or state.get("_deselecting"):
         return
     selected = flow_box.get_selected_children()
@@ -2232,7 +2402,7 @@ def _attach_flow_shortcuts(ext, flow_box: Gtk.FlowBox, win: Gtk.Window) -> None:
 
 
 def _on_panel_clicked(ext, _gesture, _n, _x, _y, win: Gtk.Window) -> None:
-    state = ext._windows.get(win)
+    state = ext._active_panel_state(win)
     if not state:
         return
     state["_deselecting"] = True
@@ -2300,7 +2470,7 @@ def _on_card_right_clicked(ext, gesture, _n, x, y, win: Gtk.Window, row: Gtk.Box
     # its menu to the card lets GTK constrain the popover to that tiny viewport
     # subtree; anchor it to the full panel instead, as Column View does for its
     # scrollable content, and translate the click point into panel coordinates.
-    state = ext._windows.get(win)
+    state = ext._active_panel_state(win)
     popover_parent = state.get("panel") if isinstance(row, MyComputerFolderCard) and state else row
     point = row.translate_coordinates(popover_parent, x, y)
     point_x, point_y = point if point is not None else (x, y)
