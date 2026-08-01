@@ -246,7 +246,7 @@ def _computer_context_menu(ext, win, entry: PlaceEntry) -> ContextMenu:
         [
             open_section(
                 lambda: ext._do_open(uri, win),
-                open_tab_action=lambda: ext._do_open_tab(uri, win),
+                open_tab_action=lambda: ext._do_open_tab(uri, win, make_active=False),
                 open_window_action=lambda: ext._do_open_window(uri),
                 open_enabled=not on_computer,
                 submenu=False,

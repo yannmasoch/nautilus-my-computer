@@ -150,7 +150,7 @@ def _disk_context_menu(ext, win, m) -> ContextMenu:
         # no app handler, so omit it there entirely, like native Nautilus.
         open_actions = open_section(
             lambda: ext._do_open(nav_uri, win),
-            open_tab_action=lambda: ext._do_open_tab(nav_uri, win),
+            open_tab_action=lambda: ext._do_open_tab(nav_uri, win, make_active=False),
             open_window_action=lambda: ext._do_open_window(nav_uri),
             open_with_action=(
                 (lambda: ext._do_open_with(nav_uri, win)) if nav_uri.startswith("file://") else None
@@ -2320,7 +2320,7 @@ def _on_mount_then_open_finish(ext, volume, result, user_data) -> None:
     uri = mount.get_root().get_uri()
     GLib.idle_add(ext._repopulate_visible)
     if mode == "tab":
-        GLib.idle_add(ext._do_open_tab, uri, win)
+        GLib.idle_add(lambda: ext._do_open_tab(uri, win, make_active=False))
     elif mode == "window":
         GLib.idle_add(ext._do_open_window, uri)
     else:
@@ -2389,7 +2389,7 @@ def _activate_focused_card(ext, flow_box: Gtk.FlowBox, win: Gtk.Window, kind: st
         return False
 
     if kind == "tab":
-        ext._do_open_tab(nav_uri, win)
+        ext._do_open_tab(nav_uri, win, make_active=False)
     elif kind == "window":
         ext._do_open_window(nav_uri)
     elif kind == "properties":

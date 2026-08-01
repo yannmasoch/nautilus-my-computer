@@ -694,7 +694,7 @@ class _ColumnViewHost:
         open_actions = (
             open_section(
                 lambda: self._on_real_row_activated(column, row),
-                open_tab_action=lambda: self._ext._do_open_tab(uri, self._win),
+                open_tab_action=lambda: self._ext._do_open_tab(uri, self._win, make_active=False),
                 open_window_action=lambda: self._ext._do_open_window(uri),
                 open_with_action=(
                     (lambda: self._ext._do_open_with(uri, self._win, content_type=content_type))
