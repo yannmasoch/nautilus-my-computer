@@ -2243,6 +2243,39 @@ def _on_panel_clicked(ext, _gesture, _n, _x, _y, win: Gtk.Window) -> None:
     state["selected_folder_key"] = None
 
 
+def _select_single_card(card: Gtk.Widget) -> None:
+    """Anticipate selection on the card's FlowBoxChild, mirroring
+    select_single_item_if_not_selected (nautilus-list-base.c:287)."""
+    wrapper = card.get_parent()
+    if isinstance(wrapper, Gtk.FlowBoxChild):
+        flow = wrapper.get_parent()
+        if isinstance(flow, Gtk.FlowBox):
+            flow.select_child(wrapper)
+
+
+def _on_card_pressed(
+    ext, gesture, n_press: int, x: float, y: float, win: Gtk.Window, card: Gtk.Box
+) -> None:
+    """Button dispatch on "pressed", mirroring on_item_click_pressed
+    (nautilus-list-base.c:270-292). Primary is left unclaimed (activation
+    stays on FlowBox's own child-activated binding, _on_card_activated)."""
+    button = gesture.get_current_button()
+    if button == Gdk.BUTTON_SECONDARY and n_press == 1:
+        _on_card_right_clicked(ext, gesture, n_press, x, y, win, card)
+    elif button == Gdk.BUTTON_MIDDLE and n_press == 1:
+        # Middle always opens a background tab, unconditionally -- native's
+        # activate_selection(self, TRUE) sets NEW_TAB | DONT_MAKE_ACTIVE with
+        # no modifier check (nautilus-list-base.c:175-187, 285-291). Ctrl+middle
+        # -> new window is sidebar-only (nautilus-sidebar.c:3236-3241, #116);
+        # cards ignore Ctrl on middle-click to match native cells.
+        gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+        _select_single_card(card)
+        if isinstance(card, MyComputerDiskCard) and not card.model.is_mounted:
+            _do_mount_then_open(ext, card.model, win, "tab")
+        else:
+            ext._do_open_tab(card.nav_uri, win, make_active=False)
+
+
 def _on_card_right_clicked(ext, gesture, _n, x, y, win: Gtk.Window, row: Gtk.Box) -> None:
     gesture.set_state(Gtk.EventSequenceState.CLAIMED)
 

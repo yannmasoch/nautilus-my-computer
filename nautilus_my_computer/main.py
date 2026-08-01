@@ -697,8 +697,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _attach_flow_shortcuts(self, flow_box: Gtk.FlowBox, win: Gtk.Window) -> None:
         my_computer_view._attach_flow_shortcuts(self, flow_box, win)
 
-    def _on_card_right_clicked(self, gesture, n, x, y, win: Gtk.Window, row: Gtk.Box) -> None:
-        my_computer_view._on_card_right_clicked(self, gesture, n, x, y, win, row)
+    def _on_card_pressed(self, gesture, n, x, y, win: Gtk.Window, card: Gtk.Box) -> None:
+        my_computer_view._on_card_pressed(self, gesture, n, x, y, win, card)
 
     # ── Initialisation ────────────────────────────────────────────────────────
 
