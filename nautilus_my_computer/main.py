@@ -1382,7 +1382,16 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                 return
 
         panel_state = self._active_panel_state(win)
-        in_view = panel_state is not None and panel_state.get("visible_view") == VIEW_DISKINFO
+        # Read the slot's own location rather than the panel's visible_view
+        # flag: Nautilus emits "locations-changed" from inside its own
+        # notify::location handler (nautilus-window.c on_slot_location_changed),
+        # which it connected long before my_computer_view's per-slot watcher,
+        # so this runs *before* _enter_panel/_leave_panel has updated that
+        # flag. The location is the same ground truth both of them act on,
+        # and it is already committed by the time either handler runs.
+        location = _active_slot_location(win)
+        at_disks = location is not None and location.equal(_DISKS_FILE)
+        in_view = panel_state is not None and at_disks
         if in_view:
             GLib.idle_add(self._set_computer_sidebar_selected, state, True)
 
