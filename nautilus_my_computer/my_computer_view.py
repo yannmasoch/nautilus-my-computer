@@ -1168,13 +1168,16 @@ def _leave_panel(ext, win: Gtk.Window, slot: Gtk.Widget) -> None:
     before it was elected."""
     state = slot._mc_computer
     stack = state["panel"].get_parent()
+    # Clear "elected" state before touching the stack: set_visible_child()
+    # fires notify::visible-child synchronously, and _on_slot_stack_child_changed
+    # reasserts the panel whenever it still reads VIEW_DISKINFO here.
+    state["visible_view"] = VIEW_FILES
+    state["filter_query"] = ""
+    state["location_filter_owned"] = False
     if stack is not None and stack.get_visible_child() is state["panel"]:
         previous = state.get("previous_child")
         if previous is not None:
             stack.set_visible_child(previous)
-    state["visible_view"] = VIEW_FILES
-    state["filter_query"] = ""
-    state["location_filter_owned"] = False
     state["_deselecting"] = True
     for flow in state.get("section_flows", []):
         flow.unselect_all()
