@@ -1140,6 +1140,15 @@ def _on_slot_location_changed(slot, _pspec, ext, win: Gtk.Window) -> None:
         _leave_panel(ext, win, slot)
 
 
+def _unselect_all_cards(state: dict) -> None:
+    """Clear every section FlowBox's selection, guarded by _deselecting so
+    _on_flow_selection_changed doesn't read it back as a user action."""
+    state["_deselecting"] = True
+    for flow in state.get("section_flows", []):
+        flow.unselect_all()
+    state["_deselecting"] = False
+
+
 def _enter_panel(ext, win: Gtk.Window, slot: Gtk.Widget) -> None:
     """Show the panel for `slot`, populated fresh. Works the same whether
     `slot` is the window's active tab or a background one (e.g. "Open in New
@@ -1178,10 +1187,7 @@ def _leave_panel(ext, win: Gtk.Window, slot: Gtk.Widget) -> None:
         previous = state.get("previous_child")
         if previous is not None:
             stack.set_visible_child(previous)
-    state["_deselecting"] = True
-    for flow in state.get("section_flows", []):
-        flow.unselect_all()
-    state["_deselecting"] = False
+    _unselect_all_cards(state)
     state["selected_mount_key"] = None
     state["selected_folder_key"] = None
     ext._stop_usage_poll_if_idle()
@@ -1939,10 +1945,7 @@ def _populate_slot(ext, slot) -> None:
     # Needed on every populate (first show AND live refresh): FlowBox with SINGLE
     # selection mode can auto-select a child when the widget gains keyboard focus,
     # so we must be explicit here rather than relying on the widget's default state.
-    state["_deselecting"] = True
-    for flow in section_flows:
-        flow.unselect_all()
-    state["_deselecting"] = False
+    _unselect_all_cards(state)
     sel_mount = state.get("selected_mount_key")
     sel_folder = state.get("selected_folder_key")
     if sel_mount and sel_mount in card_widgets:
@@ -2408,10 +2411,7 @@ def _on_panel_clicked(ext, _gesture, _n, _x, _y, win: Gtk.Window) -> None:
     state = ext._active_panel_state(win)
     if not state:
         return
-    state["_deselecting"] = True
-    for flow in state.get("section_flows", []):
-        flow.unselect_all()
-    state["_deselecting"] = False
+    _unselect_all_cards(state)
     state["selected_mount_key"] = None
     state["selected_folder_key"] = None
 
