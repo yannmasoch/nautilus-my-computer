@@ -509,12 +509,16 @@ class _ColumnViewHost:
             folder_uri,
             self._on_real_row_activated,
             on_loaded=self._on_column_loaded,
+            on_files_dropped=self._on_files_dropped,
             sort=self._sort,
         )
         right_click = Gtk.GestureClick(button=3)
         right_click.connect("pressed", self._on_column_background_right_clicked, column)
         column.add_controller(right_click)
         return column
+
+    def _on_files_dropped(self, source_uris: list[str], destination_uri: str, *, cut: bool) -> None:
+        self._paste_uris_into_folder(source_uris, destination_uri, cut=cut)
 
     def _on_column_loaded(self, _column) -> None:
         """A freshly created column's enumerate_children_async just finished

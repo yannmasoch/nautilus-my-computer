@@ -1212,6 +1212,86 @@ class MyComputerColumnRow(Gtk.ListBoxRow):
             box.append(chevron)
 
         self.set_child(box)
+        self._wire_dnd()
+
+    def _wire_dnd(self) -> None:
+        drag = Gtk.DragSource()
+        drag.set_actions(Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
+        drag.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        drag.connect("prepare", self._on_drag_prepare)
+        drag.connect("drag-begin", self._on_drag_begin)
+        self.add_controller(drag)
+
+        if self.is_dir:
+            drop = Gtk.DropTarget.new(
+                Gdk.FileList.__gtype__, Gdk.DragAction.COPY | Gdk.DragAction.MOVE
+            )
+            drop.set_preload(True)
+            drop.connect("enter", self._on_drop_enter)
+            drop.connect("leave", self._on_drop_leave)
+            drop.connect("drop", self._on_drop)
+            self.add_controller(drop)
+
+    def _on_drag_prepare(self, _source, _x, _y):
+        gfile = Gio.File.new_for_uri(self.uri)
+        file_list = Gdk.FileList.new_from_list([gfile])
+        cp_file_list = Gdk.ContentProvider.new_for_value(file_list)
+        cp_uri_text = Gdk.ContentProvider.new_for_value(f"{self.uri}\r\n")
+        return Gdk.ContentProvider.new_union([cp_file_list, cp_uri_text])
+
+    def _on_drag_begin(self, _source, drag) -> None:
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        box.add_css_class("mc-column-row")
+        box.add_css_class("navigation-sidebar")
+
+        icon = Gtk.Image()
+        if self.is_dir:
+            icon.set_from_icon_name("folder")
+        else:
+            icon.set_from_icon_name("text-x-generic")
+        box.append(icon)
+
+        label = Gtk.Label(label=self.display_name)
+        box.append(label)
+
+        Gtk.DragIcon.get_for_drag(drag).set_child(box)
+
+    def _on_drop_enter(self, target, _x, _y):
+        set_row_active(self, True)
+        event = target.get_current_event()
+        state = event.get_modifier_state() if event is not None else 0
+        if state & Gdk.ModifierType.CONTROL_MASK:
+            return Gdk.DragAction.COPY
+        return Gdk.DragAction.MOVE
+
+    def _on_drop_leave(self, _target):
+        set_row_active(self, False)
+
+    def _on_drop(self, drop_target, value, _x, _y) -> bool:
+        set_row_active(self, False)
+        if not isinstance(value, Gdk.FileList):
+            return False
+        files = value.get_files()
+        if not files:
+            return False
+        uris = [f.get_uri() for f in files if f is not None]
+        if not uris:
+            return False
+
+        target_norm = self.uri.rstrip("/")
+        uris = [u for u in uris if u.rstrip("/") != target_norm]
+        if not uris:
+            return False
+
+        event = drop_target.get_current_event()
+        state = event.get_modifier_state() if event is not None else 0
+        is_move = not bool(state & Gdk.ModifierType.CONTROL_MASK)
+
+        col = self.get_ancestor(MyComputerColumn)
+        if col is not None and callable(getattr(col, "_on_drop_files", None)):
+            col._on_drop_files(uris, destination_uri=self.uri, cut=is_move)
+            return True
+        return False
 
     def do_snapshot(self, snapshot: Gtk.Snapshot) -> None:
         """Draw the complete cut treatment in the padded row's bounds."""
@@ -1523,6 +1603,7 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         folder_uri: str,
         on_row_activated,
         on_loaded=None,
+        on_files_dropped=None,
         sort: tuple[str, bool] = ("name", False),
     ) -> None:
         super().__init__()
@@ -1530,6 +1611,7 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         self.folder_uri = folder_uri
         self._on_row_activated = on_row_activated
         self._on_loaded = on_loaded
+        self._on_files_dropped = on_files_dropped
         self._sort = sort
         self._cancellable = Gio.Cancellable()
         # Keyboard navigation is a cursor, not a change to the committed
@@ -1595,8 +1677,53 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         self._empty_page.set_title(_native("Folder is Empty"))
         self._empty_page.add_css_class("compact")
         self.set_child(self.list_box)
+        self._wire_column_drop()
 
         self._load()
+
+    def _wire_column_drop(self) -> None:
+        drop = Gtk.DropTarget.new(Gdk.FileList.__gtype__, Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
+        drop.set_preload(True)
+        drop.connect("enter", self._on_column_drop_enter)
+        drop.connect("leave", self._on_column_drop_leave)
+        drop.connect("drop", self._on_column_drop)
+        self.add_controller(drop)
+
+    def _on_column_drop_enter(self, target, _x, _y):
+        event = target.get_current_event()
+        state = event.get_modifier_state() if event is not None else 0
+        if state & Gdk.ModifierType.CONTROL_MASK:
+            return Gdk.DragAction.COPY
+        return Gdk.DragAction.MOVE
+
+    def _on_column_drop_leave(self, _target):
+        pass
+
+    def _on_column_drop(self, drop_target, value, _x, _y) -> bool:
+        if not isinstance(value, Gdk.FileList):
+            return False
+        files = value.get_files()
+        if not files:
+            return False
+        uris = [f.get_uri() for f in files if f is not None]
+        if not uris:
+            return False
+
+        col_norm = self.folder_uri.rstrip("/")
+        uris = [u for u in uris if u.rstrip("/") != col_norm]
+        if not uris:
+            return False
+
+        event = drop_target.get_current_event()
+        state = event.get_modifier_state() if event is not None else 0
+        is_move = not bool(state & Gdk.ModifierType.CONTROL_MASK)
+
+        self._on_drop_files(uris, destination_uri=self.folder_uri, cut=is_move)
+        return True
+
+    def _on_drop_files(self, uris: list[str], destination_uri: str, cut: bool) -> None:
+        if callable(self._on_files_dropped):
+            self._on_files_dropped(uris, destination_uri, cut=cut)
 
     def set_sort(self, sort: tuple[str, bool, bool]) -> None:
         """Update this column's sort and reload. Always reloads regardless of
