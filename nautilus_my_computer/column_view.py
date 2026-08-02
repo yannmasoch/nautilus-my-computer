@@ -2415,6 +2415,9 @@ def inject_column_view_entry(ext, win: Gtk.Window) -> None:
     box = Gtk.Box(spacing=6)
     box.append(switcher)
     box.append(options_btn)
+    # Unparent from the Adw.Bin first: appending a still-parented child is a
+    # no-op that trips a GTK assertion and leaves the native button orphaned.
+    view_controls.set_child(None)
     box.append(split_button)
     view_controls.set_child(box)
 
