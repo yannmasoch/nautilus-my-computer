@@ -1149,6 +1149,70 @@ def _unselect_all_cards(state: dict) -> None:
     state["_deselecting"] = False
 
 
+def _claim_panel_focus(state: dict, intended_mount, intended_folder) -> None:
+    """Take focus onto the scroller so no card does, then restore the
+    selection that was actually intended (as captured before GTK's
+    focus-driven auto-select had a chance to run).
+
+    Callers must hold state["_deselecting"] = True from before the panel is
+    shown through this call: grab_focus() itself, or GTK's own deferred focus
+    resolution during mapping, can select a GtkFlowBoxChild in SINGLE mode
+    (unlike Nautilus's GtkSingleSelection there is no autoselect property to
+    turn off), and without the guard that bogus selection reaches
+    _on_flow_selection_changed exactly like a real user click -- overwriting
+    selected_mount_key/selected_folder_key so the bogus selection then
+    persists across every future populate, indistinguishable from a
+    legitimate one. This function is the one place that lifts the guard, so
+    it must also be the one place that re-asserts the true intended value."""
+    grid_host = state.get("grid_host")
+    if grid_host is not None:
+        grid_host.grab_focus()
+    if not intended_mount and not intended_folder:
+        for flow in state.get("section_flows", []):
+            flow.unselect_all()
+    state["_deselecting"] = False
+    state["selected_mount_key"] = intended_mount
+    state["selected_folder_key"] = intended_folder
+
+
+def _claim_panel_focus_when_mapped(state: dict) -> None:
+    """Defer _claim_panel_focus() past GTK's own initial-focus resolution.
+
+    grab_focus() on an unmapped/unrealized widget is a no-op. GTK runs its own
+    focus resolution as part of mapping (notably at window present() time) and
+    picks the first focusable descendant -- a GtkFlowBoxChild, which SINGLE
+    selection mode then selects. Claiming focus inside the "map" handler
+    itself can still be overridden by that resolution, so the claim is pushed
+    one further idle iteration past it.
+
+    One idle iteration is enough for ordinary navigation, but a *cold* window
+    present() still wins the race: GTK's initial-focus resolution on first
+    present() is itself driven across more than one idle-priority pass, so a
+    single idle_add here can still land before it. A second nested one-shot
+    idle covers that final pass too. Caller must set state["_deselecting"] =
+    True before calling this (see _claim_panel_focus)."""
+    panel = state["panel"]
+    intended_mount = state.get("selected_mount_key")
+    intended_folder = state.get("selected_folder_key")
+
+    def _settle() -> bool:
+        def _settle_again() -> bool:
+            _claim_panel_focus(state, intended_mount, intended_folder)
+            return GLib.SOURCE_REMOVE
+
+        GLib.idle_add(_settle_again)
+        return GLib.SOURCE_REMOVE
+
+    def _on_map(w: Gtk.Widget) -> None:
+        w.disconnect(handler_id)
+        GLib.idle_add(_settle)
+
+    if panel.get_mapped():
+        _settle()
+    else:
+        handler_id = panel.connect("map", _on_map)
+
+
 def _enter_panel(ext, win: Gtk.Window, slot: Gtk.Widget) -> None:
     """Show the panel for `slot`, populated fresh. Works the same whether
     `slot` is the window's active tab or a background one (e.g. "Open in New
@@ -1166,9 +1230,15 @@ def _enter_panel(ext, win: Gtk.Window, slot: Gtk.Widget) -> None:
     # machinery a clean chance to tear down in-flight per-file async work (e.g.
     # context-menu-provider queries) before the forced unmap, rather than after.
     ext._stop_hidden_native_slot(win, slot)
+    # Held True from here until _claim_panel_focus_when_mapped's final settle:
+    # showing the panel is what triggers GTK's focus-driven auto-select on a
+    # card, and _on_flow_selection_changed must not record that as a real
+    # selection in the meantime (see _claim_panel_focus).
+    state["_deselecting"] = True
     stack.set_visible_child(state["panel"])
     state["visible_view"] = VIEW_DISKINFO
     state["location_filter_owned"] = False
+    _claim_panel_focus_when_mapped(state)
     ext._ensure_usage_poll_running()
 
 
@@ -1687,6 +1757,12 @@ def _build_panel(ext, win: Gtk.Window) -> tuple:
     scroll = Gtk.ScrolledWindow()
     scroll.set_vexpand(True)
     scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+    # A Gtk.FlowBox in SINGLE mode selects whatever child takes focus, so if a
+    # card were the panel's first focusable widget, showing the panel would
+    # select it on its own. Keeping the scroller focusable puts it ahead of
+    # the cards in focus order, the same way Nautilus's own view holds initial
+    # focus without selecting anything.
+    scroll.set_focusable(True)
 
     grid_box = _new_grid_box(ext)
 
