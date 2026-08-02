@@ -925,7 +925,11 @@ class MyComputerCappedGridFlowBox(Gtk.FlowBox):
     def do_measure(self, orientation, for_size):
         if orientation == Gtk.Orientation.VERTICAL and for_size > 0:
             self.set_max_children_per_line(self._cols_for_width(for_size))
-        return Gtk.FlowBox.do_measure(self, orientation, for_size)
+        minimum, natural, _min_bl, _nat_bl = Gtk.FlowBox.do_measure(self, orientation, for_size)
+        # A FlowBox has no baseline. Chaining up through PyGObject hands the
+        # baseline out-params back as 0 instead of leaving them at -1, and GTK
+        # warns on any non -1 horizontal baseline.
+        return minimum, natural, -1, -1
 
     def do_size_allocate(self, width: int, height: int, baseline: int) -> None:
         self.set_max_children_per_line(self._cols_for_width(width))
