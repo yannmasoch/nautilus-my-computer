@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-24 12:50-0700\n"
+"POT-Creation-Date: 2026-08-03 10:21-0700\n"
 "PO-Revision-Date: 2026-07-30 05:22+0000\n"
 "Last-Translator: Saintliy\n"
 "Language-Team: Korean\n"
@@ -20,40 +20,11 @@ msgid "Change Icon"
 msgstr ""
 
 #: nautilus_my_computer/bookmarks.py
-msgid "Icon"
-msgstr ""
-
-#: nautilus_my_computer/bookmarks.py
 msgid "Search icons…"
 msgstr ""
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Reset"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
-msgid "New Folder"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
-#, fuzzy, python-format
-msgid "Open With %s"
-msgstr "다른 프로그램으로 열기…"
-
-# ——————————————————————————————
-# Panel - Disk card actions
-# ——————————————————————————————
-#: nautilus_my_computer/column_view.py nautilus_my_computer/context_menu.py
-#: nautilus_my_computer/main.py
-msgid "Open"
-msgstr "열기"
-
-#: nautilus_my_computer/column_view.py
-msgid "Select Move Destination"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
-msgid "Select Copy Destination"
 msgstr ""
 
 #: nautilus_my_computer/column_view.py
@@ -69,22 +40,7 @@ msgid "Early access feature. It may contain bugs or inconsistencies."
 msgstr ""
 
 #: nautilus_my_computer/column_view.py
-msgid "Grid View"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
-msgid "List View"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
 msgid "Column View"
-msgstr ""
-
-# ——————————————————————————————
-# Preferences - Preferred Folders
-# ——————————————————————————————
-#: nautilus_my_computer/column_view.py
-msgid "View Options"
 msgstr ""
 
 # ——————————————————————————————
@@ -195,17 +151,6 @@ msgid "In {n} year"
 msgid_plural "In {n} years"
 msgstr[0] "{n}년 후"
 
-# ——————————————————————————————
-# Panel - Preferred Folders
-# ——————————————————————————————
-#: nautilus_my_computer/components.py
-msgid "Rename Folder"
-msgstr ""
-
-#: nautilus_my_computer/components.py
-msgid "Rename File"
-msgstr ""
-
 #: nautilus_my_computer/components.py
 msgid "Rename"
 msgstr ""
@@ -241,26 +186,6 @@ msgid "Pin to My Computer"
 msgstr ""
 
 #: nautilus_my_computer/context_menu.py
-msgid "Cut"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
-msgid "Copy"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
-msgid "Paste"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
-msgid "Move to…"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
-msgid "Copy to…"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
 msgstr ""
 
@@ -281,23 +206,8 @@ msgid "Compress…"
 msgstr ""
 
 #: nautilus_my_computer/context_menu.py
-msgid "Email…"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
 msgstr ""
-
-#: nautilus_my_computer/context_menu.py
-msgid "Properties"
-msgstr "속성"
-
-# ——————————————————————————————
-# Sidebar
-# ——————————————————————————————
-#: nautilus_my_computer/main.py
-msgid "Computer"
-msgstr "컴퓨터"
 
 # ——————————————————————————————
 # Preferences - General
@@ -306,57 +216,9 @@ msgstr "컴퓨터"
 msgid "My Computer Settings"
 msgstr "내 컴퓨터 설정"
 
-# ——————————————————————————————
-# Sidebar - Places
-# ——————————————————————————————
-#: nautilus_my_computer/main.py
-msgid "Home"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "Loading…"
-msgstr ""
-
 #: nautilus_my_computer/main.py
 msgid "Open My Computer"
 msgstr "내 컴퓨터 열기"
-
-#: nautilus_my_computer/main.py
-msgid "Recent"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "Starred"
-msgstr ""
-
-# Previous translation (before rename from "Network Volumes"): 네트워크 볼륨
-#: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
-msgid "Network"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "Trash"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "Open Folder"
-msgstr ""
-
-# ——————————————————————————————
-# Panel - Disk card actions
-# ——————————————————————————————
-#: nautilus_my_computer/main.py
-msgid "Open File"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "Cancel"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-#, python-format
-msgid "Choose an app to open <b>%s</b>"
-msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Recommended Apps"
@@ -364,10 +226,6 @@ msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Other Apps"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "No applications found."
 msgstr ""
 
 #: nautilus_my_computer/main.py
@@ -380,17 +238,6 @@ msgstr "일반"
 #: nautilus_my_computer/main.py
 msgid "Computer view"
 msgstr "컴퓨터 보기"
-
-#: nautilus_my_computer/main.py
-msgid "Sidebar"
-msgstr "사이드바"
-
-# ——————————————————————————————
-# Preferences - About
-# ——————————————————————————————
-#: nautilus_my_computer/main.py
-msgid "About"
-msgstr "정보"
 
 #: nautilus_my_computer/main.py
 msgid "Start on the Computer view"
@@ -414,9 +261,9 @@ msgid ""
 "separated section. Merged: folds the group into the On this Computer group. "
 "Hidden: hides the group entirely."
 msgstr ""
-"각 그룹이 표시되는 방식을 선택합니다. 표시: 그룹을 일반적인 별도 섹션으로 "
-"표시합니다. 병합: 그룹을 이 컴퓨터 그룹 안으로 접어 넣습니다. 숨김: 그룹을 "
-"완전히 숨깁니다."
+"각 그룹이 표시되는 방식을 선택합니다. 표시: 그룹을 일반적인 별도 섹션으로 표"
+"시합니다. 병합: 그룹을 이 컴퓨터 그룹 안으로 접어 넣습니다. 숨김: 그룹을 완전"
+"히 숨깁니다."
 
 #: nautilus_my_computer/main.py
 msgid "Visible"
@@ -522,10 +369,6 @@ msgid "Author"
 msgstr "작성자"
 
 #: nautilus_my_computer/main.py
-msgid "License"
-msgstr "라이선스"
-
-#: nautilus_my_computer/main.py
 msgid "Source code"
 msgstr "소스 코드"
 
@@ -533,21 +376,9 @@ msgstr "소스 코드"
 msgid "GitHub"
 msgstr "GitHub"
 
-#: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
-msgid "Unmount"
-msgstr "마운트 해제"
-
 #: nautilus_my_computer/my_computer_view.py
 msgid "Mount"
 msgstr "마운트"
-
-#: nautilus_my_computer/my_computer_view.py
-msgid "Eject"
-msgstr "꺼내기"
-
-#: nautilus_my_computer/my_computer_view.py
-msgid "Format…"
-msgstr "포맷…"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "System"
@@ -581,23 +412,5 @@ msgid "{free} free of {total}"
 msgstr "{total} 중 {free} 사용 가능"
 
 #: nautilus_my_computer/widgets.py
-msgid "Folder is Empty"
-msgstr ""
-
-#: nautilus_my_computer/widgets.py
-msgid "Created"
-msgstr ""
-
-#: nautilus_my_computer/widgets.py
-msgid "Modified"
-msgstr ""
-
-#: nautilus_my_computer/widgets.py
 msgid "Dimensions"
 msgstr ""
-
-#~ msgid "Show the Preferred Folders group at the top of the view"
-#~ msgstr "보기 상단에 기본 폴더 그룹 표시"
-
-#~ msgid "Add to Preferred"
-#~ msgstr "기본 폴더에 추가"

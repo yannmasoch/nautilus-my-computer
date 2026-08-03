@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: My Computer for Nautilus 0.12.6\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-29 08:40-0700\n"
+"POT-Creation-Date: 2026-08-03 10:21-0700\n"
 "PO-Revision-Date: 2026-07-30 16:05+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: none\n"
@@ -22,38 +22,12 @@ msgid "Change Icon"
 msgstr "Muuda ikooni"
 
 #: nautilus_my_computer/bookmarks.py
-msgid "Icon"
-msgstr "Ikoon"
-
-#: nautilus_my_computer/bookmarks.py
 msgid "Search icons…"
 msgstr "Otsi ikoone…"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Reset"
 msgstr "Lähtesta"
-
-#: nautilus_my_computer/column_view.py
-msgid "New Folder"
-msgstr "Uus kaust"
-
-#: nautilus_my_computer/column_view.py
-#, python-format
-msgid "Open With %s"
-msgstr "Ava rakendusega %s"
-
-#: nautilus_my_computer/column_view.py nautilus_my_computer/context_menu.py
-#: nautilus_my_computer/main.py
-msgid "Open"
-msgstr "Ava"
-
-#: nautilus_my_computer/column_view.py
-msgid "Select Move Destination"
-msgstr "Vali teisaldamise sihtkaust"
-
-#: nautilus_my_computer/column_view.py
-msgid "Select Copy Destination"
-msgstr "Vali kopeerimise sihtkaust"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select"
@@ -68,20 +42,8 @@ msgid "Early access feature. It may contain bugs or inconsistencies."
 msgstr "Katsetusjärgus funktsionaalsus. Võib sisaldada vigu ja vasturääkivusi."
 
 #: nautilus_my_computer/column_view.py
-msgid "Grid View"
-msgstr "Ruudustikuvaade"
-
-#: nautilus_my_computer/column_view.py
-msgid "List View"
-msgstr "Loendivaade"
-
-#: nautilus_my_computer/column_view.py
 msgid "Column View"
 msgstr "Veeruvaade"
-
-#: nautilus_my_computer/column_view.py
-msgid "View Options"
-msgstr "Vaadete valikud"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
@@ -195,14 +157,6 @@ msgstr[0] "{n} aasta pärast"
 msgstr[1] "{n} aasta pärast"
 
 #: nautilus_my_computer/components.py
-msgid "Rename Folder"
-msgstr "Muuda kausta nime"
-
-#: nautilus_my_computer/components.py
-msgid "Rename File"
-msgstr "Muuda faili nime"
-
-#: nautilus_my_computer/components.py
 msgid "Rename"
 msgstr "Muuda nime"
 
@@ -237,26 +191,6 @@ msgid "Pin to My Computer"
 msgstr ""
 
 #: nautilus_my_computer/context_menu.py
-msgid "Cut"
-msgstr "Lõika"
-
-#: nautilus_my_computer/context_menu.py
-msgid "Copy"
-msgstr "Kopeeri"
-
-#: nautilus_my_computer/context_menu.py
-msgid "Paste"
-msgstr "Aseta"
-
-#: nautilus_my_computer/context_menu.py
-msgid "Move to…"
-msgstr "Teisalda asukohta…"
-
-#: nautilus_my_computer/context_menu.py
-msgid "Copy to…"
-msgstr "Kopeeri asukohta…"
-
-#: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
 msgstr "Uus kaust…"
 
@@ -277,68 +211,15 @@ msgid "Compress…"
 msgstr "Paki kokku…"
 
 #: nautilus_my_computer/context_menu.py
-msgid "Email…"
-msgstr "Saada e-kirjaga…"
-
-#: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
 msgstr "Viska prügikasti"
-
-#: nautilus_my_computer/context_menu.py
-msgid "Properties"
-msgstr "Omadused"
-
-#: nautilus_my_computer/main.py
-msgid "Computer"
-msgstr "Arvuti"
 
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
 msgstr ""
 
 #: nautilus_my_computer/main.py
-msgid "Home"
-msgstr "Avaleht"
-
-#: nautilus_my_computer/main.py
-msgid "Loading…"
-msgstr "Laadin…"
-
-#: nautilus_my_computer/main.py
 msgid "Open My Computer"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "Recent"
-msgstr "Hiljutine"
-
-#: nautilus_my_computer/main.py
-msgid "Starred"
-msgstr "Märgitud lemmikuks"
-
-#: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
-msgid "Network"
-msgstr "Võrk"
-
-#: nautilus_my_computer/main.py
-msgid "Trash"
-msgstr "Prügikast"
-
-#: nautilus_my_computer/main.py
-msgid "Open Folder"
-msgstr "Ava kaust"
-
-#: nautilus_my_computer/main.py
-msgid "Open File"
-msgstr "Ava fail"
-
-#: nautilus_my_computer/main.py
-msgid "Cancel"
-msgstr "Katkesta"
-
-#: nautilus_my_computer/main.py
-#, python-format
-msgid "Choose an app to open <b>%s</b>"
 msgstr ""
 
 #: nautilus_my_computer/main.py
@@ -350,24 +231,12 @@ msgid "Other Apps"
 msgstr "Muud rakendused"
 
 #: nautilus_my_computer/main.py
-msgid "No applications found."
-msgstr "Rakendusi ei leidu."
-
-#: nautilus_my_computer/main.py
 msgid "General"
 msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Computer view"
 msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "Sidebar"
-msgstr "Külgpaan"
-
-#: nautilus_my_computer/main.py
-msgid "About"
-msgstr "Rakenduse teave"
 
 #: nautilus_my_computer/main.py
 msgid "Start on the Computer view"
@@ -477,10 +346,6 @@ msgid "Author"
 msgstr ""
 
 #: nautilus_my_computer/main.py
-msgid "License"
-msgstr ""
-
-#: nautilus_my_computer/main.py
 msgid "Source code"
 msgstr ""
 
@@ -488,20 +353,8 @@ msgstr ""
 msgid "GitHub"
 msgstr ""
 
-#: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
-msgid "Unmount"
-msgstr ""
-
 #: nautilus_my_computer/my_computer_view.py
 msgid "Mount"
-msgstr ""
-
-#: nautilus_my_computer/my_computer_view.py
-msgid "Eject"
-msgstr ""
-
-#: nautilus_my_computer/my_computer_view.py
-msgid "Format…"
 msgstr ""
 
 #: nautilus_my_computer/my_computer_view.py
@@ -528,18 +381,6 @@ msgstr ""
 #, python-brace-format
 msgid "{free} free of {total}"
 msgstr ""
-
-#: nautilus_my_computer/widgets.py
-msgid "Folder is Empty"
-msgstr "Kaust on tühi"
-
-#: nautilus_my_computer/widgets.py
-msgid "Created"
-msgstr "Loodud"
-
-#: nautilus_my_computer/widgets.py
-msgid "Modified"
-msgstr "Muudetud"
 
 #: nautilus_my_computer/widgets.py
 msgid "Dimensions"
