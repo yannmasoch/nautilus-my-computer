@@ -96,6 +96,7 @@ from nautilus_my_computer.common import (
     _icon_name_renders,
     _is_activating_click,
     _log,
+    _native,
     _nautilus_icon_size,
     _nautilus_list_icon_size,
     _resolve_custom_gicon,
@@ -1568,7 +1569,7 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         # loading has actually finished and the folder is confirmed empty.
         self._empty_page = Adw.StatusPage()
         self._empty_page.set_icon_name("folder-symbolic")
-        self._empty_page.set_title(_("Folder is Empty"))
+        self._empty_page.set_title(_native("Folder is Empty"))
         self._empty_page.add_css_class("compact")
         self.set_child(self.list_box)
 
@@ -2126,10 +2127,10 @@ class MyComputerPreviewColumn(Gtk.Box):
         self._detail_lbl.get_style_context().add_class("caption")
         details_area.append(self._detail_lbl)
 
-        created_row, self._created_val = _make_kv_row(_("Created"))
+        created_row, self._created_val = _make_kv_row(_native("Created"))
         details_area.append(created_row)
 
-        modified_row, self._modified_val = _make_kv_row(_("Modified"))
+        modified_row, self._modified_val = _make_kv_row(_native("Modified"))
         details_area.append(modified_row)
 
         self._dim_row, self._dim_val = _make_kv_row(_("Dimensions"))

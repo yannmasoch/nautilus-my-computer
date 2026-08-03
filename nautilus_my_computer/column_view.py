@@ -22,6 +22,7 @@ from nautilus_my_computer.common import (
     _bundled_gicon,
     _icon_name_renders,
     _log,
+    _native,
 )
 from nautilus_my_computer.context_menu import (
     ContextMenu,
@@ -636,7 +637,7 @@ class _ColumnViewHost:
     def _create_folder(self, column: Gtk.Widget) -> None:
         """Create a new folder in one column, then refresh its listing."""
         parent = Gio.File.new_for_uri(column.folder_uri)
-        base_name = _("New Folder")
+        base_name = _native("New Folder")
 
         def create_named(name: str, suffix: int) -> None:
             candidate = parent.get_child(name)
@@ -745,8 +746,15 @@ class _ColumnViewHost:
         uri = row.uri
         content_type = row.content_type or "application/octet-stream"
         default_app = Gio.AppInfo.get_default_for_type(content_type, False)
+        open_with_template = _native("Open With %s")
         file_open_label = (
-            _("Open With %s") % default_app.get_display_name() if default_app else _("Open")
+            (
+                open_with_template % default_app.get_display_name()
+                if "%s" in open_with_template
+                else default_app.get_display_name()
+            )
+            if default_app
+            else _native("Open")
         )
 
         open_actions = (
@@ -1081,7 +1089,9 @@ class _ColumnViewHost:
     def _show_destination_picker(self, uri: str, *, move: bool) -> None:
         """Choose a destination folder in Nautilus's modal native file dialog."""
         dialog = Gtk.FileDialog()
-        dialog.set_title(_("Select Move Destination") if move else _("Select Copy Destination"))
+        dialog.set_title(
+            _native("Select Move Destination") if move else _native("Select Copy Destination")
+        )
         dialog.set_accept_label(_("Select"))
         dialog.set_initial_folder(Gio.File.new_for_uri(uri).get_parent())
 
@@ -2355,8 +2365,10 @@ def _on_slot_location_changed(slot, _pspec, ext, win: Gtk.Window) -> None:
 
 
 _SEGMENTS = (
-    ("grid", _ICON_TARGET_GRID, N_("Grid View")),
-    ("list", _ICON_TARGET_LIST, N_("List View")),
+    # Grid/List always resolve through _native() (see _build_view_switcher), so
+    # their labels need no N_() marker -- only Column View reads our own catalog.
+    ("grid", _ICON_TARGET_GRID, "Grid View"),
+    ("list", _ICON_TARGET_LIST, "List View"),
     ("column", _COLUMN_ICON_NAME, N_("Column View")),
 )
 
@@ -2406,7 +2418,9 @@ def inject_column_view_entry(ext, win: Gtk.Window) -> None:
     split_button.set_visible(False)
     split_button._mc_column_attached = True
 
-    options_btn = Gtk.MenuButton(icon_name="view-more-symbolic", tooltip_text=_("View Options"))
+    options_btn = Gtk.MenuButton(
+        icon_name="view-more-symbolic", tooltip_text=_native("View Options")
+    )
     if popover is not None:
         options_btn.set_popover(popover)
 
@@ -2485,7 +2499,10 @@ def _build_view_switcher(ext, win: Gtk.Window) -> Gtk.Widget:
         (name, icon, tooltip) if name != "column" else (name, _resolve_column_icon(), tooltip)
         for name, icon, tooltip in _SEGMENTS
     ]
-    switcher = MyComputerToggleButton((name, icon, _(tooltip)) for name, icon, tooltip in segments)
+    switcher = MyComputerToggleButton(
+        (name, icon, _(tooltip) if name == "column" else _native(tooltip))
+        for name, icon, tooltip in segments
+    )
     switcher.connect("changed", lambda _w, name: _on_view_segment_activated(ext, win, name))
     return switcher
 

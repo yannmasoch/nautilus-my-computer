@@ -39,6 +39,7 @@ from nautilus_my_computer.common import (
     _find_widget,
     _icon_name_renders,
     _log,
+    _native,
     _pin_icon,
     _resolve_gtype,
 )
@@ -107,7 +108,7 @@ MILLER_VIEW_UNAVAILABLE_URIS = [
     "x-network-view:///",
     "trash:///",
 ]
-COMPUTER_LABEL = _("Computer")
+COMPUTER_LABEL = _native("Computer")
 COMPUTER_ICON = "computer-symbolic"  # icon used in sidebar and path bar
 MENU_ITEM_LABEL = _("My Computer Settings")
 PREFS_WIN_TITLE = _("My Computer Settings")
@@ -287,14 +288,14 @@ NATIVE_PLACES: list[PlaceEntry] = [
     PlaceEntry(
         name="home",
         position=1,
-        label=_("Home"),
+        label=_native("Home"),
         icon="user-home-symbolic",
         uri=GLib.filename_to_uri(GLib.get_home_dir(), None),
     ),
     PlaceEntry(
         name="recent",
         position=2,
-        label=_("Recent"),
+        label=_native("Recent"),
         icon="document-open-recent-symbolic",
         uri="recent:///",
         visible=False,
@@ -302,7 +303,7 @@ NATIVE_PLACES: list[PlaceEntry] = [
     PlaceEntry(
         name="starred",
         position=3,
-        label=_("Starred"),
+        label=_native("Starred"),
         icon="starred-symbolic",
         uri="starred:///",
         visible=False,
@@ -310,7 +311,7 @@ NATIVE_PLACES: list[PlaceEntry] = [
     PlaceEntry(
         name="network",
         position=4,
-        label=_("Network"),
+        label=_native("Network"),
         icon="network-computer-symbolic",
         uri="x-network-view:///",
         visible=False,
@@ -318,7 +319,7 @@ NATIVE_PLACES: list[PlaceEntry] = [
     PlaceEntry(
         name="trash",
         position=5,
-        label=_("Trash"),
+        label=_native("Trash"),
         icon="user-trash-symbolic",
         uri="trash:///",
     ),
@@ -1453,7 +1454,9 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         file_name = Gio.File.new_for_uri(nav_uri).get_basename() or nav_uri
 
         dialog = Adw.Dialog()
-        dialog.set_title(_("Open Folder") if content_type == "inode/directory" else _("Open File"))
+        dialog.set_title(
+            _native("Open Folder") if content_type == "inode/directory" else _native("Open File")
+        )
         dialog.set_content_width(420)
         dialog.set_content_height(560)
 
@@ -1463,10 +1466,10 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         header = Adw.HeaderBar()
         header.set_show_start_title_buttons(False)
         header.set_show_end_title_buttons(False)
-        cancel_button = Gtk.Button(label=_("Cancel"))
+        cancel_button = Gtk.Button(label=_native("Cancel"))
         cancel_button.connect("clicked", lambda *_a: dialog.close())
         header.pack_start(cancel_button)
-        open_button = Gtk.Button(label=_("Open"))
+        open_button = Gtk.Button(label=_native("Open"))
         open_button.add_css_class("suggested-action")
         open_button.set_sensitive(False)
         header.pack_end(open_button)
@@ -1491,7 +1494,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
         description = Gtk.Label(wrap=True, justify=Gtk.Justification.CENTER)
         description.set_markup(
-            _("Choose an app to open <b>%s</b>") % GLib.markup_escape_text(file_name)
+            _native("Choose an app to open <b>%s</b>") % GLib.markup_escape_text(file_name)
         )
         content.append(description)
 
@@ -1568,7 +1571,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                 empty = Gtk.ListBoxRow()
                 empty.set_selectable(False)
                 empty.set_activatable(False)
-                label = Gtk.Label(label=_("No applications found."))
+                label = Gtk.Label(label=_native("No applications found."))
                 label.add_css_class("dim-label")
                 label.set_margin_top(24)
                 label.set_margin_bottom(24)
@@ -1777,7 +1780,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         pref_win.add(page_computer)
 
         page_sidebar = Adw.PreferencesPage()
-        page_sidebar.set_title(_("Sidebar"))
+        page_sidebar.set_title(_native("Sidebar"))
         # Icon RTL handling differs by pack. view-left-pane-symbolic (Colloid,
         # Papirus, Tela, WhiteSur, kora...) and sidebar-show-symbolic (Adwaita)
         # name their mirror with a "-rtl" SUFFIX, which GTK swaps in automatically.
@@ -1796,7 +1799,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         pref_win.add(page_sidebar)
 
         page_about = Adw.PreferencesPage()
-        page_about.set_title(_("About"))
+        page_about.set_title(_native("About"))
         page_about.set_icon_name("help-about-symbolic")
         pref_win.add(page_about)
 
@@ -1988,7 +1991,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         pf_group.add(pf_captions_row)
 
         about_group = Adw.PreferencesGroup()
-        about_group.set_title(_("About"))
+        about_group.set_title(_native("About"))
         page_about.add(about_group)
 
         def _about_row(title: str, value: str) -> Adw.ActionRow:
@@ -2003,7 +2006,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         about_group.add(_about_row(_("Extension"), EXT_NAME))
         about_group.add(_about_row(_("Version"), EXT_VERSION))
         about_group.add(_about_row(_("Author"), EXT_AUTHOR))
-        about_group.add(_about_row(_("License"), EXT_LICENSE))
+        about_group.add(_about_row(_native("License"), EXT_LICENSE))
 
         github_row = Adw.ActionRow()
         github_row.set_title(_("Source code"))
@@ -2140,7 +2143,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                     "order-index": entry.order_index,
                     "label": row_label,
                     "tooltip": row_tooltip,
-                    "eject-tooltip": _("Unmount"),
+                    "eject-tooltip": _native("Unmount"),
                     "start-icon": Gio.ThemedIcon.new(icon_name),
                 }
                 if nautilus_sidebar is not None:

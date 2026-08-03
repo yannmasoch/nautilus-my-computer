@@ -23,6 +23,7 @@ from nautilus_my_computer.common import (
     _find_row_start_image,
     _log,
     _menu_section_with_action,
+    _native,
     _pin_icon,
 )
 
@@ -326,7 +327,7 @@ def open_bookmark_icon_picker(ext, uri: str, label: str, row) -> None:
 
     # Bold markup label, matching native Rename's "<b>Name</b>" field label
     # style (nautilus-sidebar.c: create_rename_popover), not a .heading.
-    title = Gtk.Label(label="<b>%s</b>" % _("Icon"))
+    title = Gtk.Label(label="<b>%s</b>" % _native("Icon"))
     title.set_use_markup(True)
     title.set_xalign(0.0)
     header.append(title)

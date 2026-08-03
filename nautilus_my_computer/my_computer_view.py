@@ -49,6 +49,7 @@ from nautilus_my_computer.common import (
     _format_permissions,
     _log,
     _mc_date_to_str,
+    _native,
     _resolve_custom_gicon,
     _uri_is_hidden,
 )
@@ -183,12 +184,14 @@ def _disk_context_menu(ext, win, m) -> ContextMenu:
                     ContextMenuItem(_("Mount"), action=lambda: _do_mount(ext, m, win))
                 )
         elif m.can_eject:
-            device_items.append(ContextMenuItem(_("Eject"), action=lambda: _do_eject(ext, m)))
+            device_items.append(ContextMenuItem(_native("Eject"), action=lambda: _do_eject(ext, m)))
         elif m.can_unmount:
-            device_items.append(ContextMenuItem(_("Unmount"), action=lambda: _do_unmount(ext, m)))
+            device_items.append(
+                ContextMenuItem(_native("Unmount"), action=lambda: _do_unmount(ext, m))
+            )
         if device.startswith("/dev/"):
             device_items.append(
-                ContextMenuItem(_("Format…"), action=lambda: _do_format(ext, device))
+                ContextMenuItem(_native("Format…"), action=lambda: _do_format(ext, device))
             )
     if device_items:
         sections.append(ContextMenuSection(device_items))
@@ -431,7 +434,9 @@ _GROUP_SPEC: list[tuple[str, str, str | None]] = [
     ("local", N_("On this Computer"), None),
     ("removable", N_("Removable"), "visibility-removable"),
     ("disc", N_("Disc"), "visibility-disc"),
-    ("network", N_("Network"), "visibility-network"),
+    # "Network" always resolves through _native() (see _populate), so it needs
+    # no N_() marker -- gvfs already has the exact wording in every language.
+    ("network", "Network", "visibility-network"),
 ]
 
 
@@ -1841,14 +1846,17 @@ def _populate_slot(ext, slot) -> None:
     # Build PanelGroup objects, reading visibility state from gsettings
     groups: dict[str, PanelGroup] = {}
     for gkey, glabel, gskey in _GROUP_SPEC:
+        # "Network" matches gvfs's own wording; the rest (including "System",
+        # our own disk-group meaning, not GTK's generic setting label) are ours.
+        label = _native(glabel) if gkey == "network" else _(glabel)
         if gskey is None:
             # "On this Computer" is the merge target -- always visible, never merged
-            groups[gkey] = PanelGroup(key=gkey, label=_(glabel), visible=True, merged=False)
+            groups[gkey] = PanelGroup(key=gkey, label=label, visible=True, merged=False)
             continue
         vis_str = ext._gsettings.get_string(gskey) if ext._gsettings else "visible"
         visible = vis_str != "hidden"
         merged = vis_str == "merged"
-        groups[gkey] = PanelGroup(key=gkey, label=_(glabel), visible=visible, merged=merged)
+        groups[gkey] = PanelGroup(key=gkey, label=label, visible=visible, merged=merged)
 
     # Classify each mount into its group
     for m in _disk_data.values():
@@ -2148,7 +2156,7 @@ def _on_folder_icon_ready(ext, gfile: Gio.File, result: Gio.AsyncResult, folder_
     # "home" has no xdg-user-dirs name to defer to -- its real basename is just
     # the username, which GIO happily reports but Nautilus itself never shows
     # (nautilus-file-utilities.c / nautilus-bookmark.c always substitute their
-    # own translated "Home" instead). Keep our _nautilus_string("Home") label there;
+    # own translated "Home" instead). Keep our _native("Home") label there;
     # only the named special-dir tokens (Documents/Downloads/...) defer to GIO.
     display_name = (
         pf.display_name if folder_key == "home" else (info.get_display_name() or pf.display_name)
