@@ -22,7 +22,7 @@ from nautilus_my_computer.common import (
     _log,
     _menu_item_index,
     _menu_section_with_action,
-    _nautilus_string,
+    _native,
     _uri_is_hidden,
 )
 from nautilus_my_computer.context_menu import (
@@ -83,21 +83,21 @@ class PreferredFolder:
 # GLib.UserDirectory enum value (resolved via GLib.get_user_special_dir).
 PREFERRED_TOKENS: dict[str, dict] = {
     "home": {
-        "label": _nautilus_string("Home"),
+        "label": _native("Home"),
         "uri": lambda: GLib.filename_to_uri(GLib.get_home_dir(), None),
     },
     "recent": {
-        "label": _nautilus_string("Recent"),
+        "label": _native("Recent"),
         "icon": "folder-recent",
         "uri": lambda: "recent:///",
     },
     "starred": {
-        "label": _nautilus_string("Starred"),
+        "label": _native("Starred"),
         "icon": "folder-favorites",
         "uri": lambda: "starred:///",
     },
     "network": {
-        "label": _nautilus_string("Network"),
+        "label": _native("Network"),
         "icon": "folder-network",
         "uri": lambda: "x-network-view:///",
     },
@@ -111,7 +111,7 @@ PREFERRED_TOKENS: dict[str, dict] = {
     # user-trash-full, so the empty/full state needs no watching of our own.
     # "icon" is only the first-frame placeholder until that query resolves.
     "trash": {
-        "label": _nautilus_string("Trash"),
+        "label": _native("Trash"),
         "icon": "user-trash",
         "uri": lambda: "trash:///",
         "gio_icon": True,

@@ -28,11 +28,16 @@ for _localedir in (os.path.expanduser("~/.local/share/locale"), None):
     except Exception:
         continue
 
-_nautilus_translation = None
-try:
-    _nautilus_translation = gettext.translation("nautilus")
-except Exception:
-    pass
+# Ordered so Nautilus's own file-manager wording wins on any msgid gtk40 or gvfs
+# also happen to translate (e.g. "Open", "Properties").
+_PLATFORM_DOMAINS = ("nautilus", "gtk40", "gvfs")
+
+_platform_translations = []
+for _domain in _PLATFORM_DOMAINS:
+    try:
+        _platform_translations.append(gettext.translation(_domain))
+    except Exception:
+        continue
 
 
 def _(text: str) -> str:
@@ -40,19 +45,23 @@ def _(text: str) -> str:
         val = _custom_translation.gettext(text)
         if val != text:
             return val
-    if _nautilus_translation is not None:
-        return _nautilus_translation.gettext(text)
+    for _translation in _platform_translations:
+        val = _translation.gettext(text)
+        if val != text:
+            return val
     return text
 
 
-def _nautilus_string(text: str) -> str:
-    """Translate via Nautilus's own "nautilus" gettext domain only, ignoring our
-    po files. For labels that duplicate a concept Nautilus's native UI already
-    names (Home/Recent/Starred/Network), this guarantees the exact same wording
-    as the native sidebar in every language, rather than risking a differently
-    worded translation from our own translators (issue #64 follow-up)."""
-    if _nautilus_translation is not None:
-        return _nautilus_translation.gettext(text)
+def _native(text: str) -> str:
+    """Translate via Nautilus/GTK/gvfs's own gettext domains only, ignoring our
+    po files. For labels that duplicate a concept the platform's native UI already
+    names (Home/Recent/Starred/Network/Cut/Copy/Paste...), this guarantees the exact
+    same wording as the rest of the desktop in every language, rather than risking a
+    differently worded translation from our own translators (issue #64, #120)."""
+    for _translation in _platform_translations:
+        val = _translation.gettext(text)
+        if val != text:
+            return val
     return text
 
 
@@ -69,8 +78,10 @@ def _n(singular: str, plural: str, n: int) -> str:
         val = _custom_translation.ngettext(singular, plural, n)
         if val != (singular if n == 1 else plural):
             return val
-    if _nautilus_translation is not None:
-        return _nautilus_translation.ngettext(singular, plural, n)
+    for _translation in _platform_translations:
+        val = _translation.ngettext(singular, plural, n)
+        if val != (singular if n == 1 else plural):
+            return val
     return singular if n == 1 else plural
 
 
