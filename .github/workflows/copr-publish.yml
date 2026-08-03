@@ -1,16 +1,19 @@
 name: Trigger COPR build
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_run:
+    workflows: ["Create GitHub Release"]
+    types:
+      - completed
 
 jobs:
   check-main:
-    name: Check tag is on main
+    name: Check release succeeded and tag is on main
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
       on_main: ${{ steps.check.outputs.on_main }}
+      tag: ${{ github.event.workflow_run.head_branch }}
 
     steps:
       - uses: actions/checkout@v7.0.0
@@ -20,10 +23,12 @@ jobs:
       - name: Check tag targets main
         id: check
         run: |
-          if git merge-base --is-ancestor "${{ github.sha }}" origin/main; then
+          tag="${{ github.event.workflow_run.head_branch }}"
+          sha="${{ github.event.workflow_run.head_sha }}"
+          if git merge-base --is-ancestor "$sha" origin/main; then
             echo "on_main=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice::${{ github.ref_name }} does not point to a commit on main -- skipping publish. Tag a commit on main to publish."
+            echo "::notice::$tag does not point to a commit on main -- skipping publish. Tag a commit on main to publish."
             echo "on_main=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -38,6 +43,7 @@ jobs:
         env:
           COPR_LOGIN: ${{ secrets.COPR_LOGIN }}
           COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
+          TAG: ${{ needs.check-main.outputs.tag }}
         run: |
           curl -sSL --fail-with-body -u "$COPR_LOGIN:$COPR_TOKEN" \
             -X POST "https://copr.fedorainfracloud.org/api_3/build/create/scm" \
@@ -46,7 +52,7 @@ jobs:
               \"ownername\": \"yannmasoch\",
               \"projectname\": \"nautilus-my-computer\",
               \"clone_url\": \"https://github.com/${GITHUB_REPOSITORY}\",
-              \"committish\": \"${GITHUB_REF_NAME}\",
+              \"committish\": \"${TAG}\",
               \"subdirectory\": \"packaging/copr\",
               \"spec\": \"nautilus-my-computer.spec\",
               \"source_build_method\": \"rpkg\"

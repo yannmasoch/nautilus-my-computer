@@ -1,16 +1,19 @@
 name: Publish AUR package
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_run:
+    workflows: ["Create GitHub Release"]
+    types:
+      - completed
 
 jobs:
   check-main:
-    name: Check tag is on main
+    name: Check release succeeded and tag is on main
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
       on_main: ${{ steps.check.outputs.on_main }}
+      tag: ${{ github.event.workflow_run.head_branch }}
 
     steps:
       - uses: actions/checkout@v7.0.0
@@ -20,10 +23,12 @@ jobs:
       - name: Check tag targets main
         id: check
         run: |
-          if git merge-base --is-ancestor "${{ github.sha }}" origin/main; then
+          tag="${{ github.event.workflow_run.head_branch }}"
+          sha="${{ github.event.workflow_run.head_sha }}"
+          if git merge-base --is-ancestor "$sha" origin/main; then
             echo "on_main=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice::${{ github.ref_name }} does not point to a commit on main -- skipping publish. Tag a commit on main to publish."
+            echo "::notice::$tag does not point to a commit on main -- skipping publish. Tag a commit on main to publish."
             echo "on_main=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -35,12 +40,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7.0.0
+        with:
+          ref: ${{ needs.check-main.outputs.tag }}
 
       - name: Resolve version and checksum
         id: resolve
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          url="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz"
+          tag="${{ needs.check-main.outputs.tag }}"
+          version="${tag#v}"
+          url="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${tag}.tar.gz"
           curl -fsSL -o source.tar.gz "$url"
           sha256=$(sha256sum source.tar.gz | cut -d' ' -f1)
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -63,4 +71,4 @@ jobs:
           commit_username: ${{ secrets.AUR_USERNAME }}
           commit_email: ${{ secrets.AUR_EMAIL }}
           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-          commit_message: "Update to ${{ github.ref_name }}"
+          commit_message: "Update to ${{ needs.check-main.outputs.tag }}"
