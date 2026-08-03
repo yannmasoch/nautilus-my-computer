@@ -6,12 +6,23 @@
     <value nick="hidden" value="2"/>
   </enum>
 
+  <enum id="io.github.yannmasoch.nautilus-my-computer.default-view">
+    <value nick="native" value="0"/>
+    <value nick="column" value="1"/>
+  </enum>
+
   <schema id="io.github.yannmasoch.nautilus-my-computer" path="/io/github/yannmasoch/nautilus-my-computer/">
 
     <key name="start-on-disks" type="b">
       <default>true</default>
       <summary>Start on Computer view</summary>
       <description>Show the disk panel when Nautilus opens</description>
+    </key>
+
+    <key name="default-view" enum="io.github.yannmasoch.nautilus-my-computer.default-view">
+      <default>'native'</default>
+      <summary>Default view for new tabs and windows</summary>
+      <description>Which of this extension's own views new tabs and windows open into. 'native' defers entirely to Nautilus's own grid/list default.</description>
     </key>
 
     <key name="show-system-partitions" type="b">

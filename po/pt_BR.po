@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: My Computer for Nautilus 0.12.5\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-07-26 16:39-0700\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: 2026-07-30 05:22+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: none\n"
 "Language: pt_BR\n"
@@ -19,367 +19,367 @@ msgstr ""
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
-msgstr ""
+msgstr "Alterar Ícone"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Icon"
-msgstr ""
+msgstr "Ícone"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Search icons…"
-msgstr ""
+msgstr "Procurar ícones…"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Reset"
-msgstr ""
+msgstr "Redefinir"
 
 #: nautilus_my_computer/column_view.py
 msgid "New Folder"
-msgstr ""
+msgstr "Nova Pasta"
 
 #: nautilus_my_computer/column_view.py
 #, python-format
 msgid "Open With %s"
-msgstr ""
+msgstr "Abrir Com %s"
 
 #: nautilus_my_computer/column_view.py nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/main.py
 msgid "Open"
-msgstr ""
+msgstr "Abrir"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select Move Destination"
-msgstr ""
+msgstr "Mover Para"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select Copy Destination"
-msgstr ""
+msgstr "Copiar Para"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select"
-msgstr ""
+msgstr "Selecionar"
 
 #: nautilus_my_computer/column_view.py
 msgid "Beta"
-msgstr ""
+msgstr "Beta"
 
 #: nautilus_my_computer/column_view.py
 msgid "Early access feature. It may contain bugs or inconsistencies."
-msgstr ""
+msgstr "Recurso de acesso antecipado. Pode conter bugs ou inconsistências."
 
 #: nautilus_my_computer/column_view.py
 msgid "Grid View"
-msgstr ""
+msgstr "Visualização em Grade"
 
 #: nautilus_my_computer/column_view.py
 msgid "List View"
-msgstr ""
+msgstr "Visualização em Lista"
 
 #: nautilus_my_computer/column_view.py
 msgid "Column View"
-msgstr ""
+msgstr "Visualização em Colunas"
 
 #: nautilus_my_computer/column_view.py
 msgid "View Options"
-msgstr ""
+msgstr "Opções de Visualização"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} item"
 msgid_plural "{n} items"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} item"
+msgstr[1] "{n} itens"
 
 #: nautilus_my_computer/common.py
 msgid "Today"
-msgstr ""
+msgstr "Hoje"
 
 #: nautilus_my_computer/common.py
 msgid "Yesterday"
-msgstr ""
+msgstr "Ontem"
 
 #: nautilus_my_computer/common.py
 msgid "Tomorrow"
-msgstr ""
+msgstr "Amanhã"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} day ago"
 msgid_plural "{n} days ago"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Há {n} dia"
+msgstr[1] "Há {n} dias"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} day"
 msgid_plural "In {n} days"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Em {n} dia"
+msgstr[1] "Em {n} dias"
 
 #: nautilus_my_computer/common.py
 msgid "This week"
-msgstr ""
+msgstr "Esta semana"
 
 #: nautilus_my_computer/common.py
 msgid "Last week"
-msgstr ""
+msgstr "Semana passada"
 
 #: nautilus_my_computer/common.py
 msgid "Next week"
-msgstr ""
+msgstr "Próxima semana"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} week ago"
 msgid_plural "{n} weeks ago"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Há {n} semana"
+msgstr[1] "Há {n} semanas"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} week"
 msgid_plural "In {n} weeks"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Em {n} semana"
+msgstr[1] "Em {n} semanas"
 
 #: nautilus_my_computer/common.py
 msgid "This month"
-msgstr ""
+msgstr "Este mês"
 
 #: nautilus_my_computer/common.py
 msgid "Last month"
-msgstr ""
+msgstr "Mês passado"
 
 #: nautilus_my_computer/common.py
 msgid "Next month"
-msgstr ""
+msgstr "Próximo mês"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} month ago"
 msgid_plural "{n} months ago"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Há {n} mês"
+msgstr[1] "Há {n} meses"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} month"
 msgid_plural "In {n} months"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Em {n} mês"
+msgstr[1] "Em {n} meses"
 
 #: nautilus_my_computer/common.py
 msgid "This year"
-msgstr ""
+msgstr "Este ano"
 
 #: nautilus_my_computer/common.py
 msgid "Last year"
-msgstr ""
+msgstr "Ano passado"
 
 #: nautilus_my_computer/common.py
 msgid "Next year"
-msgstr ""
+msgstr "Próximo ano"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} year ago"
 msgid_plural "{n} years ago"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Há {n} ano"
+msgstr[1] "Há {n} anos"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} year"
 msgid_plural "In {n} years"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Em {n} ano"
+msgstr[1] "Em {n} anos"
 
 #: nautilus_my_computer/components.py
 msgid "Rename Folder"
-msgstr ""
+msgstr "Renomear Pasta"
 
 #: nautilus_my_computer/components.py
 msgid "Rename File"
-msgstr ""
+msgstr "Renomear Arquivo"
 
 #: nautilus_my_computer/components.py
 msgid "Rename"
-msgstr ""
+msgstr "Renomear"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Tab"
-msgstr ""
+msgstr "Abrir em Nova Aba"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Window"
-msgstr ""
+msgstr "Abrir em Nova Janela"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open With…"
-msgstr ""
+msgstr "Abrir Com…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Remove from Bookmarks"
-msgstr ""
+msgstr "Remover dos Favoritos"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Add to Bookmarks"
-msgstr ""
+msgstr "Adicionar aos Favoritos"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Unpin from My Computer"
-msgstr ""
+msgstr "Desafixar de Meu Computador"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Pin to My Computer"
-msgstr ""
+msgstr "Fixar em Meu Computador"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Cut"
-msgstr ""
+msgstr "Recortar"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Copy"
-msgstr ""
+msgstr "Copiar"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Paste"
-msgstr ""
+msgstr "Colar"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Move to…"
-msgstr ""
+msgstr "Mover para…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Copy to…"
-msgstr ""
+msgstr "Copiar para…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
-msgstr ""
+msgstr "Nova Pasta…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Document"
-msgstr ""
+msgstr "Novo Documento"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in Terminal"
-msgstr ""
+msgstr "Abrir no Terminal"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Rename…"
-msgstr ""
+msgstr "Renomear…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Compress…"
-msgstr ""
+msgstr "Comprimir…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Email…"
-msgstr ""
+msgstr "Email…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
-msgstr ""
+msgstr "Mover para a Lixeira"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Properties"
-msgstr ""
+msgstr "Propriedades"
 
 #: nautilus_my_computer/main.py
 msgid "Computer"
-msgstr ""
+msgstr "Computador"
 
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
-msgstr ""
+msgstr "Configurações do Meu Computador"
 
 #: nautilus_my_computer/main.py
 msgid "Home"
-msgstr ""
+msgstr "Início"
 
 #: nautilus_my_computer/main.py
 msgid "Loading…"
-msgstr ""
+msgstr "Carregando…"
 
 #: nautilus_my_computer/main.py
 msgid "Open My Computer"
-msgstr ""
+msgstr "Abrir Meu Computador"
 
 #: nautilus_my_computer/main.py
 msgid "Recent"
-msgstr ""
+msgstr "Recentes"
 
 #: nautilus_my_computer/main.py
 msgid "Starred"
-msgstr ""
+msgstr "Favoritos"
 
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Network"
-msgstr ""
+msgstr "Rede"
 
 #: nautilus_my_computer/main.py
 msgid "Trash"
-msgstr ""
+msgstr "Lixeira"
 
 #: nautilus_my_computer/main.py
 msgid "Open Folder"
-msgstr ""
+msgstr "Abrir Pasta"
 
 #: nautilus_my_computer/main.py
 msgid "Open File"
-msgstr ""
+msgstr "Abrir Arquivo"
 
 #: nautilus_my_computer/main.py
 msgid "Cancel"
-msgstr ""
+msgstr "Cancelar"
 
 #: nautilus_my_computer/main.py
 #, python-format
 msgid "Choose an app to open <b>%s</b>"
-msgstr ""
+msgstr "Escolha um aplicativo para abrir <b>%s</b>"
 
 #: nautilus_my_computer/main.py
 msgid "Recommended Apps"
-msgstr ""
+msgstr "Aplicativos Recomendados"
 
 #: nautilus_my_computer/main.py
 msgid "Other Apps"
-msgstr ""
+msgstr "Outros Aplicativos"
 
 #: nautilus_my_computer/main.py
 msgid "No applications found."
-msgstr ""
+msgstr "Nenhum aplicativo encontrado."
 
 #: nautilus_my_computer/main.py
 msgid "General"
-msgstr ""
+msgstr "Geral"
 
 #: nautilus_my_computer/main.py
 msgid "Computer view"
-msgstr ""
+msgstr "Visualização do computador"
 
 #: nautilus_my_computer/main.py
 msgid "Sidebar"
-msgstr ""
+msgstr "Barra lateral"
 
 #: nautilus_my_computer/main.py
 msgid "About"
-msgstr ""
+msgstr "Sobre"
 
 #: nautilus_my_computer/main.py
 msgid "Start on the Computer view"
-msgstr ""
+msgstr "Iniciar na Visualização do computador"
 
 #: nautilus_my_computer/main.py
 msgid "Launch directly to the Computer view instead of Home"
-msgstr ""
+msgstr "Iniciar em Visualização do computador ao invés de Início"
 
 #: nautilus_my_computer/main.py
 msgid "Panel visibility"
-msgstr ""
+msgstr "Visibilidade do painel"
 
 #: nautilus_my_computer/main.py
 msgid ""
@@ -387,160 +387,163 @@ msgid ""
 "separated section. Merged: folds the group into the On this Computer group. "
 "Hidden: hides the group entirely."
 msgstr ""
+"Escolha como cada grupo aparece. Visível: mostra o grupo como uma seção "
+"separada normal. Mesclado: reúne os itens na seção Deste Computador. Oculto: "
+"oculta o grupo inteiramente."
 
 #: nautilus_my_computer/main.py
 msgid "Visible"
-msgstr ""
+msgstr "Visível"
 
 #: nautilus_my_computer/main.py
 msgid "Merged"
-msgstr ""
+msgstr "Mesclado"
 
 #: nautilus_my_computer/main.py
 msgid "Hidden"
-msgstr ""
+msgstr "Oculto"
 
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Preferred Folders"
-msgstr ""
+msgstr "Pastas Favoritas"
 
 #: nautilus_my_computer/main.py
 msgid "Show system partitions"
-msgstr ""
+msgstr "Mostrar partições do sistema"
 
 #: nautilus_my_computer/main.py
 msgid "Include boot and EFI partitions in the System group"
-msgstr ""
+msgstr "Incluir partições de inicialização e EFI no grupo Sistema"
 
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
-msgstr ""
+msgstr "Visibilidade da barra lateral"
 
 #: nautilus_my_computer/main.py
 msgid "Choose which locations appear on the sidebar."
-msgstr ""
+msgstr "Escolha quais locais aparecem na barra lateral."
 
 #: nautilus_my_computer/main.py
 msgid "Bar Color"
-msgstr ""
+msgstr "Cor da Barra"
 
 #: nautilus_my_computer/main.py
 msgid "Select or customize the bar color."
-msgstr ""
+msgstr "Selecione ou personalize a cor da barra."
 
 #: nautilus_my_computer/main.py
 msgid "Color mode"
-msgstr ""
+msgstr "Modo de cor"
 
 #: nautilus_my_computer/main.py
 msgid "System accent"
-msgstr ""
+msgstr "Realce do sistema"
 
 #: nautilus_my_computer/main.py
 msgid "Custom color"
-msgstr ""
+msgstr "Cor personalizada"
 
 #: nautilus_my_computer/main.py
 msgid "Custom gradient"
-msgstr ""
+msgstr "Gradiente personalizado"
 
 #: nautilus_my_computer/main.py
 msgid "Color"
-msgstr ""
+msgstr "Cor"
 
 #: nautilus_my_computer/main.py
 msgid "Start color"
-msgstr ""
+msgstr "Cor inicial"
 
 #: nautilus_my_computer/main.py
 msgid "End color"
-msgstr ""
+msgstr "Cor final"
 
 #: nautilus_my_computer/main.py
 msgid "Show captions"
-msgstr ""
+msgstr "Mostrar legendas"
 
 #: nautilus_my_computer/main.py
 msgid "Shows or hides the caption lines already configured in Nautilus"
-msgstr ""
+msgstr "Mostra ou oculta as linhas de legenda já configuradas no Nautilus"
 
 #: nautilus_my_computer/main.py
 msgid "Extension"
-msgstr ""
+msgstr "Extensão"
 
 #: nautilus_my_computer/main.py
 msgid "Version"
-msgstr ""
+msgstr "Versão"
 
 #: nautilus_my_computer/main.py
 msgid "Author"
-msgstr ""
+msgstr "Autor"
 
 #: nautilus_my_computer/main.py
 msgid "License"
-msgstr ""
+msgstr "Licença"
 
 #: nautilus_my_computer/main.py
 msgid "Source code"
-msgstr ""
+msgstr "Código fonte"
 
 #: nautilus_my_computer/main.py
 msgid "GitHub"
-msgstr ""
+msgstr "GitHub"
 
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Unmount"
-msgstr ""
+msgstr "Desmontar"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Mount"
-msgstr ""
+msgstr "Montar"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Eject"
-msgstr ""
+msgstr "Ejetar"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Format…"
-msgstr ""
+msgstr "Formatar…"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "System"
-msgstr ""
+msgstr "Sistema"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "On this Computer"
-msgstr ""
+msgstr "Neste Computador"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Removable"
-msgstr ""
+msgstr "Removível"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Disc"
-msgstr ""
+msgstr "Disco"
 
 #: nautilus_my_computer/widgets.py
 msgid "Not mounted"
-msgstr ""
+msgstr "Não montado"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{free} free of {total}"
-msgstr ""
+msgstr "{free} livre de {total}"
 
 #: nautilus_my_computer/widgets.py
 msgid "Folder is Empty"
-msgstr ""
+msgstr "A Pasta está Vazia"
 
 #: nautilus_my_computer/widgets.py
 msgid "Created"
-msgstr ""
+msgstr "Criado"
 
 #: nautilus_my_computer/widgets.py
 msgid "Modified"
-msgstr ""
+msgstr "Modificado"
 
 #: nautilus_my_computer/widgets.py
 msgid "Dimensions"
-msgstr ""
+msgstr "Dimensões"

@@ -4,6 +4,42 @@ All notable changes to this project are documented here.
 
 ---
 
+## v0.13.0
+Remember your last-picked view instead of always resetting to the file view, match native
+middle-click behavior everywhere in the Computer and Column views, give the Computer view real
+per-tab state, and fix several polish issues from that work.
+
+### Added
+- Estonian translation.
+
+### Changed
+- Nautilus now remembers whether you last used Grid, List, or Column view and reopens to it,
+  instead of always resetting to the regular file view.
+- Middle-click now opens a background tab from disk cards, Preferred Folder cards, and Column
+  View rows, matching the sidebar; Ctrl+middle-click opens a new window instead.
+- Computer view tabs are now fully independent: switching tabs no longer shares selection,
+  scroll position, or filter state with other tabs in the same window.
+- Updated Portuguese (Brazil), German, Arabic, Catalan, Greek, Spanish, French, Hungarian,
+  Italian, Korean, Portuguese, Russian, and Turkish translations.
+
+### Fixed
+- The native Grid/List view button no longer disappears from the widget tree when hidden behind
+  the Grid/List/Column switcher.
+- Removed noisy debug warnings printed to the terminal log every time the Computer view was
+  drawn.
+- Fixed a bug where clicking a sidebar location from the Computer view sometimes didn't navigate
+  away until a second click.
+- Fixed the first disk or folder card auto-selecting itself on a cold Nautilus start, and the
+  sidebar's "Computer" highlight lagging behind the panel.
+
+Thanks to @thomasaull for requesting Column View as the default in #102; to @ikem-krueger for
+reporting the missing middle-click behavior in #116; to @guilmm for updating the Portuguese
+(Brazil) translation in #119, #122, #123, and #124; to @uwe-ss for updating the German
+translation in #122 and #123; and to Priit Jõerüüt for adding the Estonian translation in #125
+and #126.
+
+---
+
 ## v0.12.6
 Fix hidden disks respecting Show Hidden Files, bundle a proper Miller View icon, and add
 Portuguese (Brazil) translation.

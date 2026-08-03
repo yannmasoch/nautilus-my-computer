@@ -40,7 +40,7 @@ def folder_context_menu(ext, win, pf) -> ContextMenu:
         [
             open_section(
                 lambda: ext._do_open(uri, win),
-                open_tab_action=lambda: ext._do_open_tab(uri, win),
+                open_tab_action=lambda: ext._do_open_tab(uri, win, make_active=False),
                 open_window_action=lambda: ext._do_open_window(uri),
                 open_with_action=(
                     (lambda: ext._do_open_with(uri, win))

@@ -12,6 +12,7 @@ import dataclasses
 import os
 import subprocess
 import threading
+import weakref
 
 import gi
 
@@ -74,7 +75,7 @@ def _sidebar_mode(native_enabled_default: bool) -> str:
     return "native-list"
 
 
-DEBUG_MAIN_VIEW_ACTIVE = _flag("MC_MAIN_VIEW")  # main view: panel overlay over the file view
+DEBUG_MAIN_VIEW_ACTIVE = _flag("MC_MAIN_VIEW")  # main view: Computer panel injected per-slot
 DEBUG_COMPUTER_BUTTON_ACTIVE = _flag("MC_COMPUTER_BUTTON")  # left sidebar: "Computer" row injection
 DEBUG_NATIVE_SIDEBAR_ACTIVE = _flag("MC_NATIVE_SIDEBAR")  # native sidebar row, set 0 for fallback
 DEBUG_SIDEBAR_MODE = _sidebar_mode(
@@ -88,7 +89,7 @@ DETACH_SETTINGS_WINDOW = False  # testing toggle: True opens settings as a stand
 
 # ── Extension metadata (keep in sync with pyproject.toml) ────────────────────
 EXT_NAME = "My Computer for Nautilus"
-EXT_VERSION = "0.12.6"
+EXT_VERSION = "0.13.0"
 EXT_AUTHOR = "Yann Masoch"
 EXT_LICENSE = "MIT"
 EXT_GITHUB = "https://github.com/yannmasoch/nautilus-my-computer"
@@ -112,11 +113,11 @@ MENU_ITEM_LABEL = _("My Computer Settings")
 PREFS_WIN_TITLE = _("My Computer Settings")
 SCHEMA_ID = "io.github.yannmasoch.nautilus-my-computer"
 
-VIEW_FILES = "files"  # visible_view token — files view (Overlay base)
-VIEW_DISKINFO = "diskinfo"  # noqa: F811 -- intentional local redefinition; token — our panel (Overlay child)
-VIEW_COLUMN = (
-    column_view.VIEW_COLUMN
-)  # visible_view token — Column View placeholder (Overlay child)
+# VIEW_DISKINFO (imported above; VIEW_FILES is my_computer_view-internal) is a
+# per-slot "visible_view" token: whether a slot's own GtkStack currently
+# shows our panel.
+# Column View doesn't participate in visible_view (issue #118): it lives on
+# the same per-slot GtkStack, tracked via column_view.slot_is_showing_column().
 
 DBUS_FILE_MANAGER = "org.freedesktop.FileManager1"
 DBUS_PATH_FILE_MANAGER = "/org/freedesktop/FileManager1"
@@ -242,12 +243,13 @@ class PlaceEntry:
 def _computer_context_menu(ext, win, entry: PlaceEntry) -> ContextMenu:
     """Computer row: open actions + settings, with Open greyed out when already shown."""
     uri = entry.uri
-    on_computer = ext._windows.get(win, {}).get("visible_view") == VIEW_DISKINFO
+    panel_state = ext._active_panel_state(win)
+    on_computer = panel_state is not None and panel_state.get("visible_view") == VIEW_DISKINFO
     return ContextMenu(
         [
             open_section(
                 lambda: ext._do_open(uri, win),
-                open_tab_action=lambda: ext._do_open_tab(uri, win),
+                open_tab_action=lambda: ext._do_open_tab(uri, win, make_active=False),
                 open_window_action=lambda: ext._do_open_window(uri),
                 open_enabled=not on_computer,
                 submenu=False,
@@ -457,12 +459,13 @@ def _get_gsettings() -> Gio.Settings | None:
         return None
 
 
-def _active_slot_location(win) -> Gio.File | None:
-    """The window's active slot's current location, or None.
+def _active_slot(win) -> Gtk.Widget | None:
+    """The window's active NautilusWindowSlot widget, or None.
 
-    Reads the NautilusWindowSlot "location" GFile property on demand. No
-    persistent signal, no set_child (safe re: issue #11). Prefers the active
-    slot so tabs are handled; falls back to the first slot with a location.
+    Reads the "active"/"location" GObject properties on demand. No
+    persistent signal, no set_child (safe re: issue #11). Prefers the slot
+    flagged active so tabs are handled; falls back to the last slot found
+    with a resolved location.
     """
     fallback = None
     for w in _all_widgets(win):
@@ -476,11 +479,17 @@ def _active_slot_location(win) -> Gio.File | None:
             continue
         try:
             if w.get_property("active"):
-                return loc
+                return w
         except TypeError:
             pass
-        fallback = loc
+        fallback = w
     return fallback
+
+
+def _active_slot_location(win) -> Gio.File | None:
+    """The window's active slot's current location, or None. See _active_slot."""
+    slot = _active_slot(win)
+    return slot.get_property("location") if slot is not None else None
 
 
 def _is_file_chooser_window(win: Gtk.Window) -> bool:
@@ -572,9 +581,18 @@ _LOCATION_ENTRY_KEYVALS = frozenset(
 class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def __init__(self):
         super().__init__()
-        # Maps each NautilusWindow to its per-window state dict:
-        #   overlay, panel, content_box, force_disks, initial_title
+        # Maps each NautilusWindow to its per-window chrome state dict (sidebar
+        # row, pathbar/sort watches, start_on_computer, native place hiding).
+        # The Computer panel itself is per-slot state (slot._mc_computer, see
+        # my_computer_view.py's injection machinery, issue #133) -- use
+        # _active_panel_state()/_iter_panel_states() to reach it.
         self._windows: dict = {}
+        # Weak registry of every slot with an injected panel, so broadcasts
+        # (usage updates, folder icon/caption refreshes) don't need to walk
+        # every window's whole widget tree to find them. Self-cleaning: a
+        # slot drops out once GTK finalizes it and no other Python reference
+        # remains (tab close).
+        self._panel_slots: weakref.WeakSet = weakref.WeakSet()
         self._polling_started = False
         self._refresh_pending = False  # debounce flag for live-refresh
         self._local_poll_stop: threading.Event | None = None
@@ -670,7 +688,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _schedule_live_refresh(self) -> None:
         my_computer_view._schedule_live_refresh(self)
 
-    # _repopulate_visible is defined further below, extended for VIEW_COLUMN.
+    # _repopulate_visible is defined further below; it also refreshes every
+    # tab's Column View via column_view.refresh_all_column_views.
 
     def _ensure_usage_poll_running(self) -> None:
         my_computer_view._ensure_usage_poll_running(self)
@@ -690,8 +709,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _attach_flow_shortcuts(self, flow_box: Gtk.FlowBox, win: Gtk.Window) -> None:
         my_computer_view._attach_flow_shortcuts(self, flow_box, win)
 
-    def _on_card_right_clicked(self, gesture, n, x, y, win: Gtk.Window, row: Gtk.Box) -> None:
-        my_computer_view._on_card_right_clicked(self, gesture, n, x, y, win, row)
+    def _on_card_pressed(self, gesture, n, x, y, win: Gtk.Window, card: Gtk.Box) -> None:
+        my_computer_view._on_card_pressed(self, gesture, n, x, y, win, card)
 
     # ── Initialisation ────────────────────────────────────────────────────────
 
@@ -783,78 +802,108 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         if self._bar_css_display is None:
             self._bar_css_display = display
             self._apply_bar_color()
-        if self._inject_overlay(win):
-            win.connect("destroy", self._on_window_destroyed)
-            if _is_file_chooser_window(win):
-                # No window-level "locations-changed" on this class — watch the
-                # slot's own "location" property directly (same ground truth
-                # _window_is_at_disks() reads, symmetric with normal windows).
-                for w in _all_widgets(win):
-                    if "Slot" in type(w).__name__:
-                        w.connect(
+
+        self._windows[win] = {
+            "window": win,
+            "native_split_button": None,
+            "view_switcher": None,
+            "view_options_menu_button": None,
+            "header_motion": None,  # Gtk.EventControllerMotion on the header bar
+            "location_filter_watch_attached": False,
+            # A file-picker dialog should never auto-navigate itself to
+            # computer:/// on open - that heuristic is normal-window-only.
+            "start_on_computer": self._start_on_disks and not _is_file_chooser_window(win),
+            "native_hide_model": None,  # observe_children() model of native listbox
+            "native_hide_handler": None,  # items-changed handler id on that model
+            "native_hide_pending": False,  # coalesces re-hide bursts into one idle pass
+        }
+
+        # Capture-phase key guard on the window: Nautilus's "type to search"
+        # type-ahead is hooked above keyboard focus, so neither hiding nor
+        # de-focusing the covered file view stops it. A controller at the top
+        # of the capture chain sees keystrokes first and swallows plain
+        # printable ones while the active slot's panel is shown — so typing
+        # doesn't reopen the vanilla computer:/// search. Modified shortcuts
+        # (Ctrl/Alt/Super) and control keys (arrows, Tab, Enter, Esc) always
+        # pass through.
+        key_guard = Gtk.EventControllerKey()
+        key_guard.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        key_guard.connect("key-pressed", self._on_window_key_capture, win)
+        win.add_controller(key_guard)
+
+        win.connect("destroy", self._on_window_destroyed)
+        if _is_file_chooser_window(win):
+            # No window-level "locations-changed" on this class — watch the
+            # slot's own "location" property directly (same ground truth
+            # _window_is_at_disks() reads, symmetric with normal windows).
+            for w in _all_widgets(win):
+                if "Slot" in type(w).__name__:
+                    w.connect(
+                        "notify::location",
+                        lambda _slot, _pspec, w=win: self._on_navigation(w),
+                    )
+                    break
+        elif GObject.signal_lookup("locations-changed", type(win)):
+            # "locations-changed" fires when a slot's own location changes
+            # (navigating within a tab), but NOT on tab switch: switching
+            # tabs only reassigns NautilusWindow's "active-slot" property
+            # (set_active_slot() -> g_object_notify_by_pspec(active-slot),
+            # confirmed in nautilus-window.c) without touching any slot's
+            # location. Both must be watched or the window chrome goes stale
+            # the moment the active tab changes without a navigation.
+            win.connect("locations-changed", self._on_navigation)
+            win.connect("notify::active-slot", lambda w, _pspec: self._on_navigation(w))
+        else:
+            # Nautilus <= 47 has no "locations-changed" signal on
+            # NautilusWindow (issue #61). Fall back to watching the active
+            # slot's own "location" property directly (same technique as
+            # the file-chooser branch above), re-subscribing whenever
+            # "active-slot" changes (tab switch or new tab). URI-based,
+            # like _window_is_at_disks() itself, rather than locale-string
+            # title matching.
+            watch = {"slot": None, "handler": None}
+
+            def _rewatch_active_slot(w, _pspec=None, watch=watch):
+                try:
+                    slot = w.get_property("active-slot")
+                except TypeError:
+                    slot = None
+                if slot is not watch["slot"]:
+                    if watch["slot"] is not None and watch["handler"] is not None:
+                        try:
+                            watch["slot"].disconnect(watch["handler"])
+                        except Exception:
+                            pass
+                    watch["slot"] = slot
+                    watch["handler"] = (
+                        slot.connect(
                             "notify::location",
-                            lambda _slot, _pspec, w=win: self._on_navigation(w),
+                            lambda _s, _p, w=w: self._on_navigation(w),
                         )
-                        break
-            elif GObject.signal_lookup("locations-changed", type(win)):
-                # "locations-changed" fires when a slot's own location changes
-                # (navigating within a tab), but NOT on tab switch: switching
-                # tabs only reassigns NautilusWindow's "active-slot" property
-                # (set_active_slot() -> g_object_notify_by_pspec(active-slot),
-                # confirmed in nautilus-window.c) without touching any slot's
-                # location. Both must be watched or the overlay goes stale
-                # the moment the active tab changes without a navigation.
-                win.connect("locations-changed", self._on_navigation)
-                win.connect("notify::active-slot", lambda w, _pspec: self._on_navigation(w))
-            else:
-                # Nautilus <= 47 has no "locations-changed" signal on
-                # NautilusWindow (issue #61). Fall back to watching the active
-                # slot's own "location" property directly (same technique as
-                # the file-chooser branch above), re-subscribing whenever
-                # "active-slot" changes (tab switch or new tab). URI-based,
-                # like _window_is_at_disks() itself, rather than locale-string
-                # title matching.
-                watch = {"slot": None, "handler": None}
+                        if slot is not None
+                        else None
+                    )
+                self._on_navigation(w)
 
-                def _rewatch_active_slot(w, _pspec=None, watch=watch):
-                    try:
-                        slot = w.get_property("active-slot")
-                    except TypeError:
-                        slot = None
-                    if slot is not watch["slot"]:
-                        if watch["slot"] is not None and watch["handler"] is not None:
-                            try:
-                                watch["slot"].disconnect(watch["handler"])
-                            except Exception:
-                                pass
-                        watch["slot"] = slot
-                        watch["handler"] = (
-                            slot.connect(
-                                "notify::location",
-                                lambda _s, _p, w=w: self._on_navigation(w),
-                            )
-                            if slot is not None
-                            else None
-                        )
-                    self._on_navigation(w)
+            win.connect("notify::active-slot", _rewatch_active_slot)
+            _rewatch_active_slot(win)
 
-                win.connect("notify::active-slot", _rewatch_active_slot)
-                _rewatch_active_slot(win)
+        if DEBUG_COMPUTER_BUTTON_ACTIVE:
+            self._inject_sidebar_link(win)
+        self._attach_pathbar_menu_watch(win)
+        self._attach_file_view_context_menu(win)
+        self._inject_column_view_entry(win)
+        column_view.watch_tab_view(self, win)
+        if DEBUG_MAIN_VIEW_ACTIVE:
+            my_computer_view.watch_tab_view(self, win)
+        win.connect("notify::is-active", lambda w, _pspec: self._on_window_active_changed(w))
+        self._on_navigation(win)
 
-            if DEBUG_COMPUTER_BUTTON_ACTIVE:
-                self._inject_sidebar_link(win)
-            self._attach_pathbar_menu_watch(win)
-            self._attach_file_view_context_menu(win)
-            self._inject_column_view_entry(win)
-            win.connect("notify::is-active", lambda w, _pspec: self._on_window_active_changed(w))
-            self._on_navigation(win)
+        if DEBUG_SELFTEST and not getattr(self, "_selftest_started", False):
+            self._selftest_started = True
+            GLib.timeout_add(3000, lambda: self._run_selftest(win))
 
-            if DEBUG_SELFTEST and not getattr(self, "_selftest_started", False):
-                self._selftest_started = True
-                GLib.timeout_add(3000, lambda: self._run_selftest(win))
-
-            return True
-        return False
+        return True
 
     def _run_selftest(self, win) -> bool:
         """Debug-only: drive in-process navigation (no keyboard/focus needed) so
@@ -910,17 +959,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         state = self._windows.pop(win, None)
         if state:
             column_view.detach_column_view_entry(self, win, state)
-            tick_id = state.get("stale_release_tick_id")
-            overlay = state.get("overlay")
-            if (
-                tick_id is not None
-                and overlay is not None
-                and hasattr(overlay, "remove_tick_callback")
-            ):
-                overlay.remove_tick_callback(tick_id)
-            state["stale_release_tick_id"] = None
-            state["stale_release_ticks"] = 0
-            state.get("stale_generations", []).clear()
             model = state.get("native_hide_model")
             handler = state.get("native_hide_handler")
             if model is not None and handler:
@@ -930,86 +968,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                     pass
             state["native_hide_model"] = None
             state["native_hide_handler"] = None
-        # Stop usage poll workers if this was the last window showing our panel.
+        # Stop usage poll workers if this was the last slot showing our panel.
         self._stop_usage_poll_if_idle()
-
-    def _on_overlay_finalized(self, win: Gtk.Window, state: dict) -> None:
-        if state.get("overlay") is None and not state.get("overlay_alive", True):
-            return
-        was_visible = state.get("visible_view") == VIEW_DISKINFO
-        state["overlay"] = None
-        state["overlay_alive"] = False
-        state["visible_view"] = None
-        _log(f"overlay finalized before window destroy for {type(win).__name__}")
-        if was_visible:
-            GLib.idle_add(self._stop_usage_poll_if_idle)
-
-    def _has_live_overlay(self, state: dict, site: str) -> bool:
-        if state.get("overlay") is None or not state.get("overlay_alive", True):
-            _log(f"{site}: skip dead overlay")
-            return False
-        return True
-
-    def _trace_view_set(self, overlay: Gtk.Widget, name: str, site: str) -> None:
-        _log(f"{site}: show view '{name}' on {type(overlay).__name__}@0x{id(overlay):x}")
-
-    def _set_visible_view(self, state: dict, name: str, site: str) -> bool:
-        if not self._has_live_overlay(state, site):
-            return False
-        panel = state.get("panel")
-        if panel is None:
-            return False
-
-        self._trace_view_set(state["overlay"], name, site)
-        # files_widget is the always-present Overlay base — never hidden (hiding
-        # it would reparent/unmap and risk the GTK_IS_STACK crash). Toggle only
-        # the panel overlay's visibility. The panel is FILL/FILL and absorbs all
-        # pointer events without needing set_sensitive() on the base. Keyboard
-        # type-ahead is blocked separately by the capture-phase key guard
-        # (_on_window_key_capture). Do NOT call set_sensitive() on the base
-        # (AdwTabView): it covers all tabs, so toggling it disrupts Nautilus
-        # keyboard controllers on other tabs and causes freezes in multi-tab.
-        panel.set_visible(name == VIEW_DISKINFO)
-        column_panel = state.get("column_panel")
-        if column_panel is not None:
-            column_panel.set_visible(name == VIEW_COLUMN)
-
-        if state.get("visible_view") == VIEW_DISKINFO and name != VIEW_DISKINFO:
-            # Leaving the panel — drop any active address-bar filter so a
-            # stale query can't linger and hide cards on the next visit
-            # (the address bar itself may still be mid-navigation, not
-            # necessarily cleared, so we can't rely on its own "changed").
-            state["filter_query"] = ""
-            state["location_filter_owned"] = False
-        state["visible_view"] = name
-        column_view.set_native_cut_observer_active(self, state["window"], name == VIEW_COLUMN)
-        # While the panel is shown, hide the vanilla computer:/// contents
-        # (icons/labels) underneath via opacity. The vanilla view is itself a
-        # .nautilus-grid-view, so its theme background/radius/margin/shadow stay
-        # intact and serve as the opaque backdrop behind the panel's transparent
-        # heading rows and card gaps. Un-blank when we land on a normal folder.
-        # The Column View placeholder needs the same backdrop treatment: it also
-        # fully covers the underlying files_widget.
-        self._blank_vanilla_view(state, name in (VIEW_DISKINFO, VIEW_COLUMN))
-        return True
-
-    def _blank_vanilla_view(self, state: dict, hidden: bool) -> None:
-        """Toggle a CSS class that paints over the vanilla computer:/// file view
-        with the panel's background before our overlay panel becomes visible.
-
-        Adding/removing a style class is a same-frame paint change, not a tree
-        mutation - it cannot trigger the GTK_IS_STACK reparenting crash class
-        (see _set_visible_view). We arm this the moment we know navigation is
-        heading to computer:/// (earlier than the location-change signal that
-        drives the overlay toggle), so the vanilla grid is never painted at all
-        on the paths we initiate ourselves."""
-        files_widget = state.get("files_widget")
-        if files_widget is None:
-            return
-        if hidden:
-            files_widget.add_css_class("vanilla-diskinfo-view-hidden")
-        else:
-            files_widget.remove_css_class("vanilla-diskinfo-view-hidden")
 
     def _set_computer_sidebar_selected(self, state: dict, selected: bool) -> bool:
         my_computer_listbox = state.get("sidebar_my_computer_listbox")
@@ -1086,14 +1046,13 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     # ── Live-refresh helpers ──────────────────────────────────────────────────
 
     def _repopulate_visible(self) -> bool:
-        """Repopulate whichever windows are showing the disk view or Column View."""
-        for win, state in list(self._windows.items()):
-            if not self._has_live_overlay(state, "repopulate_visible"):
-                continue
+        """Repopulate every slot with the panel elected, and refresh Column
+        View wherever it's active."""
+        for state in list(self._iter_panel_states()):
             if state.get("visible_view") == VIEW_DISKINFO:
-                self._populate(win)
-            elif state.get("visible_view") == VIEW_COLUMN:
-                column_view.refresh_column_view(self, win)
+                my_computer_view._populate_slot(self, state["slot"])
+        for win in list(self._windows):
+            column_view.refresh_all_column_views(self, win)
         return GLib.SOURCE_REMOVE
 
     def _reapply_folder_captions(self) -> None:
@@ -1112,15 +1071,36 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         Column View is deliberately skipped -- refreshing it would
         re-enumerate and re-sort every open Miller column for a setting its
         columns don't use."""
-        for win, state in list(self._windows.items()):
-            if not self._has_live_overlay(state, "repopulate_disk_view_only"):
-                continue
+        for state in list(self._iter_panel_states()):
             if state.get("visible_view") == VIEW_DISKINFO:
-                self._populate(win)
+                my_computer_view._populate_slot(self, state["slot"])
         return GLib.SOURCE_REMOVE
 
     def _slot_location(self, win: Gtk.Window) -> Gio.File | None:
         return _active_slot_location(win)
+
+    def _active_slot_widget(self, win: Gtk.Window) -> Gtk.Widget | None:
+        return _active_slot(win)
+
+    def _active_panel_state(self, win: Gtk.Window) -> dict | None:
+        """Per-slot Computer panel state for `win`'s active slot, or None if
+        that slot hasn't been injected (or has no panel elected). See
+        my_computer_view._slot_panel_state / slot._mc_computer."""
+        return my_computer_view._slot_panel_state(_active_slot(win))
+
+    def _iter_panel_states(self):
+        """Every injected Computer panel state, active tab or not -- for
+        broadcasts that must reach every open tab (usage updates, folder
+        icon/caption refreshes, live re-populate). Backed by a weak registry
+        (self._panel_slots) rather than a widget-tree walk, since this is
+        called from the usage-poll hot path."""
+        for slot in list(self._panel_slots):
+            state = getattr(slot, "_mc_computer", None)
+            if state is not None:
+                yield state
+
+    def _active_slot_showing_column(self, win: Gtk.Window) -> bool:
+        return column_view.is_active_slot_showing_column(self, win)
 
     def _resolve_sort_target(self, win: Gtk.Window):
         """(uri, on_changed) for whichever of our views is visible in `win`
@@ -1132,13 +1112,10 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         column_view.enter_column_view: entering always reseeds the Miller
         chain from the real current location, and internal drill-down never
         moves the real Nautilus slot)."""
-        state = self._windows.get(win)
-        if not state:
-            return None
-        visible = state.get("visible_view")
-        if visible == VIEW_DISKINFO:
+        state = self._active_panel_state(win)
+        if state and state.get("visible_view") == VIEW_DISKINFO:
             return (DISKS_URI, self._repopulate_visible)
-        if visible == VIEW_COLUMN:
+        if self._active_slot_showing_column(win):
             loc = _active_slot_location(win)
             if loc is None:
                 return None
@@ -1167,11 +1144,9 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         collapsing it to a single column (see _ColumnViewHost.sync_to_uri for
         the ancestor-truncate / re-root cases). See
         _leave_column_view_for_native_mode for the mirror-image case."""
-        state = self._windows.get(win)
-        if not state:
-            _log("_show_column_view: no state for win")
-            return
-        if not self._has_live_overlay(state, "show column view"):
+        slot = self._active_slot_widget(win)
+        if slot is None or getattr(slot, "_mc_column_view", None) is None:
+            _log("_show_column_view: active slot not ready")
             return
         loc = _active_slot_location(win)
         if not self._column_view_available_at(loc):
@@ -1182,6 +1157,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         column_view.enter_column_view(self, win, root_uri)
         column_view.refresh_column_view_chrome(self, win)
         self._arm_sort_watch(win)
+        self._set_default_view(column_view.VIEW_COLUMN)
 
     @staticmethod
     def _column_view_available_at(location: Gio.File | None) -> bool:
@@ -1191,10 +1167,23 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _column_view_available_for_window(self, win: Gtk.Window) -> bool:
         return self._column_view_available_at(_active_slot_location(win))
 
+    def _auto_elect_view_for_slot(self, win: Gtk.Window) -> str | None:
+        """Which of our own views a slot should open into, or None to leave
+        Nautilus's native view alone. File choosers must never be auto-elected
+        into a non-native view -- they carry a single NautilusWindowSlot and
+        need their native model for file selection (see _is_file_chooser_window)."""
+        if _is_file_chooser_window(win) or not self._gsettings:
+            return None
+        value = self._gsettings.get_string("default-view")
+        return None if value == "native" else value
+
+    def _set_default_view(self, value: str) -> None:
+        if self._gsettings and self._gsettings.get_string("default-view") != value:
+            self._gsettings.set_string("default-view", value)
+
     def _rename_column_focused_folder(self, win: Gtk.Window) -> bool:
         """F2: rename the selected local item in the focused Miller column."""
-        state = self._windows.get(win)
-        if not state or state.get("visible_view") != VIEW_COLUMN:
+        if not self._active_slot_showing_column(win):
             return False
         # While the rename entry itself owns focus, leave F2 to that editor
         # rather than creating a second popover.
@@ -1204,8 +1193,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
     def _trash_column_focused_folder(self, win: Gtk.Window) -> bool:
         """Delete: move the selected local Miller item to Nautilus's trash."""
-        state = self._windows.get(win)
-        if not state or state.get("visible_view") != VIEW_COLUMN:
+        if not self._active_slot_showing_column(win):
             return False
         if isinstance(win.get_focus(), Gtk.Editable):
             return False
@@ -1217,8 +1205,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
     def _copy_column_focused_folder(self, win: Gtk.Window, *, cut: bool = False) -> bool:
         """Ctrl+C: copy the selected Miller item to the system clipboard."""
-        state = self._windows.get(win)
-        if not state or state.get("visible_view") != VIEW_COLUMN:
+        if not self._active_slot_showing_column(win):
             return False
         if isinstance(win.get_focus(), Gtk.Editable):
             return False
@@ -1226,8 +1213,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
     def _paste_into_column_focused_folder(self, win: Gtk.Window) -> bool:
         """Ctrl+V: paste the Miller clipboard into the selected folder."""
-        state = self._windows.get(win)
-        if not state or state.get("visible_view") != VIEW_COLUMN:
+        if not self._active_slot_showing_column(win):
             return False
         if isinstance(win.get_focus(), Gtk.Editable):
             return False
@@ -1235,34 +1221,42 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
     def _new_folder_in_column_focused_folder(self, win: Gtk.Window) -> bool:
         """Shift+Ctrl+N: create a folder in the focused Miller column."""
-        state = self._windows.get(win)
-        if not state or state.get("visible_view") != VIEW_COLUMN:
+        if not self._active_slot_showing_column(win):
             return False
         if isinstance(win.get_focus(), Gtk.Editable):
             return False
         return column_view.create_folder_in_focused_column(self, win)
 
-    def _stop_hidden_native_view(self, win: Gtk.Window) -> bool:
-        """Cancel Nautilus's covered files-view load without touching widgets."""
-        # File choosers need their single native model throughout navigation.
-        # The issue #55 picker path deliberately uses location observation only.
+    def _stop_hidden_native_slot(self, win: Gtk.Window, slot: Gtk.Widget) -> bool:
+        """Cancel Nautilus's covered files-view load on `slot` without
+        touching widgets. Targets `slot` directly (rather than the window's
+        current active slot) since per-slot injection (Column View #118,
+        Computer View #133) means the slot needing this is not necessarily
+        the active one -- e.g. a background tab elected via "Open in New
+        Tab". File choosers need their single native model throughout
+        navigation (issue #55 picker path deliberately uses location
+        observation only)."""
         if _is_file_chooser_window(win):
             return False
-        return win.activate_action("slot.stop", None)
+        return slot.activate_action("slot.stop", None)
 
-    def _reload_native_view_after_column(self, win: Gtk.Window, state: dict) -> bool:
-        """Reload a native model that Column View previously stopped.
+    def _reload_native_slot_after_column(self, win: Gtk.Window, slot: Gtk.Widget) -> bool:
+        """Reload a native model that Column View previously stopped for `slot`.
 
         This runs from an idle after Ctrl+1/Ctrl+2 propagation, so Nautilus
         changes the inner List/Grid widget before reloading its shared model.
         If Column View became visible again first, keep the stopped marker for
         the next real exit instead of restarting hidden native work.
         """
-        if self._windows.get(win) is not state or state.get("visible_view") != VIEW_FILES:
+        if not getattr(slot, "_mc_column_native_stopped", False):
             return GLib.SOURCE_REMOVE
-        activated = win.activate_action("slot.reload", None)
+        if column_view.slot_is_showing_column(slot):
+            return GLib.SOURCE_REMOVE
+        if _is_file_chooser_window(win):
+            return GLib.SOURCE_REMOVE
+        activated = slot.activate_action("slot.reload", None)
         if activated:
-            state["column_native_stopped"] = False
+            slot._mc_column_native_stopped = False
         return GLib.SOURCE_REMOVE
 
     def _leave_column_view_for_native_mode(self, win: Gtk.Window) -> bool:
@@ -1272,145 +1266,35 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         Nautilus. The extension-owned three-state primary action also calls it
         before explicitly activating Nautilus's untouched native toggle.
         """
-        state = self._windows.get(win)
-        if state is not None and state.get("visible_view") == VIEW_COLUMN:
-            _log("_leave_column_view_for_native_mode: dropping back to VIEW_FILES")
-            self._set_visible_view(state, VIEW_FILES, "ctrl+1/2 native view-mode switch")
-            if state.get("column_native_stopped"):
-                GLib.idle_add(self._reload_native_view_after_column, win, state)
+        # Every caller here is an explicit "I want native" pick, so this is
+        # written unconditionally, not only when slot_is_showing_column below
+        # is true -- e.g. the user forced-fallback to a Column-unavailable
+        # location (trash:///) and then presses Ctrl+1 there. If the write
+        # were gated on slot_is_showing_column, the key would stay 'column'
+        # and leaving that location would silently re-elect Column View
+        # against the explicit pick just made.
+        self._set_default_view("native")
+        slot = self._active_slot_widget(win)
+        if slot is not None and column_view.slot_is_showing_column(slot):
+            _log("_leave_column_view_for_native_mode: dropping back to native view")
+            column_view.leave_column_view(slot)
+            if getattr(slot, "_mc_column_native_stopped", False):
+                GLib.idle_add(self._reload_native_slot_after_column, win, slot)
         return False
-
-    def _inject_overlay(self, nautilus_win: Gtk.Window) -> bool:
-        split_view = None
-        for w in _all_widgets(nautilus_win):
-            if isinstance(w, Adw.OverlaySplitView):
-                split_view = w
-                break
-        if not split_view:
-            _log("inject_overlay: Adw.OverlaySplitView not found — widget tree may have changed")
-            return False
-
-        toolbar_view = None
-        right = split_view.get_content()
-        if right:
-            for w in _all_widgets(right):
-                if isinstance(w, Adw.ToolbarView):
-                    toolbar_view = w
-                    break
-
-        panel, grid_host, grid_box = self._build_panel(nautilus_win)
-        column_panel = column_view.build_column_view(self, nautilus_win)
-        column_panel.set_halign(Gtk.Align.FILL)
-        column_panel.set_valign(Gtk.Align.FILL)
-        # Use Gtk.Overlay: files view is the always-present base; our panel floats
-        # on top as an overlay child, visible only on computer:///. The Overlay type
-        # is opaque to Nautilus's gtk_widget_get_ancestor(view, GTK_TYPE_STACK) walk,
-        # so it never confuses Nautilus's internal view GtkStack (unlike a Gtk.Stack
-        # wrapper, which caused the GTK_IS_STACK assertion / SIGSEGV on GNOME 43+).
-        overlay = Gtk.Overlay()
-
-        # Panel must fill the full Overlay area so the files view doesn't show through.
-        panel.set_halign(Gtk.Align.FILL)
-        panel.set_valign(Gtk.Align.FILL)
-
-        if not DEBUG_MAIN_VIEW_ACTIVE:
-            # Main-view site disabled: keep the overlay/panel ORPHAN (never inserted
-            # into Nautilus's tree) so other sites can still be exercised/isolated.
-            files_widget = None
-            _log("inject_overlay: DEBUG_MAIN_VIEW_ACTIVE=False — overlay kept orphan")
-        elif toolbar_view:
-            files_widget = toolbar_view.get_content()
-            if not files_widget:
-                return False
-            toolbar_view.set_content(overlay)
-            overlay.set_child(files_widget)
-            overlay.add_overlay(panel)
-            overlay.add_overlay(column_panel)
-        else:
-            files_widget = right
-            if not files_widget:
-                return False
-            split_view.set_content(overlay)
-            overlay.set_child(files_widget)
-            overlay.add_overlay(panel)
-            overlay.add_overlay(column_panel)
-
-        # Start with the files view — panel hidden until title changes to computer:///.
-        self._trace_view_set(overlay, VIEW_FILES, "inject_overlay initial")
-        panel.set_visible(False)
-        column_panel.set_visible(False)
-
-        self._windows[nautilus_win] = {
-            "window": nautilus_win,
-            "overlay": overlay,
-            "overlay_alive": True,
-            "visible_view": VIEW_FILES,
-            "files_widget": files_widget,
-            "panel": panel,
-            "column_panel": column_panel,
-            "column_native_stopped": False,
-            "native_split_button": None,
-            "view_switcher": None,
-            "view_options_menu_button": None,
-            "grid_host": grid_host,
-            "grid_box": grid_box,
-            "section_flows": [],
-            "card_widgets": {},  # key → MyComputerDiskCard
-            "stale_generations": [],
-            "stale_release_tick_id": None,
-            "stale_release_ticks": 0,
-            "_deselecting": False,
-            "force_disks": False,
-            "initial_title": None,
-            # A file-picker dialog should never auto-navigate itself to
-            # computer:/// on open - that heuristic is normal-window-only.
-            "start_on_computer": self._start_on_disks and not _is_file_chooser_window(nautilus_win),
-            "awaiting_disks": False,
-            "selected_mount_key": None,
-            "selected_folder_key": None,
-            "header_motion": None,  # Gtk.EventControllerMotion on the header bar
-            "location_filter_watch_attached": False,
-            "location_filter_owned": False,
-            "filter_query": "",
-            "native_hide_model": None,  # observe_children() model of native listbox
-            "native_hide_handler": None,  # items-changed handler id on that model
-            "native_hide_pending": False,  # coalesces re-hide bursts into one idle pass
-        }
-        overlay.weak_ref(
-            lambda w=nautilus_win, st=self._windows.get(nautilus_win): (
-                self._on_overlay_finalized(w, st) if st is not None else None
-            )
-        )
-
-        # Capture-phase key guard on the window: Nautilus's "type to search"
-        # type-ahead is hooked above keyboard focus, so neither hiding nor
-        # de-focusing the covered file view stops it. A controller at the top of
-        # the capture chain sees keystrokes first and swallows plain printable
-        # ones while the panel is shown — so typing doesn't reopen the vanilla
-        # computer:/// search. Modified shortcuts (Ctrl/Alt/Super) and control
-        # keys (arrows, Tab, Enter, Esc) always pass through.
-        key_guard = Gtk.EventControllerKey()
-        key_guard.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
-        key_guard.connect("key-pressed", self._on_window_key_capture, nautilus_win)
-        nautilus_win.add_controller(key_guard)
-
-        # If this window is headed to computer:///, let the later title-change
-        # path do the first populate + switch once Nautilus has settled.
-
-        return True
 
     def _on_window_key_capture(self, _ctrl, keyval, _keycode, gtk_state, win) -> bool:
         """Limit Column View keys and suppress panel type-ahead search."""
-        state = self._windows.get(win)
-        if not state:
+        win_state = self._windows.get(win)
+        if not win_state:
             _log(f"key_capture: no state for win, keyval={Gdk.keyval_name(keyval)}")
             return False
+        panel_state = self._active_panel_state(win)
         _log(
             f"key_capture: keyval={Gdk.keyval_name(keyval)} "
             f"ctrl={bool(gtk_state & Gdk.ModifierType.CONTROL_MASK)} "
             f"alt={bool(gtk_state & Gdk.ModifierType.ALT_MASK)} "
             f"super={bool(gtk_state & Gdk.ModifierType.SUPER_MASK)} "
-            f"visible_view={state.get('visible_view')!r}"
+            f"visible_view={panel_state.get('visible_view') if panel_state else None!r}"
         )
         # Shared shortcut table (see _WINDOW_SHORTCUTS) -- checked from any
         # visible_view, must run before the VIEW_DISKINFO gate below (that
@@ -1423,7 +1307,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                 f"{handler_name} consumed={consumed}"
             )
             return consumed
-        if state.get("visible_view") != VIEW_DISKINFO:
+        if not panel_state or panel_state.get("visible_view") != VIEW_DISKINFO:
             return False
         # Let modified shortcuts through (Ctrl+L, Alt+Left, Super, …).
         if gtk_state & (
@@ -1432,7 +1316,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             # Ctrl+L opens the address bar for real navigation, not card
             # filtering -- disown it so _on_location_text_changed ignores
             # the resulting "changed" signals. See location_filter_owned.
-            state["location_filter_owned"] = False
+            panel_state["location_filter_owned"] = False
             return False
         # Address-bar trigger keys must reach the toolbar's MANAGED shortcut
         # controller (nautilus-toolbar.c): "/" -> root, "~" -> home, like native.
@@ -1440,7 +1324,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         # These open the bar for real navigation, not card filtering, so
         # disown it the same way Ctrl+L does above.
         if keyval in _LOCATION_ENTRY_KEYVALS:
-            state["location_filter_owned"] = False
+            panel_state["location_filter_owned"] = False
             return False
         # Only handle printable characters (>= space). Control keys — arrows,
         # Tab, Enter, Esc, function keys — map to unicode < 0x20 and pass through.
@@ -1463,37 +1347,33 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             # fires "changed" synchronously, before this call even returns, so
             # setting the flag from the return value would miss that first
             # keystroke's filter application entirely.
-            state["location_filter_owned"] = True
+            panel_state["location_filter_owned"] = True
             if not location_filter.reveal_and_seed(self, win, char):
-                state["location_filter_owned"] = False
+                panel_state["location_filter_owned"] = False
         return True
 
     # ── Location change handler ───────────────────────────────────────────────
 
     def _on_navigation(self, win: Gtk.Window) -> None:
+        """Sync window-singleton chrome (sidebar highlight, pathbar chip,
+        sort watch, location filter watch) to whichever slot is active.
+
+        Showing/hiding the panel itself is no longer this function's job:
+        each slot owns that decision independently, driven directly by its
+        own "notify::location" (see my_computer_view._on_slot_location_changed,
+        issue #133) rather than by window-title polling. This function only
+        follows the ACTIVE slot to keep the window's shared chrome widgets in
+        sync with it -- it fires on both real navigation and tab switches."""
         state = self._windows.get(win)
         if not state:
             return
-        if not self._has_live_overlay(state, "title changed"):
-            return
 
         current_title = win.get_title() or ""
-        in_view = my_computer_view._window_is_at_disks(win)
-
         # A transient/empty title ("Loading…") means the window hasn't resolved
         # its location yet. Never act on it: it must not consume the one-shot
-        # start-on-computer flag, nor flip the overlay to the file view.
+        # start-on-computer flag.
         if _is_unsettled_title(current_title):
             return
-
-        # While the startup navigation to computer:/// is still in flight, keep
-        # the panel pinned. Intermediate titles (e.g. a lingering "Home") must
-        # not flip the overlay to the file view and cause a flash.
-        if state.get("awaiting_disks"):
-            if in_view:
-                state["awaiting_disks"] = False  # arrived, fall through
-            else:
-                return
 
         if state.get("start_on_computer"):
             state["start_on_computer"] = False
@@ -1501,93 +1381,49 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                 self._navigate_to_disks(win)
                 return
 
-        if state["force_disks"]:
-            if state["initial_title"] is None:
-                state["initial_title"] = current_title
-            elif current_title != state["initial_title"] and not in_view:
-                state["force_disks"] = False
-            else:
-                in_view = True
-
-        current = state.get("visible_view")
+        panel_state = self._active_panel_state(win)
+        # Read the slot's own location rather than the panel's visible_view
+        # flag: Nautilus emits "locations-changed" from inside its own
+        # notify::location handler (nautilus-window.c on_slot_location_changed),
+        # which it connected long before my_computer_view's per-slot watcher,
+        # so this runs *before* _enter_panel/_leave_panel has updated that
+        # flag. The location is the same ground truth both of them act on,
+        # and it is already committed by the time either handler runs.
+        location = _active_slot_location(win)
+        at_disks = location is not None and location.equal(_DISKS_FILE)
+        in_view = panel_state is not None and at_disks
         if in_view:
-            if current != VIEW_DISKINFO:
-                self._populate(win)
-                if not self._set_visible_view(state, VIEW_DISKINFO, "title changed show diskinfo"):
-                    return
-                self._stop_hidden_native_view(win)
-                self._ensure_usage_poll_running()
-
             GLib.idle_add(self._set_computer_sidebar_selected, state, True)
 
-            # Re-pin the chrome icons (path-bar chip + sidebar row) every time we
-            # arrive at the computer view. This must run even when the overlay is
-            # already showing the panel — on the start-on-disks path the panel is
-            # pre-shown before navigation completes, so the chip only gains its
-            # "Computer" label here, after the overlay is already DISKINFO.
+            # Re-pin the chrome icons (path-bar chip + sidebar row) every time
+            # the active tab arrives at the computer view.
             if DEBUG_PATHBAR_ACTIVE:
                 GLib.idle_add(lambda w=win: self._fix_pathbar_icon(w) or False)
             if DEBUG_SORT_WATCH_ACTIVE:
                 GLib.idle_add(lambda w=win: self._attach_sort_button_watch(w) or False)
             if DEBUG_LOCATION_FILTER_ACTIVE:
                 GLib.idle_add(lambda w=win: self._attach_location_filter_watch(w) or False)
-        elif (
-            not in_view
-            and current == VIEW_COLUMN
-            and self._column_view_available_for_window(win)
-            and column_view.stays_active(self, win)
-        ):
-            # Location changed while Column View is active (our own row-click
-            # navigation, or external navigation -- pathbar, back/forward, a
-            # typed path): rebuild the column chain from the new URI and stay
-            # in Column View, rather than falling back to VIEW_FILES like any
-            # other location change would (see the elif below). sync_to_uri's
-            # own echo guard is what skips the rebuild for our own row-click
-            # navigation (column_view._ColumnViewHost._sync_slot_location).
-            loc = _active_slot_location(win)
-            if loc is not None:
-                uri = loc.get_uri()
-                column_view.sync_column_view_to_location(self, win, uri)
-                # At this point Nautilus has committed the slot location,
-                # title, pathbar, sidebar state, and history, but its native
-                # files view can still be loading underneath Column View.
-                # Stop that load through Nautilus's own slot action. Unlike
-                # hiding/unmapping files_widget, this cancels metadata
-                # callbacks, model updates, and directory monitors without
-                # mutating the widget tree. Ctrl+1/Ctrl+2 reloads the native
-                # model before exposing it again.
-                activated = self._stop_hidden_native_view(win)
-                if activated:
-                    state["column_native_stopped"] = True
-        elif not in_view and current != VIEW_FILES:
-            if state:
-                state["_deselecting"] = True
-                for flow in state.get("section_flows", []):
-                    flow.unselect_all()
-                state["_deselecting"] = False
-                state["selected_mount_key"] = None
-                state["selected_folder_key"] = None
-            # Re-derive our sidebar highlight from the aggregate native selection
-            # rather than blindly unselecting. The Computer row is selected
-            # manually on entry (no live native row to mirror), so on exit nothing
-            # fires a native signal to clear it. Re-running the mirror sync clears
-            # our row when the destination (e.g. /tmp/) is not one of our places,
-            # and leaves it intact when the mirror already picked an owned place.
+        elif state.get("_chrome_in_view"):
+            # Only on the actual transition away from the panel (not on every
+            # subsequent files-view navigation) -- re-derive our sidebar
+            # highlight from the aggregate native selection rather than
+            # blindly unselecting. The Computer row is selected manually on
+            # entry (no live native row to mirror), so on exit nothing fires
+            # a native signal to clear it. Re-running the mirror sync clears
+            # our row when the destination (e.g. /tmp/) is not one of our
+            # places, and leaves it intact when the mirror already picked an
+            # owned place.
             sync = state.get("sidebar_sync")
             if callable(sync):
                 GLib.idle_add(lambda s=sync: (s(), False)[1])
             else:
                 GLib.idle_add(self._set_computer_sidebar_selected, state, False)
-            if not self._set_visible_view(state, VIEW_FILES, "title changed show files"):
-                return
-            self._stop_usage_poll_if_idle()
+        state["_chrome_in_view"] = in_view
 
         # Nautilus keeps one view-options control and menu model per window.
         # Refresh our chrome and stable menu section when the active slot moves
         # into or out of a location where Column View is unavailable.
         column_view.refresh_column_view_chrome(self, win)
-
-        return True
 
     def _do_open_with(
         self, nav_uri: str, win: Gtk.Window, *, content_type: str = "inode/directory"
@@ -1771,19 +1607,53 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _do_open(self, nav_uri: str, win: Gtk.Window) -> None:
         GLib.idle_add(self._navigate_to, nav_uri, win)
 
-    def _do_open_tab(self, nav_uri: str, win: Gtk.Window) -> None:
+    def _do_open_tab(self, nav_uri: str, win: Gtk.Window, make_active: bool = True) -> None:
+        """Open nav_uri in a new tab, built the way Nautilus itself builds one
+        (nautilus_window_create_and_init_slot, nautilus-window.c:406): create a
+        NautilusWindowSlot directly and hand it to AdwTabView, rather than firing
+        the "new-tab" action (the Ctrl+T path) and polling for the resulting slot.
+        Falls back to the action+poll path if the slot type can't be resolved.
+
+        make_active=False mirrors NAUTILUS_OPEN_FLAG_DONT_MAKE_ACTIVE
+        (nautilus-window.c:471): the tab is created and navigated but never
+        selected, matching every native middle-click and "Open in New Tab" site.
+        Nautilus itself defaults to leaving a freshly created tab unselected
+        (adw_tab_view_add_page never selects); selecting happens only in
+        set_active_slot, which we skip here when make_active is False.
+        """
         uri = nav_uri
 
         tab_view = next(
             (w for w in _all_widgets(win) if isinstance(w, Adw.TabView)),
             None,
         )
-        pages_before = tab_view.get_n_pages() if tab_view else 0
+        if tab_view is None:
+            return
 
-        # Switch to the files view first — new-tab action requires the TabView to be visible.
-        state = self._windows.get(win)
-        if state and self._set_visible_view(state, VIEW_FILES, "open_tab show files"):
-            self._stop_usage_poll_if_idle()
+        slot_gtype = _resolve_gtype("NautilusWindowSlot")
+        if slot_gtype is None:
+            self._do_open_tab_via_action(uri, win, tab_view, make_active)
+            return
+
+        slot = GObject.new(slot_gtype, mode=0)  # NAUTILUS_MODE_BROWSE
+        current_page = tab_view.get_selected_page()
+        page = tab_view.add_page(slot, current_page)
+
+        # Without these bindings the tab has no title and never shows the
+        # loading spinner — nautilus_window_create_and_init_slot binds the same
+        # two properties (nautilus-window.c:417-421).
+        slot.bind_property("title", page, "title", GObject.BindingFlags.SYNC_CREATE)
+        slot.bind_property("allow-stop", page, "loading", GObject.BindingFlags.SYNC_CREATE)
+
+        slot.activate_action("slot.open-location", GLib.Variant("s", uri))
+        if make_active:
+            tab_view.set_selected_page(page)
+
+    def _do_open_tab_via_action(
+        self, uri: str, win: Gtk.Window, tab_view: Adw.TabView, make_active: bool = True
+    ) -> None:
+        pages_before = tab_view.get_n_pages()
+        previous_page = None if make_active else tab_view.get_selected_page()
 
         attempt = [0]
 
@@ -1791,8 +1661,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             Gio.ActionGroup.activate_action(win, "new-tab", None)
 
             def _wait_for_tab():
-                n = tab_view.get_n_pages() if tab_view else 0
-                if not (tab_view and n > pages_before):
+                n = tab_view.get_n_pages()
+                if n <= pages_before:
                     attempt[0] += 1
                     if attempt[0] >= 20:
                         return GLib.SOURCE_REMOVE
@@ -1804,6 +1674,11 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                 if page:
                     slot = page.get_child()
                     if slot and slot.activate_action("slot.open-location", GLib.Variant("s", uri)):
+                        # The "new-tab" action always selects the new tab (it's
+                        # the Ctrl+T path) — restore the previous selection to
+                        # emulate DONT_MAKE_ACTIVE in this fallback.
+                        if previous_page is not None:
+                            tab_view.set_selected_page(previous_page)
                         return GLib.SOURCE_REMOVE
 
                 attempt[0] += 1
@@ -2147,26 +2022,18 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         """Navigate a window to computer:/// at startup, retrying until the slot
         is ready. The slot often isn't navigable the instant the window settles
         on Home, so a single open-location call silently no-ops; we retry on a
-        short bounded poll and stop as soon as the location actually changes.
-        While awaiting arrival the panel stays pinned (see _on_navigation)."""
-        state = self._windows.get(win)
-        if state is not None:
-            state["awaiting_disks"] = True
-            self._blank_vanilla_view(state, True)
-
+        short bounded poll and stop as soon as the location actually changes
+        (the active slot's own per-slot handler shows the panel at that point,
+        see my_computer_view._on_slot_location_changed)."""
         attempts = [0]
 
         def _try() -> bool:
-            st = self._windows.get(win)
-            if st is None:
+            if win not in self._windows:
                 return GLib.SOURCE_REMOVE
             if my_computer_view._window_is_at_disks(win):
-                st["awaiting_disks"] = False  # arrived
                 return GLib.SOURCE_REMOVE
             attempts[0] += 1
             if attempts[0] > 25:  # ~1.5 s budget, then give up
-                st["awaiting_disks"] = False
-                self._blank_vanilla_view(st, False)
                 return GLib.SOURCE_REMOVE
             self._navigate_to(DISKS_URI, win)
             return GLib.SOURCE_CONTINUE
@@ -2174,23 +2041,19 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         GLib.timeout_add(_NAV_RETRY_MS, _try)
 
     def _navigate_to(self, uri: str, win: Gtk.Window) -> bool:
-        state = self._windows.get(win) if uri == DISKS_URI else None
-
-        def _arm_blank() -> None:
-            if state is not None:
-                self._blank_vanilla_view(state, True)
-
-        for w in _all_widgets(win):
-            if "Slot" in type(w).__name__:
-                try:
-                    if w.activate_action("open-location", GLib.Variant("s", uri)):
-                        _arm_blank()
-                        return False
-                except Exception:
-                    pass
+        # Target the active slot directly rather than walking every "Slot"
+        # widget in the window: with 2+ tabs open, a blind walk can hand the
+        # action to a background tab's slot first, silently navigating the
+        # wrong tab while the visible one looks frozen (issue #132).
+        slot = _active_slot(win)
+        if slot is not None:
+            try:
+                if slot.activate_action("open-location", GLib.Variant("s", uri)):
+                    return False
+            except Exception:
+                pass
         try:
             if win.activate_action("slot.open-location", GLib.Variant("s", uri)):
-                _arm_blank()
                 return False
         except Exception:
             pass
@@ -2340,10 +2203,24 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
         GLib.idle_add(_pin_row_icon)
 
-        # Right-click context menu (Computer carries _computer_context_menu).
-        if callable(entry.menu):
-
-            def _on_place_right_clicked(gesture, _n, x, y):
+        # Click dispatch, mirroring NautilusSidebar (nautilus-sidebar.c:3215): one
+        # gesture on all buttons, dispatched from "released" (not "pressed" - the
+        # sidebar's "pressed" handler only records drag-reorder coordinates), no
+        # n_press guard. Middle opens a background tab (Ctrl+middle a new window,
+        # nautilus-sidebar.c:3237); secondary opens the row's popover menu
+        # (Computer carries _computer_context_menu).
+        def _on_place_released(gesture, _n, x, y):
+            button = gesture.get_current_button()
+            if button == Gdk.BUTTON_MIDDLE:
+                gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+                state = gesture.get_current_event_state()
+                if state & Gdk.ModifierType.CONTROL_MASK:
+                    self._do_open_window(entry.uri)
+                else:
+                    self._do_open_tab(entry.uri, win, make_active=False)
+            elif button == Gdk.BUTTON_SECONDARY:
+                if not callable(entry.menu):
+                    return
                 gesture.set_state(Gtk.EventSequenceState.CLAIMED)
                 ctx_menu = entry.menu(self, win, entry)
                 popover = ctx_menu.build_popover(list_row, f"place_{entry.name}")
@@ -2352,10 +2229,10 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                 popover.set_pointing_to(rect)
                 popover.popup()
 
-            right_click = Gtk.GestureClick()
-            right_click.set_button(3)
-            right_click.connect("pressed", _on_place_right_clicked)
-            list_row.add_controller(right_click)
+        click = Gtk.GestureClick()
+        click.set_button(0)
+        click.connect("released", _on_place_released)
+        list_row.add_controller(click)
 
         # Hide the eject button - not applicable for our injected entries.
         btn = _find_widget(list_row, buildable_id="eject_button")

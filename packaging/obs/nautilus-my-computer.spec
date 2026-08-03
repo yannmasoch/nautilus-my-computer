@@ -1,5 +1,5 @@
 Name:           nautilus-my-computer
-Version:        0.12.6
+Version:        0.13.0
 Release:        0
 Summary:        My Computer for Nautilus, what GNOME Files should have always been
 
@@ -42,6 +42,17 @@ make build
 %{_datadir}/glib-2.0/schemas/io.github.yannmasoch.nautilus-my-computer.gschema.xml
 
 %changelog
+* Sun Aug 02 2026 Yann Masoch <231734284+yannmasoch@users.noreply.github.com> - 0.13.0-0
+- Remember the last-picked view (Grid, List, or Column) instead of always resetting to the file view
+- Middle-click disk cards, Preferred Folder cards, and Column View rows to open a background tab; Ctrl+middle-click opens a new window
+- Give the Computer view real per-tab state (selection, scroll, filter no longer shared across tabs)
+- Fix the native Grid/List view button disappearing from the widget tree behind the switcher
+- Fix noisy debug warnings printed to the terminal log when drawing the Computer view
+- Fix a sidebar location click from the Computer view sometimes needing a second click to navigate away
+- Fix the first disk/folder card auto-selecting on cold start and the sidebar highlight lagging behind the panel
+- Add Estonian translation
+- Update Portuguese (Brazil), German, Arabic, Catalan, Greek, Spanish, French, Hungarian, Italian, Korean, Portuguese, Russian, and Turkish translations
+
 * Wed Jul 29 2026 Yann Masoch <231734284+yannmasoch@users.noreply.github.com> - 0.12.6-0
 - Fix hidden (dot-prefixed) disks not respecting the Show Hidden Files setting
 - Fix hidden disks not grouping together in Name/Type sort

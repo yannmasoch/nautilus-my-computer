@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-07-24 12:50-0700\n"
-"PO-Revision-Date: 2026-06-01 00:00+0200\n"
+"PO-Revision-Date: 2026-07-30 16:05+0000\n"
 "Last-Translator: Unai Lomas\n"
 "Language-Team: Italian\n"
 "Language: it\n"
@@ -17,28 +17,28 @@ msgstr ""
 # ——————————————————————————————
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
-msgstr ""
+msgstr "Cambia icona"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Icon"
-msgstr ""
+msgstr "Icona"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Search icons…"
-msgstr ""
+msgstr "Cerca icone…"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Reset"
-msgstr ""
+msgstr "Azzera"
 
 #: nautilus_my_computer/column_view.py
 msgid "New Folder"
-msgstr ""
+msgstr "Nuova cartella"
 
 #: nautilus_my_computer/column_view.py
-#, fuzzy, python-format
+#, python-format
 msgid "Open With %s"
-msgstr "Apri con…"
+msgstr "Apri con %s"
 
 # ——————————————————————————————
 # Panel - Disk card actions
@@ -50,42 +50,43 @@ msgstr "Apri"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select Move Destination"
-msgstr ""
+msgstr "Seleziona destinazione spostamento"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select Copy Destination"
-msgstr ""
+msgstr "Seleziona destinazione copia"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select"
-msgstr ""
+msgstr "Seleziona"
 
 #: nautilus_my_computer/column_view.py
 msgid "Beta"
-msgstr ""
+msgstr "Beta"
 
 #: nautilus_my_computer/column_view.py
 msgid "Early access feature. It may contain bugs or inconsistencies."
 msgstr ""
+"Funzionalità ad accesso anticipato. Potrebbe contenere bug o incoerenze."
 
 #: nautilus_my_computer/column_view.py
 msgid "Grid View"
-msgstr ""
+msgstr "Vista a griglia"
 
 #: nautilus_my_computer/column_view.py
 msgid "List View"
-msgstr ""
+msgstr "Vista ad elenco"
 
 #: nautilus_my_computer/column_view.py
 msgid "Column View"
-msgstr ""
+msgstr "Vista a colonne"
 
 # ——————————————————————————————
 # Preferences - Preferred Folders
 # ——————————————————————————————
 #: nautilus_my_computer/column_view.py
 msgid "View Options"
-msgstr ""
+msgstr "Opzioni vista"
 
 # ——————————————————————————————
 # Panel - Preferred Folders - Captions
@@ -209,15 +210,15 @@ msgstr[1] "tra {n} anni"
 # ——————————————————————————————
 #: nautilus_my_computer/components.py
 msgid "Rename Folder"
-msgstr ""
+msgstr "Rinomina cartella"
 
 #: nautilus_my_computer/components.py
 msgid "Rename File"
-msgstr ""
+msgstr "Rinomina file"
 
 #: nautilus_my_computer/components.py
 msgid "Rename"
-msgstr ""
+msgstr "Rinomina"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Tab"
@@ -233,69 +234,69 @@ msgstr "Apri con…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Remove from Bookmarks"
-msgstr ""
+msgstr "Rimuovi dai segnalibri"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Add to Bookmarks"
-msgstr ""
+msgstr "Aggiungi dai segnalibri"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Unpin from My Computer"
-msgstr ""
+msgstr "Rimuovi da Computer"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Pin to My Computer"
-msgstr ""
+msgstr "Aggiungi a Computer"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Cut"
-msgstr ""
+msgstr "Taglia"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Copy"
-msgstr ""
+msgstr "Copia"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Paste"
-msgstr ""
+msgstr "Incolla"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Move to…"
-msgstr ""
+msgstr "Sposta in…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Copy to…"
-msgstr ""
+msgstr "Copia in…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
-msgstr ""
+msgstr "Nuova cartella…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Document"
-msgstr ""
+msgstr "Nuovo documento"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in Terminal"
-msgstr ""
+msgstr "Apri nel terminale"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Rename…"
-msgstr ""
+msgstr "Rinomina…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Compress…"
-msgstr ""
+msgstr "Comprimi…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Email…"
-msgstr ""
+msgstr "Invia email…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
-msgstr ""
+msgstr "Sposta nel cestino"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Properties"
@@ -324,7 +325,7 @@ msgstr "Home"
 
 #: nautilus_my_computer/main.py
 msgid "Loading…"
-msgstr ""
+msgstr "Caricamento…"
 
 #: nautilus_my_computer/main.py
 msgid "Open My Computer"
@@ -348,35 +349,35 @@ msgstr "Cestino"
 
 #: nautilus_my_computer/main.py
 msgid "Open Folder"
-msgstr ""
+msgstr "Apri cartella"
 
 # ——————————————————————————————
 # Panel - Disk card actions
 # ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Open File"
-msgstr ""
+msgstr "Apri file"
 
 #: nautilus_my_computer/main.py
 msgid "Cancel"
-msgstr ""
+msgstr "Annulla"
 
 #: nautilus_my_computer/main.py
 #, python-format
 msgid "Choose an app to open <b>%s</b>"
-msgstr ""
+msgstr "Scegli un'applicazione per aprire <b>%s</b>"
 
 #: nautilus_my_computer/main.py
 msgid "Recommended Apps"
-msgstr ""
+msgstr "Applicazioni consigliate"
 
 #: nautilus_my_computer/main.py
 msgid "Other Apps"
-msgstr ""
+msgstr "Altre applicazioni"
 
 #: nautilus_my_computer/main.py
 msgid "No applications found."
-msgstr ""
+msgstr "Non è stata trovata alcuna applicazione."
 
 #: nautilus_my_computer/main.py
 msgid "General"
@@ -589,19 +590,19 @@ msgstr "{free} disponibile di {total}"
 
 #: nautilus_my_computer/widgets.py
 msgid "Folder is Empty"
-msgstr ""
+msgstr "La cartella è vuota"
 
 #: nautilus_my_computer/widgets.py
 msgid "Created"
-msgstr ""
+msgstr "Creazione"
 
 #: nautilus_my_computer/widgets.py
 msgid "Modified"
-msgstr ""
+msgstr "Modificato"
 
 #: nautilus_my_computer/widgets.py
 msgid "Dimensions"
-msgstr ""
+msgstr "Dimensioni"
 
 #~ msgid "Show the Preferred Folders group at the top of the view"
 #~ msgstr "Mostra il gruppo Cartelle preferite in alto nella vista"

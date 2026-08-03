@@ -124,10 +124,14 @@ class MyComputerDiskCard(Gtk.Box):
         self.set_focus_on_click(True)
         self._build()
 
-        right_click = Gtk.GestureClick()
-        right_click.set_button(3)
-        right_click.connect("pressed", self._ext._on_card_right_clicked, self._win, self)
-        self.add_controller(right_click)
+        # One gesture on all buttons, dispatched from "pressed", mirroring
+        # nautilus-list-base.c:880-886 (on_item_click_pressed / button=0).
+        # Primary is left unclaimed -- activation stays on FlowBox's own
+        # child-activated binding (_on_card_activated).
+        click = Gtk.GestureClick()
+        click.set_button(0)
+        click.connect("pressed", self._ext._on_card_pressed, self._win, self)
+        self.add_controller(click)
 
     @property
     def is_list(self) -> bool:
@@ -332,10 +336,14 @@ class MyComputerFolderCard(Gtk.Widget):
         # floats outside the FlowBox and is never a drop target. See
         # _build_drag_ghost / _build_reorder_placeholder.
         if interactive:
-            right_click = Gtk.GestureClick()
-            right_click.set_button(3)
-            right_click.connect("pressed", self._ext._on_card_right_clicked, self._win, self)
-            self.add_controller(right_click)
+            # One gesture on all buttons, dispatched from "pressed", mirroring
+            # nautilus-list-base.c:880-886 (on_item_click_pressed / button=0).
+            # Primary is left unclaimed -- activation stays on FlowBox's own
+            # child-activated binding (_on_card_activated).
+            click = Gtk.GestureClick()
+            click.set_button(0)
+            click.connect("pressed", self._ext._on_card_pressed, self._win, self)
+            self.add_controller(click)
 
             self._wire_drag()
 
@@ -423,6 +431,10 @@ class MyComputerFolderCard(Gtk.Widget):
     def _wire_drag(self) -> None:
         drag = Gtk.DragSource()
         drag.set_actions(Gdk.DragAction.MOVE)
+        # CAPTURE, matching nautilus-list-base.c:1373 -- runs ahead of the
+        # BUBBLE-phase click gesture above so a drag on primary press isn't
+        # shadowed by it.
+        drag.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
         drag.connect("prepare", self._on_drag_prepare)
         drag.connect("drag-begin", self._on_drag_begin)
         drag.connect("drag-end", self._on_drag_end)
@@ -913,7 +925,11 @@ class MyComputerCappedGridFlowBox(Gtk.FlowBox):
     def do_measure(self, orientation, for_size):
         if orientation == Gtk.Orientation.VERTICAL and for_size > 0:
             self.set_max_children_per_line(self._cols_for_width(for_size))
-        return Gtk.FlowBox.do_measure(self, orientation, for_size)
+        minimum, natural, _min_bl, _nat_bl = Gtk.FlowBox.do_measure(self, orientation, for_size)
+        # A FlowBox has no baseline. Chaining up through PyGObject hands the
+        # baseline out-params back as 0 instead of leaving them at -1, and GTK
+        # warns on any non -1 horizontal baseline.
+        return minimum, natural, -1, -1
 
     def do_size_allocate(self, width: int, height: int, baseline: int) -> None:
         self.set_max_children_per_line(self._cols_for_width(width))
