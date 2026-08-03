@@ -4,6 +4,15 @@ All notable changes to this project are documented here.
 
 ---
 
+## Unreleased
+
+### Changed
+- Many menu and panel labels (Cut, Copy, Paste, Properties, Unmount, Eject, Network, and more)
+  now use the exact same wording as the rest of your desktop, and are translated in far more
+  languages than we ship ourselves.
+
+---
+
 ## v0.13.0
 Remember your last-picked view instead of always resetting to the file view, match native
 middle-click behavior everywhere in the Computer and Column views, give the Computer view real
