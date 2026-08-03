@@ -12,9 +12,6 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
 
-# ——————————————————————————————
-# Sidebar - Bookmark icon
-# ——————————————————————————————
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
 msgstr "Changer l’icône"
@@ -44,9 +41,6 @@ msgstr ""
 msgid "Column View"
 msgstr "Vue en colonne"
 
-# ——————————————————————————————
-# Panel - Preferred Folders - Captions
-# ——————————————————————————————
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} item"
@@ -54,9 +48,6 @@ msgid_plural "{n} items"
 msgstr[0] "{n} élément"
 msgstr[1] "{n} éléments"
 
-# ——————————————————————————————
-# General - Relative Dates
-# ——————————————————————————————
 #: nautilus_my_computer/common.py
 msgid "Today"
 msgstr "Aujourd’hui"
@@ -219,9 +210,6 @@ msgstr "Compresser…"
 msgid "Move to Trash"
 msgstr "Mettre à la corbeille"
 
-# ——————————————————————————————
-# Preferences - General
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
 msgstr "Paramètres de My Computer"
@@ -242,9 +230,6 @@ msgstr "Autres applications"
 msgid "General"
 msgstr "Général"
 
-# ——————————————————————————————
-# Preferences - Tabs
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Computer view"
 msgstr "Vue Ordinateur"
@@ -258,9 +243,6 @@ msgid "Launch directly to the Computer view instead of Home"
 msgstr ""
 "Démarrer directement sur la vue Ordinateur au lieu de Dossier personnel"
 
-# ——————————————————————————————
-# Preferences - Panel visibility
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Panel visibility"
 msgstr "Visibilité du panneau"
@@ -287,16 +269,10 @@ msgstr "Fusionné"
 msgid "Hidden"
 msgstr "Masqué"
 
-# ——————————————————————————————
-# Panel - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Preferred Folders"
 msgstr "Dossiers préférés"
 
-# ——————————————————————————————
-# Preferences - System
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Show system partitions"
 msgstr "Afficher les partitions système"
@@ -305,9 +281,6 @@ msgstr "Afficher les partitions système"
 msgid "Include boot and EFI partitions in the System group"
 msgstr "Inclure les partitions boot et EFI dans le groupe Système"
 
-# ——————————————————————————————
-# Preferences - Sidebar visibility
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
 msgstr "Visibilité de la barre latérale"
@@ -316,9 +289,6 @@ msgstr "Visibilité de la barre latérale"
 msgid "Choose which locations appear on the sidebar."
 msgstr "Choisir les emplacements affichés dans la barre latérale."
 
-# ——————————————————————————————
-# Preferences - Bar Color
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Bar Color"
 msgstr "Couleur de la barre"
@@ -355,9 +325,6 @@ msgstr "Couleur de début"
 msgid "End color"
 msgstr "Couleur de fin"
 
-# ——————————————————————————————
-# Preferences - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Show captions"
 msgstr "Afficher les légendes"
@@ -394,9 +361,6 @@ msgstr "Monter"
 msgid "System"
 msgstr "Système"
 
-# ——————————————————————————————
-# Panel - Group labels
-# ——————————————————————————————
 #: nautilus_my_computer/my_computer_view.py
 msgid "On this Computer"
 msgstr "Sur cet ordinateur"
@@ -413,9 +377,6 @@ msgstr "Disque"
 msgid "Not mounted"
 msgstr "Non monté"
 
-# ——————————————————————————————
-# Panel - Disk card
-# ——————————————————————————————
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{free} free of {total}"

@@ -16,9 +16,6 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "X-Generator: Gtranslator 50.0\n"
 
-# ——————————————————————————————
-# Sidebar - Bookmark icon
-# ——————————————————————————————
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
 msgstr "Αλαγή εικονιδίου"
@@ -48,9 +45,6 @@ msgstr ""
 msgid "Column View"
 msgstr "Προβολή κολώνας"
 
-# ——————————————————————————————
-# Panel - Preferred Folders - Captions
-# ——————————————————————————————
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} item"
@@ -58,9 +52,6 @@ msgid_plural "{n} items"
 msgstr[0] "{n} αντικείμενο"
 msgstr[1] "{n} αντικείμενα"
 
-# ——————————————————————————————
-# General - Relative Dates
-# ——————————————————————————————
 #: nautilus_my_computer/common.py
 msgid "Today"
 msgstr "Σήμερα"
@@ -223,9 +214,6 @@ msgstr "Συμπίεση…"
 msgid "Move to Trash"
 msgstr "Μετακίνηση προς Απορρίμματα"
 
-# ——————————————————————————————
-# Preferences - General
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
 msgstr "Ρυθμίσεις του Ο Υπολογιστής Μου"
@@ -246,9 +234,6 @@ msgstr "Άλλες εφαρμογές"
 msgid "General"
 msgstr "Γενικά"
 
-# ——————————————————————————————
-# Preferences - Tabs
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Computer view"
 msgstr "Προβολή Υπολογιστή"
@@ -261,9 +246,6 @@ msgstr "Εκκίνηση σε προβολή Υπολογιστή"
 msgid "Launch directly to the Computer view instead of Home"
 msgstr "Εκκίνηση απευθείας στο Ο Υπολογιστής μου αντί για το προσωπικό φάκελο"
 
-# ——————————————————————————————
-# Preferences - Panel visibility
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Panel visibility"
 msgstr "Ορατότητα καταχωρίσεων"
@@ -290,16 +272,10 @@ msgstr "Συγχωνευμένο"
 msgid "Hidden"
 msgstr "Κρυμμένο"
 
-# ——————————————————————————————
-# Panel - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Preferred Folders"
 msgstr "Αγαπημένοι φάκελοι"
 
-# ——————————————————————————————
-# Preferences - System
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Show system partitions"
 msgstr "Προβολή διαμερισμάτων συστήματος"
@@ -308,9 +284,6 @@ msgstr "Προβολή διαμερισμάτων συστήματος"
 msgid "Include boot and EFI partitions in the System group"
 msgstr "Προσθήκη διαμερισμάτων boot και EFI στο γκρούπ Σύστημα"
 
-# ——————————————————————————————
-# Preferences - Sidebar visibility
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
 msgstr "Ορατότητα πλευρικής μπάρας"
@@ -319,9 +292,6 @@ msgstr "Ορατότητα πλευρικής μπάρας"
 msgid "Choose which locations appear on the sidebar."
 msgstr "Επιλέξτε ποιοί προορισμοί να είναι ορατοί στη πλευρική μπάρα."
 
-# ——————————————————————————————
-# Preferences - Bar Color
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Bar Color"
 msgstr "Χρώμα μπάρας"
@@ -358,9 +328,6 @@ msgstr "Χρώμα αρχής"
 msgid "End color"
 msgstr "Χρώμα τέλους"
 
-# ——————————————————————————————
-# Preferences - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Show captions"
 msgstr "Προβολή υπότιτλων"
@@ -397,9 +364,6 @@ msgstr "Προσάρτηση"
 msgid "System"
 msgstr "Σύστημα"
 
-# ——————————————————————————————
-# Panel - Group labels
-# ——————————————————————————————
 #: nautilus_my_computer/my_computer_view.py
 msgid "On this Computer"
 msgstr "Σ'αυτόν τον υπολογιστή"
@@ -416,9 +380,6 @@ msgstr "Δίσκος"
 msgid "Not mounted"
 msgstr "Αμοντάριστος"
 
-# ——————————————————————————————
-# Panel - Disk card
-# ——————————————————————————————
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{free} free of {total}"

@@ -16,9 +16,6 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
 "X-Generator: Gtranslator 48.0\n"
 
-# ——————————————————————————————
-# Sidebar - Bookmark icon
-# ——————————————————————————————
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
 msgstr ""
@@ -47,9 +44,6 @@ msgstr ""
 msgid "Column View"
 msgstr ""
 
-# ——————————————————————————————
-# Panel - Preferred Folders - Captions
-# ——————————————————————————————
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} item"
@@ -57,9 +51,6 @@ msgid_plural "{n} items"
 msgstr[0] "{n} elem"
 msgstr[1] "{n} elem"
 
-# ——————————————————————————————
-# General - Relative Dates
-# ——————————————————————————————
 #: nautilus_my_computer/common.py
 msgid "Today"
 msgstr "Ma"
@@ -222,9 +213,6 @@ msgstr ""
 msgid "Move to Trash"
 msgstr ""
 
-# ——————————————————————————————
-# Preferences - General
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
 msgstr "Számítógép beállítása"
@@ -245,9 +233,6 @@ msgstr ""
 msgid "General"
 msgstr "Általános"
 
-# ——————————————————————————————
-# Preferences - Tabs
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Computer view"
 msgstr "Számítógép nézet"
@@ -260,9 +245,6 @@ msgstr "Számítógép nézetben indul"
 msgid "Launch directly to the Computer view instead of Home"
 msgstr "Közvetlenül a Számítógép nézetbe indítás a Kezdőlap helyett"
 
-# ——————————————————————————————
-# Preferences - Panel visibility
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Panel visibility"
 msgstr "Panel láthatóság"
@@ -289,16 +271,10 @@ msgstr "Egyesített"
 msgid "Hidden"
 msgstr "Rejtett"
 
-# ——————————————————————————————
-# Panel - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Preferred Folders"
 msgstr "Kedvelt mappák"
 
-# ——————————————————————————————
-# Preferences - System
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Show system partitions"
 msgstr "Látható rendszer partíció"
@@ -307,9 +283,6 @@ msgstr "Látható rendszer partíció"
 msgid "Include boot and EFI partitions in the System group"
 msgstr "A rendszerindító és az EFI partíciók hozzáadása a Rendszer csoporthoz"
 
-# ——————————————————————————————
-# Preferences - Sidebar visibility
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
 msgstr "Oldalsáv láthatósága"
@@ -318,9 +291,6 @@ msgstr "Oldalsáv láthatósága"
 msgid "Choose which locations appear on the sidebar."
 msgstr "Válassza ki, hogy mely helyek jelenjenek meg az oldalsávon."
 
-# ——————————————————————————————
-# Preferences - Bar Color
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Bar Color"
 msgstr "Sáv színe"
@@ -357,9 +327,6 @@ msgstr "Induló szín"
 msgid "End color"
 msgstr "Záró szín"
 
-# ——————————————————————————————
-# Preferences - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Show captions"
 msgstr "Feliratok megjelenítése"
@@ -396,9 +363,6 @@ msgstr "Csatolás"
 msgid "System"
 msgstr "Rendszer"
 
-# ——————————————————————————————
-# Panel - Group labels
-# ——————————————————————————————
 #: nautilus_my_computer/my_computer_view.py
 msgid "On this Computer"
 msgstr "Számítógép"
@@ -415,9 +379,6 @@ msgstr "Lemez"
 msgid "Not mounted"
 msgstr "Nincs csatolva"
 
-# ——————————————————————————————
-# Panel - Disk card
-# ——————————————————————————————
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{free} free of {total}"

@@ -13,9 +13,6 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
 "n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
-# ——————————————————————————————
-# Sidebar - Bookmark icon
-# ——————————————————————————————
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
 msgstr ""
@@ -44,9 +41,6 @@ msgstr ""
 msgid "Column View"
 msgstr ""
 
-# ——————————————————————————————
-# Panel - Preferred Folders - Captions
-# ——————————————————————————————
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} item"
@@ -55,9 +49,6 @@ msgstr[0] "{n} объект"
 msgstr[1] "{n} объекта"
 msgstr[2] "{n} объектов"
 
-# ——————————————————————————————
-# General - Relative Dates
-# ——————————————————————————————
 #: nautilus_my_computer/common.py
 msgid "Today"
 msgstr "Сегодня"
@@ -228,9 +219,6 @@ msgstr ""
 msgid "Move to Trash"
 msgstr ""
 
-# ——————————————————————————————
-# Preferences - General
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
 msgstr "Настройки моего компьютера"
@@ -251,9 +239,6 @@ msgstr ""
 msgid "General"
 msgstr "Общие"
 
-# ——————————————————————————————
-# Preferences - Tabs
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Computer view"
 msgstr "Вид компьютера"
@@ -266,9 +251,6 @@ msgstr "Начинать на экране Мой компьютер"
 msgid "Launch directly to the Computer view instead of Home"
 msgstr "Запускать прямо с экрана Мой компьютер вместо Домашней папки"
 
-# ——————————————————————————————
-# Preferences - Visibility
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Panel visibility"
 msgstr "Видимость панелей"
@@ -295,16 +277,10 @@ msgstr "Объединить"
 msgid "Hidden"
 msgstr "Спрятать"
 
-# ——————————————————————————————
-# Panel - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Preferred Folders"
 msgstr "Избранные папки"
 
-# ——————————————————————————————
-# Preferences - System
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Show system partitions"
 msgstr "Показывать системные разделы"
@@ -321,9 +297,6 @@ msgstr "Видимость элементов боковой панели"
 msgid "Choose which locations appear on the sidebar."
 msgstr "Выберите, какие места будут отображаться на боковой панели."
 
-# ——————————————————————————————
-# Preferences - Bar Color
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Bar Color"
 msgstr "Цвет полоски"
@@ -360,9 +333,6 @@ msgstr "Начальный цвет"
 msgid "End color"
 msgstr "Конечный цвет"
 
-# ——————————————————————————————
-# Preferences - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Show captions"
 msgstr "Показывать подписи"
@@ -399,9 +369,6 @@ msgstr "Присоединить"
 msgid "System"
 msgstr "Системные"
 
-# ——————————————————————————————
-# Panel - Group labels
-# ——————————————————————————————
 #: nautilus_my_computer/my_computer_view.py
 msgid "On this Computer"
 msgstr "На этом компьютере"
@@ -418,9 +385,6 @@ msgstr "Диски"
 msgid "Not mounted"
 msgstr "Не присоединён"
 
-# ——————————————————————————————
-# Panel - Disk card
-# ——————————————————————————————
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{free} free of {total}"

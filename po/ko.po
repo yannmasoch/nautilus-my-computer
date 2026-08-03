@@ -12,9 +12,6 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-# ——————————————————————————————
-# Sidebar - Bookmark icon
-# ——————————————————————————————
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
 msgstr ""
@@ -43,18 +40,12 @@ msgstr ""
 msgid "Column View"
 msgstr ""
 
-# ——————————————————————————————
-# Panel - Preferred Folders - Captions
-# ——————————————————————————————
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} item"
 msgid_plural "{n} items"
 msgstr[0] "항목 {n}개"
 
-# ——————————————————————————————
-# General - Relative Dates
-# ——————————————————————————————
 #: nautilus_my_computer/common.py
 msgid "Today"
 msgstr "오늘"
@@ -209,9 +200,6 @@ msgstr ""
 msgid "Move to Trash"
 msgstr ""
 
-# ——————————————————————————————
-# Preferences - General
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
 msgstr "내 컴퓨터 설정"
@@ -232,9 +220,6 @@ msgstr ""
 msgid "General"
 msgstr "일반"
 
-# ——————————————————————————————
-# Preferences - Tabs
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Computer view"
 msgstr "컴퓨터 보기"
@@ -247,9 +232,6 @@ msgstr "컴퓨터 보기에서 시작"
 msgid "Launch directly to the Computer view instead of Home"
 msgstr "홈 대신 컴퓨터 보기를 바로 엽니다"
 
-# ——————————————————————————————
-# Preferences - Panel visibility
-# ——————————————————————————————
 # Previous translation (before rename from "Visibility"): 표시 여부
 #: nautilus_my_computer/main.py
 msgid "Panel visibility"
@@ -277,16 +259,10 @@ msgstr "병합"
 msgid "Hidden"
 msgstr "숨김"
 
-# ——————————————————————————————
-# Panel - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Preferred Folders"
 msgstr "기본 폴더"
 
-# ——————————————————————————————
-# Preferences - System
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Show system partitions"
 msgstr "시스템 파티션 표시"
@@ -295,9 +271,6 @@ msgstr "시스템 파티션 표시"
 msgid "Include boot and EFI partitions in the System group"
 msgstr "부트 및 EFI 파티션을 시스템 그룹에 포함합니다"
 
-# ——————————————————————————————
-# Preferences - Sidebar visibility
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
 msgstr ""
@@ -306,9 +279,6 @@ msgstr ""
 msgid "Choose which locations appear on the sidebar."
 msgstr ""
 
-# ——————————————————————————————
-# Preferences - Bar Color
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Bar Color"
 msgstr "막대 색상"
@@ -345,9 +315,6 @@ msgstr "시작 색상"
 msgid "End color"
 msgstr "끝 색상"
 
-# ——————————————————————————————
-# Preferences - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Show captions"
 msgstr "캡션 표시"
@@ -384,9 +351,6 @@ msgstr "마운트"
 msgid "System"
 msgstr "시스템"
 
-# ——————————————————————————————
-# Panel - Group labels
-# ——————————————————————————————
 #: nautilus_my_computer/my_computer_view.py
 msgid "On this Computer"
 msgstr "이 컴퓨터"
@@ -403,9 +367,6 @@ msgstr "디스크"
 msgid "Not mounted"
 msgstr "마운트되지 않음"
 
-# ——————————————————————————————
-# Panel - Disk card
-# ——————————————————————————————
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{free} free of {total}"
