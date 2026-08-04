@@ -1077,6 +1077,15 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                 my_computer_view._populate_slot(self, state["slot"])
         return GLib.SOURCE_REMOVE
 
+    def _repopulate_column_view_only(self) -> bool:
+        """Narrower sibling of _repopulate_visible for sort-directories-first
+        changes (see NautilusPrefs.sort_directories_first): only Column View
+        mixes folders and files in one listing, so only it needs
+        re-sorting."""
+        for win in list(self._windows):
+            column_view.refresh_all_column_views(self, win)
+        return GLib.SOURCE_REMOVE
+
     def _slot_location(self, win: Gtk.Window) -> Gio.File | None:
         return _active_slot_location(win)
 

@@ -1796,6 +1796,15 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         key_fn = _SORT_KEY_BUILDERS.get(col, _SORT_KEY_BUILDERS["name"])
         entries.sort(key=key_fn, reverse=reverse)
 
+        if self._ext._nautilus_prefs.sort_directories_first():
+            # Outer, pinned grouping applied after the criterion sort --
+            # Python's sort is stable, so within-bucket order (reverse
+            # included) survives unchanged. Never flipped by reverse: unlike
+            # every key above, compare_for_sort_internal's directories_first
+            # check returns its -1/+1 directly, before the function ever
+            # reaches the "if (reversed) result = -result" branch.
+            entries.sort(key=lambda e: not e.is_dir)
+
         base = Gio.File.new_for_uri(self.folder_uri)
         for entry in entries:
             child_uri = base.get_child(entry.name).get_uri()
