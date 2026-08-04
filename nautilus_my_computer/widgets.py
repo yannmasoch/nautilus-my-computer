@@ -1404,6 +1404,7 @@ class _ColumnEntry:
     size: int
     mtime: int
     btime: int
+    atime: int
 
 
 def _type_rank(e: _ColumnEntry) -> int:
@@ -1475,9 +1476,12 @@ _SORT_KEY_BUILDERS = {
     # grouping at all for name sort.
     "name": lambda e: (e.is_hidden, e.name_lower),
     # Flat pool, no buckets -- folders/files/hidden all mixed, sorted purely
-    # by timestamp.
-    "mtime": lambda e: (e.mtime,),
-    "btime": lambda e: (e.btime,),
+    # by timestamp, alpha-num tiebreak for equal timestamps (matches native's
+    # compare_by_time -> compare_by_full_path chain; btime especially needs
+    # this, since time::created is 0/equal for many files).
+    "mtime": lambda e: (e.mtime, e.name_lower),
+    "btime": lambda e: (e.btime, e.name_lower),
+    "atime": lambda e: (e.atime, e.name_lower),
     # 4 buckets: normal folders, hidden folders, normal files, hidden files;
     # alpha-num by name within each.
     "type": lambda e: (_type_rank(e), e.name_lower),
@@ -1604,7 +1608,7 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         gfile.enumerate_children_async(
             "standard::name,standard::display-name,standard::icon,"
             "standard::is-hidden,standard::is-backup,standard::type,standard::content-type,"
-            "standard::size,time::modified,time::created,"
+            "standard::size,time::modified,time::created,time::access,"
             "metadata::custom-icon,metadata::custom-icon-name",
             Gio.FileQueryInfoFlags.NONE,
             GLib.PRIORITY_DEFAULT,
@@ -1763,6 +1767,7 @@ class MyComputerColumn(Gtk.ScrolledWindow):
                     size=size,
                     mtime=info.get_attribute_uint64("time::modified"),
                     btime=info.get_attribute_uint64("time::created"),
+                    atime=info.get_attribute_uint64("time::access"),
                 )
             )
 
