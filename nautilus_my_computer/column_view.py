@@ -57,8 +57,7 @@ _SLOT_INIT_MAX_ATTEMPTS = 100  # ~2s budget, mirrors main.py's _WIN_INIT_MAX_ATT
 # within the same column that was already focused (NAV_SELF). Detected from
 # the shape of the change rather than comparing URIs directly: NAV_DOWN is
 # the row activated living in the currently deepest open column (so the new
-# folder is a child of the current one), or, for sync_to_uri, the new chain
-# being a strict extension of the existing one. NAV_SELF is a click landing
+# folder is a child of the current one). NAV_SELF is a click landing
 # in the same column that already held focus (self.focused_index) when that
 # column isn't the deepest one -- re-choosing a sibling in a column the user
 # is already working in, not backing out of it, so it should scroll like
@@ -159,6 +158,21 @@ SCROLL_ANIMATION_DURATION_MS = 200
 # this just needs to be enough to smooth over the replace-flash, not to read
 # as a deliberate reveal.
 PREVIEW_FADE_DURATION_MS = 100
+# Keyboard row changes move the selection immediately but defer the actual
+# commit (rebuild the chain, replace the preview, push Nautilus's real slot
+# location) by this long, restarting the clock on each further key. Held
+# arrow keys repeat roughly every 30ms once X's repeat delay elapses, so
+# without this every intermediate row on the way to the target one paid for a
+# full _rebuild_chain plus its own slot.open-location navigation. Short enough
+# that a single deliberate press still feels immediate.
+ROW_COMMIT_DEBOUNCE_MS = 100
+# How many not-yet-echoed slot.open-location pushes to remember (see
+# _sync_slot_location / sync_to_uri). Bounded because an echo is not
+# guaranteed to arrive at all -- Nautilus can refuse or supersede a
+# navigation -- and a permanently pinned entry would swallow a later, real
+# navigation to the same folder. Drill-downs land 0.7-9s apart in practice,
+# so anything beyond a couple of outstanding pushes is already pathological.
+_MAX_PENDING_SLOT_URIS = 8
 # How many frame ticks to keep re-asserting keyboard focus onto a freshly
 # drilled-into column after a commit (see _arm_focus_retry) -- long enough to
 # outlast Nautilus's own async re-focus of its real, hidden GtkGridView for
@@ -381,6 +395,12 @@ class _ColumnViewHost:
         # _scroll_to_viewport_pos.
         self._pending_scroll_intent: tuple[str, Gtk.Widget | None, float | None] | None = None
         self._scroll_settle_debounce_id = 0
+        # Keyboard row change waiting to be committed (see _arm_row_commit).
+        self._pending_row_commit: tuple[Gtk.Widget, Gtk.Widget] | None = None
+        self._row_commit_id = 0
+        # Locations this chain pushed onto Nautilus's real slot that have not
+        # come back through notify::location yet (see _sync_slot_location).
+        self._pending_slot_uris: list[str] = []
         # Kept alive on self so the Adw.TimedAnimation isn't GC'd mid-flight
         # (see _animate_scroll_to) -- Adw.TimedAnimation.play() does not hold
         # its own reference.
@@ -469,6 +489,9 @@ class _ColumnViewHost:
 
     def reset(self, root_uri: str) -> None:
         self._detach_root()
+        # Nothing from the old chain may commit into, or echo into, the new one.
+        self._cancel_row_commit()
+        self._pending_slot_uris.clear()
 
         self._root_uri = root_uri
         self._sort = self._ext._nautilus_prefs.resolve_column_sort(root_uri)
@@ -538,10 +561,19 @@ class _ColumnViewHost:
         # context-menu controllers only after this batch has populated.
         # The menu itself is still built on demand below, keeping bookmark
         # and Preferred Folder state current at the instant it opens.
+        #
+        # Runs more than once per load: a large folder streams its rows in
+        # over several idle turns and calls back again once the tail exists
+        # (see MyComputerColumn._append_rows_in_chunks). Rows already wired
+        # by an earlier call must not collect a second controller, which
+        # would run every press handler twice.
         for row in _column.rows():
+            if getattr(row, "_mc_click_wired", False):
+                continue
             click = Gtk.GestureClick(button=0)
             click.connect("pressed", self._on_row_pressed, _column, row)
             row.add_controller(click)
+            row._mc_click_wired = True
         self._set_cut_rows()
 
     def _on_column_background_right_clicked(
@@ -698,6 +730,9 @@ class _ColumnViewHost:
         right-click case below.
         """
         button = gesture.get_current_button()
+        # The pointer takes over from here: a keyboard commit still waiting
+        # out its debounce would otherwise land on top of this click.
+        self._cancel_row_commit()
         if button == Gdk.BUTTON_MIDDLE and n_press == 1:
             gesture.set_state(Gtk.EventSequenceState.CLAIMED)
             ctrl = bool(gesture.get_current_event_state() & Gdk.ModifierType.CONTROL_MASK)
@@ -714,18 +749,174 @@ class _ColumnViewHost:
             self._on_row_right_clicked(gesture, n_press, x, y, column, row)
             return
 
-        # Every other button, primary above all, belongs to Gtk.ListBox's own
-        # gesture (row-activated drives Miller navigation). Deny rather than
-        # just return: a GtkGestureSingle with button=0 tracks the first
-        # button pressed and ignores the rest until that sequence ends, and
-        # primary activation rebuilds the paned chain (_rebuild_chain), which
-        # can swallow the matching release. An undenied sequence would then
-        # linger and make the gesture drop the next secondary/middle press --
-        # the menu-needs-two-clicks symptom. DENIED resets it at once and
-        # leaves the event free to propagate. Native has no equivalent branch
-        # because its cell gesture handles primary itself
-        # (nautilus-list-base.c on_item_click_released).
+        if button == Gdk.BUTTON_PRIMARY and n_press == 1:
+            state = gesture.get_current_event_state()
+            ctrl = bool(state & Gdk.ModifierType.CONTROL_MASK)
+            shift = bool(state & Gdk.ModifierType.SHIFT_MASK)
+            if shift:
+                self._select_range(column, row)
+                column._cursor_row = row
+                self._activate_selection(column, row)
+            elif ctrl:
+                if row in column.selected_rows():
+                    column.list_box.unselect_row(row)
+                else:
+                    column.list_box.select_row(row)
+                column._anchor_row = row
+                column._cursor_row = row
+                self._activate_selection(column, row)
+            else:
+                column.list_box.unselect_all()
+                column.list_box.select_row(row)
+                column._anchor_row = row
+                column._cursor_row = row
+                # A plain click hands activation back to Gtk.ListBox's own
+                # gesture (see below), so nothing is pinned for it to undo.
+                column.clear_pinned_selection()
+
         gesture.set_state(Gtk.EventSequenceState.DENIED)
+
+    def _activate_selection(self, column: Gtk.Widget, clicked_row: Gtk.Widget) -> None:
+        """Run Miller activation for whatever `column` has selected *after* a
+        modifier click, rather than for the row that was clicked.
+
+        Ctrl+clicking a selected row deselects it, so the clicked row is
+        exactly the one that must not drive the preview/chain: feeding it to
+        _on_real_row_activated made _sync_column_selections re-select it as
+        the previewed file, silently undoing the deselection. With several
+        rows selected the clicked row is only a tie-break -- the multi
+        branch of _on_real_row_activated reads the whole selection itself.
+
+        The resulting selection is then pinned (see
+        MyComputerColumn.pin_selection): Gtk.ListBox drives its own
+        select-and-activate from the button *release*, which ignores
+        modifiers and would re-select a row this click just deselected."""
+        selected = column.selected_rows()
+        if not selected:
+            self._collapse_below(column)
+        elif len(selected) == 1:
+            self._on_real_row_activated(column, selected[0])
+        else:
+            self._on_real_row_activated(column, clicked_row)
+        column.pin_selection()
+
+    def _open_selection(self, column: Gtk.Widget) -> bool:
+        """Open what is selected in `column` -- the Return/Enter target.
+
+        Enter was previously left to propagate, on the assumption that
+        Gtk.ListBox's activate-cursor-row binding would pick it up. It only
+        fires when a row itself holds keyboard focus, which is not the case
+        for most of Column View's life: entering the view focuses the view
+        widget (see populate_column_view), and the accent selection this
+        chain tracks is deliberately independent of GTK focus. So Enter
+        usually did nothing at all. Handled explicitly here instead, off the
+        same selection every other shortcut uses.
+
+        Folders open the way clicking them does -- drill into a new column,
+        which is what "open" means in a Miller view. Files go to their
+        default application, matching native Nautilus, where Enter opens the
+        selection rather than merely previewing it. A multi-selection opens
+        every file in it and ignores any folders, since several folders
+        cannot all become the next column."""
+        selected = column.selected_rows()
+        if not selected:
+            cursor = getattr(column, "_cursor_row", None)
+            if cursor is None or cursor not in column.rows():
+                return False
+            selected = [cursor]
+
+        if len(selected) == 1:
+            row = selected[0]
+            if row.is_dir:
+                self._cancel_row_commit()
+                self._on_real_row_activated(column, row)
+            else:
+                self._open_file(row.uri)
+            return True
+
+        for row in selected:
+            if not row.is_dir:
+                self._open_file(row.uri)
+        return True
+
+    def _arm_row_commit(self, column: Gtk.Widget, row: Gtk.Widget) -> None:
+        """Schedule the Miller commit for a keyboard row change, replacing
+        any commit still pending.
+
+        The selection itself has already moved by the time this is called --
+        this only defers the expensive half (see ROW_COMMIT_DEBOUNCE_MS), so
+        walking through a folder with the arrow keys stays a pure cursor
+        movement until the user settles on a row."""
+        self._pending_row_commit = (column, row)
+        if self._row_commit_id != 0:
+            GLib.source_remove(self._row_commit_id)
+        self._row_commit_id = GLib.timeout_add(ROW_COMMIT_DEBOUNCE_MS, self._apply_row_commit)
+
+    def _apply_row_commit(self) -> bool:
+        self._row_commit_id = 0
+        pending = self._pending_row_commit
+        self._pending_row_commit = None
+        if pending is None:
+            return GLib.SOURCE_REMOVE
+        column, row = pending
+        # The chain can have moved on while this was waiting (an external
+        # navigation, a reload recreating the rows) -- commit only what is
+        # still really there.
+        if column not in self.columns or row not in column.rows():
+            return GLib.SOURCE_REMOVE
+        self._on_real_row_activated(column, row)
+        return GLib.SOURCE_REMOVE
+
+    def _cancel_row_commit(self) -> None:
+        """Drop a pending keyboard commit, for when something else takes over
+        the navigation (a click, a re-root)."""
+        if self._row_commit_id != 0:
+            GLib.source_remove(self._row_commit_id)
+            self._row_commit_id = 0
+        self._pending_row_commit = None
+
+    def _collapse_below(self, column: Gtk.Widget) -> None:
+        """Drop everything deeper than `column` and clear the preview, for a
+        selection that just became empty (ctrl+clicking the last selected row
+        off). Nothing is selected any more, so there is no row left to derive
+        a child column or a preview from."""
+        index = self.columns.index(column)
+        self.focused_index = index
+        had_deeper = len(self.columns) > index + 1
+        for stale_column in self.columns[index + 1 :]:
+            stale_column.destroy_enumeration()
+        del self.columns[index + 1 :]
+        self._set_preview(None)
+        self._sync_slot_location(column.folder_uri)
+        self._sync_column_selections()
+        self._apply_focused_column_style()
+        if had_deeper:
+            # Same collapse as NAV_UP in _on_real_row_activated -- reset the
+            # scroll position before the rebuild so the stale, far-scrolled
+            # value isn't baked into the new, narrower canvas (see
+            # _reset_viewport_width).
+            self._reset_viewport_width()
+        self._rebuild_chain()
+
+    def _select_range(self, column: Gtk.Widget, target_row: Gtk.Widget) -> None:
+        rows = column.rows() if hasattr(column, "rows") else []
+        if not rows:
+            return
+        anchor = getattr(column, "_anchor_row", None)
+        if anchor is None or anchor not in rows:
+            column.list_box.unselect_all()
+            column.list_box.select_row(target_row)
+            column._anchor_row = target_row
+            column._cursor_row = target_row
+            return
+
+        idx1 = rows.index(anchor)
+        idx2 = rows.index(target_row)
+        start, end = min(idx1, idx2), max(idx1, idx2)
+        column.list_box.unselect_all()
+        for i in range(start, end + 1):
+            column.list_box.select_row(rows[i])
+        column._cursor_row = target_row
 
     def _on_row_right_clicked(
         self,
@@ -744,84 +935,120 @@ class _ColumnViewHost:
         extension owns directly.
         """
         gesture.set_state(Gtk.EventSequenceState.CLAIMED)
-        # Keep the context-menu target in GTK's native dark-grey :active
-        # state; it must not become the Miller column's blue :selected row.
         components.set_row_active(row, True)
-        uri = row.uri
-        content_type = row.content_type or "application/octet-stream"
-        default_app = Gio.AppInfo.get_default_for_type(content_type, False)
-        open_with_template = _native("Open With %s")
-        file_open_label = (
-            (
-                open_with_template % default_app.get_display_name()
-                if "%s" in open_with_template
-                else default_app.get_display_name()
-            )
-            if default_app
-            else _native("Open")
-        )
 
-        open_actions = (
-            open_section(
-                lambda: self._on_real_row_activated(column, row),
-                open_tab_action=lambda: self._ext._do_open_tab(uri, self._win, make_active=False),
-                open_window_action=lambda: self._ext._do_open_window(uri),
-                open_with_action=(
-                    (lambda: self._ext._do_open_with(uri, self._win, content_type=content_type))
-                    if uri.startswith("file://")
-                    else None
+        selected_rows = column.selected_rows() if hasattr(column, "selected_rows") else []
+        if row not in selected_rows:
+            column.list_box.unselect_all()
+            column.list_box.select_row(row)
+            selected_rows = [row]
+
+        selected_uris = [r.uri for r in selected_rows]
+        is_multi = len(selected_rows) > 1
+
+        if is_multi:
+            sections = [
+                clipboard_actions_section(
+                    cut_action=lambda: self._copy_to_clipboard(selected_uris, cut=True),
+                    copy_action=lambda: self._copy_to_clipboard(selected_uris, cut=False),
+                    paste_action=(lambda: self._paste_into_folder(column.folder_uri))
+                    if self._clipboard_has_pasteable_files()
+                    else None,
+                    move_to_action=lambda: self._show_destination_picker(selected_uris, move=True),
+                    copy_to_action=lambda: self._show_destination_picker(selected_uris, move=False),
                 ),
+                file_actions_section(
+                    rename_action=None,
+                    move_to_trash_action=(
+                        (lambda: self._move_to_trash(column, selected_uris))
+                        if any(u.startswith("file://") for u in selected_uris)
+                        else None
+                    ),
+                    show_compress=True,
+                    show_email=True,
+                ),
+            ]
+        else:
+            uri = row.uri
+            content_type = row.content_type or "application/octet-stream"
+            default_app = Gio.AppInfo.get_default_for_type(content_type, False)
+            # Native catalog wording (#120). Some locales translate this
+            # entry without a %s placeholder, so the app name is only
+            # substituted when the template actually carries one.
+            open_with_template = _native("Open With %s")
+            file_open_label = (
+                (
+                    open_with_template % default_app.get_display_name()
+                    if "%s" in open_with_template
+                    else default_app.get_display_name()
+                )
+                if default_app
+                else _native("Open")
             )
-            if row.is_dir
-            else open_section(
-                lambda: self._open_file(uri),
-                open_label=file_open_label,
-                open_with_action=(
-                    (lambda: self._ext._do_open_with(uri, self._win, content_type=content_type))
-                    if uri.startswith("file://")
-                    else None
-                ),
-                submenu=False,
-            )
-        )
-        sections = [
-            open_actions,
-            clipboard_actions_section(
-                cut_action=lambda: self._copy_to_clipboard(uri, cut=True),
-                copy_action=lambda: self._copy_to_clipboard(uri, cut=False),
-                paste_action=(lambda: self._paste_into_folder(uri))
-                if self._clipboard_has_pasteable_files()
-                else None,
-                move_to_action=lambda: self._show_destination_picker(uri, move=True),
-                copy_to_action=lambda: self._show_destination_picker(uri, move=False),
-            ),
-            file_actions_section(
-                rename_action=(
-                    (lambda: self._show_rename_popover(column, row))
-                    if uri.startswith("file://")
-                    else None
-                ),
-                move_to_trash_action=(
-                    (lambda: self._move_to_trash(column, uri))
-                    if uri.startswith("file://")
-                    else None
-                ),
-                show_compress=True,
-                show_email=True,
-            ),
-        ]
-        if uri.startswith("file://"):
-            sections.append(
-                my_computer_additions_section(
-                    bookmarked=bookmarks.is_bookmarked(uri),
-                    preferred=preferred_folders.is_preferred(self._ext._gsettings, uri),
-                    toggle_bookmark_action=lambda: bookmarks.toggle_bookmark(uri),
-                    toggle_preferred_action=lambda: preferred_folders.toggle_preferred(
-                        self._ext._gsettings, uri
+
+            open_actions = (
+                open_section(
+                    lambda: self._on_real_row_activated(column, row),
+                    open_tab_action=lambda: self._ext._do_open_tab(
+                        uri, self._win, make_active=False
+                    ),
+                    open_window_action=lambda: self._ext._do_open_window(uri),
+                    open_with_action=(
+                        (lambda: self._ext._do_open_with(uri, self._win, content_type=content_type))
+                        if uri.startswith("file://")
+                        else None
                     ),
                 )
+                if row.is_dir
+                else open_section(
+                    lambda: self._open_file(uri),
+                    open_label=file_open_label,
+                    open_with_action=(
+                        (lambda: self._ext._do_open_with(uri, self._win, content_type=content_type))
+                        if uri.startswith("file://")
+                        else None
+                    ),
+                    submenu=False,
+                )
             )
-        sections.append(properties_section(lambda: self._ext._do_properties(uri, self._win)))
+            sections = [
+                open_actions,
+                clipboard_actions_section(
+                    cut_action=lambda: self._copy_to_clipboard(uri, cut=True),
+                    copy_action=lambda: self._copy_to_clipboard(uri, cut=False),
+                    paste_action=(lambda: self._paste_into_folder(uri))
+                    if self._clipboard_has_pasteable_files()
+                    else None,
+                    move_to_action=lambda: self._show_destination_picker(uri, move=True),
+                    copy_to_action=lambda: self._show_destination_picker(uri, move=False),
+                ),
+                file_actions_section(
+                    rename_action=(
+                        (lambda: self._show_rename_popover(column, row))
+                        if uri.startswith("file://")
+                        else None
+                    ),
+                    move_to_trash_action=(
+                        (lambda: self._move_to_trash(column, uri))
+                        if uri.startswith("file://")
+                        else None
+                    ),
+                    show_compress=True,
+                    show_email=True,
+                ),
+            ]
+            if uri.startswith("file://"):
+                sections.append(
+                    my_computer_additions_section(
+                        bookmarked=bookmarks.is_bookmarked(uri),
+                        preferred=preferred_folders.is_preferred(self._ext._gsettings, uri),
+                        toggle_bookmark_action=lambda: bookmarks.toggle_bookmark(uri),
+                        toggle_preferred_action=lambda: preferred_folders.toggle_preferred(
+                            self._ext._gsettings, uri
+                        ),
+                    )
+                )
+            sections.append(properties_section(lambda: self._ext._do_properties(uri, self._win)))
 
         popover = ContextMenu(sections).build_popover(row, "millerrow")
         rect = Gdk.Rectangle()
@@ -873,12 +1100,23 @@ class _ColumnViewHost:
             item_kind="folder" if row.is_dir else "file",
         )
 
-    def _move_to_trash(self, source_column: Gtk.Widget, uri: str) -> None:
+    def _move_to_trash(self, source_column: Gtk.Widget, uris: str | list[str]) -> None:
         """Run Nautilus's own trash operation, including its undo manager."""
-        parent = Gio.File.new_for_uri(uri).get_parent()
-        if parent is not None:
-            self._watch_operation_directories([parent.get_uri()])
-        self._call_nautilus_file_operation("TrashURIs", GLib.Variant("(asa{sv})", ([uri], {})), uri)
+        if isinstance(uris, str):
+            uris = [uris]
+        file_uris = [u for u in uris if u.startswith("file://")]
+        if not file_uris:
+            return
+        source_parents = []
+        for u in file_uris:
+            parent = Gio.File.new_for_uri(u).get_parent()
+            if parent is not None:
+                source_parents.append(parent.get_uri())
+        if source_parents:
+            self._watch_operation_directories(source_parents)
+        self._call_nautilus_file_operation(
+            "TrashURIs", GLib.Variant("(asa{sv})", (file_uris, {})), file_uris[0]
+        )
 
     def _call_nautilus_file_operation(
         self, method: str, parameters: GLib.Variant, uri: str, *, on_started=None
@@ -917,20 +1155,24 @@ class _ColumnViewHost:
             None,
         )
 
-    def _copy_to_clipboard(self, uri: str, *, cut: bool) -> None:
-        """Publish one Miller item as standard and Nautilus clipboard data."""
-        file_list = Gdk.FileList.new_from_list([Gio.File.new_for_uri(uri)])
+    def _copy_to_clipboard(self, uris: str | list[str], *, cut: bool) -> None:
+        """Publish Miller items as standard and Nautilus clipboard data."""
+        if isinstance(uris, str):
+            uris = [uris]
+        gfiles = [Gio.File.new_for_uri(u) for u in uris]
+        file_list = Gdk.FileList.new_from_list(gfiles)
         value = GObject.Value()
         value.init(Gdk.FileList)
         value.set_boxed(file_list)
         file_provider = Gdk.ContentProvider.new_for_value(value)
-        nautilus_data = f"{'cut' if cut else 'copy'}\n{uri}".encode()
+        action_prefix = "cut" if cut else "copy"
+        nautilus_data = (action_prefix + "\n" + "\n".join(uris)).encode()
         nautilus_provider = Gdk.ContentProvider.new_for_bytes(
             "x-special/gnome-copied-files", GLib.Bytes.new(nautilus_data)
         )
         provider = Gdk.ContentProvider.new_union([file_provider, nautilus_provider])
         self._clipboard.set_content(provider)
-        self._set_miller_clipboard_state([uri], cut=cut)
+        self._set_miller_clipboard_state(uris, cut=cut)
 
     def _open_file(self, uri: str) -> None:
         """Launch a file with its default application."""
@@ -1090,49 +1332,67 @@ class _ColumnViewHost:
             monitors.append(monitor)
             self._operation_monitors.append(monitor)
 
-    def _show_destination_picker(self, uri: str, *, move: bool) -> None:
+    def _show_destination_picker(self, uris: str | list[str], *, move: bool) -> None:
         """Choose a destination folder in Nautilus's modal native file dialog."""
+        if isinstance(uris, str):
+            uris = [uris]
+        if not uris:
+            return
         dialog = Gtk.FileDialog()
         dialog.set_title(
             _native("Select Move Destination") if move else _native("Select Copy Destination")
         )
         dialog.set_accept_label(_("Select"))
-        dialog.set_initial_folder(Gio.File.new_for_uri(uri).get_parent())
+        dialog.set_initial_folder(Gio.File.new_for_uri(uris[0]).get_parent())
 
         def on_destination_selected(source, result, _data) -> None:
             try:
                 destination = source.select_folder_finish(result)
             except GLib.Error as error:
                 if not error.matches(Gtk.DialogError, Gtk.DialogError.DISMISSED):
-                    _log(f"Could not select destination for {uri!r}: {error.message}")
+                    _log(f"Could not select destination for {uris!r}: {error.message}")
                 return
             method = "MoveURIs" if move else "CopyURIs"
-            parameters = GLib.Variant("(assa{sv})", ([uri], destination.get_uri(), {}))
-            source_parent = Gio.File.new_for_uri(uri).get_parent()
+            parameters = GLib.Variant("(assa{sv})", (uris, destination.get_uri(), {}))
             watch_uris = [destination.get_uri()]
-            if source_parent is not None:
-                watch_uris.append(source_parent.get_uri())
+            for uri in uris:
+                source_parent = Gio.File.new_for_uri(uri).get_parent()
+                if source_parent is not None:
+                    watch_uris.append(source_parent.get_uri())
             self._watch_operation_directories(watch_uris)
-            self._call_nautilus_file_operation(method, parameters, uri)
+            self._call_nautilus_file_operation(method, parameters, uris[0])
 
         dialog.select_folder(self._win, None, on_destination_selected, None)
 
     def trash_focused_folder(self) -> bool:
-        """Move the focused local Miller item to trash (the Delete target)."""
+        """Move the focused local Miller item(s) to trash (the Delete target)."""
         column = self._focused_column()
-        row = column.selected_row() if column is not None else None
-        if row is None or not row.uri.startswith("file://"):
+        if column is None:
             return False
-        self._move_to_trash(column, row.uri)
+        uris = column.selected_uris() if hasattr(column, "selected_uris") else []
+        if not uris:
+            row = column.selected_row()
+            if row is not None:
+                uris = [row.uri]
+        file_uris = [u for u in uris if u.startswith("file://")]
+        if not file_uris:
+            return False
+        self._move_to_trash(column, file_uris)
         return True
 
     def copy_focused_folder_to_clipboard(self, *, cut: bool) -> bool:
-        """Copy or cut the focused Miller item (the Ctrl+X/Ctrl+C targets)."""
+        """Copy or cut the focused Miller item(s) (the Ctrl+X/Ctrl+C targets)."""
         column = self._focused_column()
-        row = column.selected_row() if column is not None else None
-        if row is None:
+        if column is None:
             return False
-        self._copy_to_clipboard(row.uri, cut=cut)
+        uris = column.selected_uris() if hasattr(column, "selected_uris") else []
+        if not uris:
+            row = column.selected_row()
+            if row is not None:
+                uris = [row.uri]
+        if not uris:
+            return False
+        self._copy_to_clipboard(uris, cut=cut)
         return True
 
     def paste_into_focused_folder(self) -> bool:
@@ -1145,8 +1405,13 @@ class _ColumnViewHost:
         return True
 
     def rename_focused_folder(self) -> bool:
-        """Open Rename for the focused local Miller item (the F2 target)."""
+        """Open Rename for the focused local Miller item (the F2 target).
+        Renaming targets exactly one item, so a multi-selection declines the
+        shortcut rather than picking one of them -- same rule the row menu
+        already follows (see _on_row_right_clicked's is_multi branch)."""
         column = self._focused_column()
+        if column is not None and len(column.selected_rows()) > 1:
+            return False
         row = column.selected_row() if column is not None else None
         if row is None or not row.uri.startswith("file://"):
             return False
@@ -1180,6 +1445,18 @@ class _ColumnViewHost:
         already_open = (
             row.is_dir and stale and stale[0].folder_uri.rstrip("/") == row.uri.rstrip("/")
         )
+
+        selected_rows = column.selected_rows() if hasattr(column, "selected_rows") else []
+        if len(selected_rows) > 1:
+            for stale_column in stale:
+                stale_column.destroy_enumeration()
+            del self.columns[index + 1 :]
+            self._set_preview([r.uri for r in selected_rows])
+            self._sync_slot_location(column.folder_uri)
+            self._sync_column_selections()
+            self._apply_focused_column_style()
+            self._rebuild_chain()
+            return
 
         new_column: Gtk.Widget | None = None
         preview_replaced = False
@@ -1288,7 +1565,16 @@ class _ColumnViewHost:
         commits the new location and chrome, _on_slot_location_changed
         activates slot.stop to cancel the hidden native view's remaining
         metadata, model, monitor, and thumbnail work. Ctrl+1/Ctrl+2 reloads
-        that model before exposing the native view again."""
+        that model before exposing the native view again.
+
+        The pushed URI is remembered so the notify::location it eventually
+        produces can be recognized as this chain's own echo rather than a
+        user navigation (see sync_to_uri). That echo is asynchronous, so it
+        can arrive after further clicks have already moved the chain on --
+        without the record, a late echo for an abandoned folder reads as
+        somebody navigating there and re-roots the view onto it."""
+        self._pending_slot_uris.append(uri)
+        del self._pending_slot_uris[:-_MAX_PENDING_SLOT_URIS]
         try:
             self._win.activate_action("slot.open-location", GLib.Variant("s", uri))
         except Exception as e:
@@ -1306,29 +1592,35 @@ class _ColumnViewHost:
         pathbar, back/forward, a bookmark, the sidebar; see
         _on_slot_location_changed below).
 
-        Only ever preserves columns that are already open: an exact match
-        against one of them is either our own drill-down's
-        _sync_slot_location echo (already the deepest column -- no-op) or a
-        pathbar chip for an already-open ancestor (truncate what's deeper,
-        keep the rest untouched -- no re-enumeration, no flicker, no lost
-        widths). A location that is the immediate child of an already-open
-        column (e.g. the native view opened a folder while sitting inside a
-        folder the Miller chain already has open) extends the chain by one
-        column instead, via _drill_into_open_chain -- same "still browsing
-        the same branch" UX as a click would give. Anything else -- a
-        bookmark, a typed address, a sidebar jump, or any location that
-        isn't one of the columns on screen or their immediate child --
-        re-roots fresh there via reset(), a single column, same as a brand
-        new Column View entry (see enter_column_view). Deliberately does NOT
-        walk new_uri's full filesystem ancestry to rebuild a multi-level
-        chain: that logic used to treat every location as "a descendant of
-        wherever the chain happens to be rooted," which degenerates once the
-        root is the filesystem root itself (everything is a descendant of
-        "/") and silently exploded any external navigation into a full path
-        chain instead of a single column. Checking only the immediate parent
-        (one hop, against the finite list of columns actually open) doesn't
-        have that failure mode: a jump that skips levels, or lands outside
-        the open chain entirely, still falls through to reset() below.
+        Growing the chain is the exclusive privilege of activating a row in
+        the view itself (_on_real_row_activated). Navigation that arrives
+        from anywhere else lands as a single fresh column via reset(), even
+        when the target happens to sit directly under a folder already on
+        screen. That last part is deliberate and was the whole point of the
+        rule: a sidebar place used to render one column from a cold start but
+        two (its parent, then itself) whenever that parent happened to be
+        open, so the same click produced a different view depending on
+        history.
+        An ancestor column is only ever shown because the user walked
+        through it.
+
+        Two cases still preserve what is open. Our own drill-down echo (the
+        notify::location produced by _sync_slot_location) changes nothing at
+        all -- the chain already moved before the push, and the echo can
+        arrive late, after further clicks, so it is matched against the
+        pending-push record rather than against the chain's current shape.
+        And a location that is already open as an ancestor column -- a
+        pathbar chip, or Alt+Left back into the branch -- truncates to it
+        and keeps everything to its left untouched: no re-enumeration, no
+        flicker, no lost widths. Backing up inside a chain the user built
+        by hand is not the same as being sent somewhere new.
+
+        Deliberately does NOT walk new_uri's filesystem ancestry to rebuild
+        a multi-level chain: that logic used to treat every location as "a
+        descendant of wherever the chain happens to be rooted," which
+        degenerates once the root is the filesystem root itself (everything
+        is a descendant of "/") and silently exploded any external
+        navigation into a full path chain.
 
         Matches via Gio.File.equal() rather than string comparison --
         trailing slashes, percent-encoding, and other representational
@@ -1339,20 +1631,18 @@ class _ColumnViewHost:
         every case (the raw filesystem root "file:///" is a corner case:
         rstrip strips all three slashes down to "file:", not one)."""
         target = Gio.File.new_for_uri(new_uri)
-        existing = [Gio.File.new_for_uri(c.folder_uri) for c in self.columns]
 
+        for position, pending in enumerate(self._pending_slot_uris):
+            if Gio.File.new_for_uri(pending).equal(target):
+                # This chain's own push coming back. Everything queued before
+                # it was superseded without ever echoing, so drop those too.
+                del self._pending_slot_uris[: position + 1]
+                return
+
+        existing = [Gio.File.new_for_uri(c.folder_uri) for c in self.columns]
         idx = next((i for i, f in enumerate(existing) if f.equal(target)), None)
         if idx is None:
-            parent = target.get_parent()
-            parent_idx = (
-                next((i for i, f in enumerate(existing) if f.equal(parent)), None)
-                if parent is not None
-                else None
-            )
-            if parent_idx is None:
-                self.reset(new_uri)
-                return
-            self._drill_into_open_chain(parent_idx, new_uri)
+            self.reset(new_uri)
             return
 
         if idx == len(existing) - 1:
@@ -1387,54 +1677,30 @@ class _ColumnViewHost:
         # column (click or the echo of one) no longer grabs GTK keyboard
         # focus onto it.
 
-    def _drill_into_open_chain(self, parent_idx: int, new_uri: str) -> None:
-        """Extend the chain by one column: new_uri is the immediate child of
-        an already-open column (see sync_to_uri's parent_idx check), so this
-        is "still browsing the same branch," not a new location -- append a
-        fresh column exactly like a click on that row would
-        (_on_real_row_activated's NAV_DOWN branch), just triggered by an
-        external navigation instead of a click."""
-        for stale in self.columns[parent_idx + 1 :]:
-            stale.destroy_enumeration()
-        del self.columns[parent_idx + 1 :]
-
-        # Checked BEFORE the append below: self.columns still reflects only
-        # the columns that are staying (see _new_content_fits).
-        fits = self._new_content_fits(COLUMN_WIDTH)
-        new_column = self._make_real_column(new_uri)
-        new_column.width = COLUMN_WIDTH
-        self.columns.append(new_column)
-        self._set_preview(None)
-
-        if _COLUMN_KEYBOARD_NAV:
-            self.focused_index = len(self.columns) - 1
-        else:
-            self.focused_index = max(0, len(self.columns) - 2)
-        self._sync_column_selections()
-        self._apply_focused_column_style()
-        self._rebuild_chain()
-        self._fade_in(new_column)
-        self._fade_in(self.preview_column, duration=PREVIEW_FADE_DURATION_MS)
-        if not fits:
-            self._align_to_viewport_end(new_column)
-
     def _sync_column_selections(self) -> None:
         """Each column's own row selection is derived from the URI chain
         that is actually open right now, not tracked as click history: a
         column highlights the row whose URI equals the next column's
         folder_uri, and the last column highlights the previewed file (or
         nothing, if the last column is itself a fresh empty drill-down).
-        This is what keeps the accent highlight (see _CSS's .mc-column-list
-        rule) on exactly the active path -- redriving every column here,
-        including ones the click didn't touch, means a stale selection from
-        a since-abandoned branch can never linger."""
+
+        A multi-selection is preserved, but only in the deepest column: every
+        multi-select path collapses whatever was open past the column it
+        happened in (see _on_real_row_activated), so the deepest column is
+        the only one where several selected rows can be current. Preserving
+        it anywhere else stranded a stale block of highlighted rows (Ctrl+A
+        in an earlier column) that nothing ever cleared, with that column's
+        real path row left unhighlighted."""
+        last_index = len(self.columns) - 1
         for i, col in enumerate(self.columns):
             col.clear_active_row()
+            if i == last_index and len(col.selected_rows()) > 1:
+                continue
             if i + 1 < len(self.columns):
                 col.select_child_for_uri(self.columns[i + 1].folder_uri)
             elif self.preview_column.file_uri:
                 col.select_child_for_uri(self.preview_column.file_uri)
-            else:
+            elif not self.preview_column.file_uris:
                 col.clear_selection()
 
     def _apply_focused_column_style(self) -> None:
@@ -1448,15 +1714,132 @@ class _ColumnViewHost:
         for i, col in enumerate(self.columns):
             col.set_current_column(i == self.focused_index)
 
-    def _on_key_pressed(self, _ctrl, keyval, _keycode, _gtk_state) -> bool:
-        """Block keys only while the Column View itself owns focus.
+    def _on_key_pressed(self, _ctrl, keyval, _keycode, gtk_state) -> bool:
+        """Handle keyboard navigation and multi-selection shortcuts in Column View."""
+        if keyval in (Gdk.KEY_asciitilde, Gdk.KEY_slash):
+            return False
 
-        This controller is attached to the view scroller, not the Nautilus
-        window, so header-bar controls and location-entry widgets retain
-        their normal keyboard handling. ``~`` and ``/`` pass through for
-        Nautilus's URI-entry shortcuts.
-        """
-        return keyval not in (Gdk.KEY_asciitilde, Gdk.KEY_slash)
+        column = self._focused_column()
+        if column is None:
+            return False
+
+        ctrl = bool(gtk_state & Gdk.ModifierType.CONTROL_MASK)
+        shift = bool(gtk_state & Gdk.ModifierType.SHIFT_MASK)
+
+        if ctrl and keyval in (Gdk.KEY_a, Gdk.KEY_A):
+            column.list_box.select_all()
+            # Routed through the same activation path a shift+click takes, so
+            # Select All collapses the deeper chain and surfaces the
+            # multi-item preview instead of leaving a fully highlighted
+            # column sitting behind an unrelated open chain.
+            selected = column.selected_rows()
+            if selected:
+                self._activate_selection(column, selected[0])
+            return True
+
+        rows = column.rows() if hasattr(column, "rows") else []
+        if not rows:
+            return False
+
+        if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter, Gdk.KEY_ISO_Enter):
+            self._open_selection(column)
+            return True
+
+        if keyval in (Gdk.KEY_Up, Gdk.KEY_KP_Up):
+            cursor = getattr(column, "_cursor_row", None)
+            selected = column.selected_rows() if hasattr(column, "selected_rows") else []
+            if cursor in rows:
+                current_idx = rows.index(cursor)
+            elif selected:
+                current_idx = rows.index(selected[0])
+            else:
+                current_idx = 0
+
+            target_idx = max(0, current_idx - 1)
+            target_row = rows[target_idx]
+            column._cursor_row = target_row
+            if ctrl:
+                # Ctrl moves the cursor alone -- it neither changes the
+                # selection nor commits, so the user can walk to a row and
+                # add it to a multi-selection without dragging the open
+                # chain (and Nautilus's real location) along the way.
+                target_row.grab_focus()
+                return True
+            if shift:
+                self._select_range(column, target_row)
+            else:
+                column.list_box.unselect_all()
+                column.list_box.select_row(target_row)
+                column._anchor_row = target_row
+            self._arm_row_commit(column, target_row)
+            target_row.grab_focus()
+            return True
+
+        if keyval in (Gdk.KEY_Down, Gdk.KEY_KP_Down):
+            cursor = getattr(column, "_cursor_row", None)
+            selected = column.selected_rows() if hasattr(column, "selected_rows") else []
+            if cursor in rows:
+                current_idx = rows.index(cursor)
+            elif selected:
+                current_idx = rows.index(selected[-1])
+            else:
+                current_idx = 0
+
+            target_idx = min(len(rows) - 1, current_idx + 1)
+            target_row = rows[target_idx]
+            column._cursor_row = target_row
+            if ctrl:
+                # Cursor-only, same as Ctrl+Up above.
+                target_row.grab_focus()
+                return True
+            if shift:
+                self._select_range(column, target_row)
+            else:
+                column.list_box.unselect_all()
+                column.list_box.select_row(target_row)
+                column._anchor_row = target_row
+            self._arm_row_commit(column, target_row)
+            target_row.grab_focus()
+            return True
+
+        if keyval in (Gdk.KEY_Left, Gdk.KEY_KP_Left):
+            if self.focused_index > 0:
+                self.focused_index -= 1
+                self._apply_focused_column_style()
+                new_col = self._focused_column()
+                if new_col is not None:
+                    new_col.grab_list_focus()
+            return True
+
+        if keyval in (Gdk.KEY_Right, Gdk.KEY_KP_Right):
+            row = getattr(column, "_cursor_row", None) or column.selected_row()
+            if row is not None and row.is_dir and self.focused_index + 1 < len(self.columns):
+                self.focused_index += 1
+                self._apply_focused_column_style()
+                new_col = self._focused_column()
+                if new_col is not None:
+                    new_col.grab_list_focus()
+            return True
+
+        if keyval in (Gdk.KEY_Home, Gdk.KEY_KP_Home, Gdk.KEY_End, Gdk.KEY_KP_End):
+            target_row = rows[0] if keyval in (Gdk.KEY_Home, Gdk.KEY_KP_Home) else rows[-1]
+            # Also moves the cursor: leaving it behind meant a following
+            # Up/Down resumed from wherever the cursor last was rather than
+            # from the row Home/End just jumped to.
+            column._cursor_row = target_row
+            if shift:
+                self._select_range(column, target_row)
+            else:
+                column.list_box.unselect_all()
+                column.list_box.select_row(target_row)
+                column._anchor_row = target_row
+            # Committed for both, unlike before: a shift+Home/End range left
+            # the preview showing whatever the previous selection was.
+            self._arm_row_commit(column, target_row)
+            target_row.grab_focus()
+            return True
+
+        return False
 
     def _focused_column(self) -> Gtk.Widget | None:
         if 0 <= self.focused_index < len(self.columns):

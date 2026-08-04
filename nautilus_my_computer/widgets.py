@@ -97,6 +97,7 @@ from nautilus_my_computer.common import (
     _icon_name_renders,
     _is_activating_click,
     _log,
+    _n,
     _native,
     _nautilus_icon_size,
     _nautilus_list_icon_size,
@@ -1045,6 +1046,37 @@ class MyComputerCardSection(Gtk.Box):
         self.set_visible(any_match)
 
 
+def _droppable_uris(uris: list[str], destination_uri: str, *, is_move: bool) -> list[str]:
+    """Drop the sources a drop into destination_uri cannot sensibly act on.
+
+    Three cases, all of which Nautilus's own D-Bus file operations would
+    either refuse or turn into a confusing error dialog:
+
+    * the source *is* the destination (dropping a folder onto itself),
+    * the destination lives inside the source (dropping a folder into its
+      own descendant, which would move a tree into itself),
+    * a move whose source already sits directly in the destination -- the
+      file is where it is being dropped, so the move is a no-op. Only moves
+      are filtered here: copying into the source's own folder is the normal
+      way to duplicate a file, and Nautilus names the copy for us.
+
+    Comparison goes through Gio.File rather than string prefixes so URI
+    encoding and trailing slashes normalize the way GVfs itself normalizes
+    them."""
+    destination = Gio.File.new_for_uri(destination_uri)
+    kept = []
+    for uri in uris:
+        source = Gio.File.new_for_uri(uri)
+        if source.equal(destination) or destination.has_prefix(source):
+            continue
+        if is_move:
+            parent = source.get_parent()
+            if parent is not None and parent.equal(destination):
+                continue
+        kept.append(uri)
+    return kept
+
+
 class MyComputerColumnRow(Gtk.ListBoxRow):
     """One entry in a Column View column: icon, name, and a trailing chevron
     for folders (visual affordance that activating the row opens a child
@@ -1233,25 +1265,42 @@ class MyComputerColumnRow(Gtk.ListBoxRow):
             self.add_controller(drop)
 
     def _on_drag_prepare(self, _source, _x, _y):
-        gfile = Gio.File.new_for_uri(self.uri)
-        file_list = Gdk.FileList.new_from_list([gfile])
+        col = self.get_ancestor(MyComputerColumn)
+        selected_rows = col.selected_rows() if col is not None else []
+        if self in selected_rows and len(selected_rows) > 1:
+            uris = [r.uri for r in selected_rows]
+        else:
+            uris = [self.uri]
+        gfiles = [Gio.File.new_for_uri(u) for u in uris]
+        file_list = Gdk.FileList.new_from_list(gfiles)
         cp_file_list = Gdk.ContentProvider.new_for_value(file_list)
-        cp_uri_text = Gdk.ContentProvider.new_for_value(f"{self.uri}\r\n")
+        cp_uri_text = Gdk.ContentProvider.new_for_value("\r\n".join(uris) + "\r\n")
         return Gdk.ContentProvider.new_union([cp_file_list, cp_uri_text])
 
     def _on_drag_begin(self, _source, drag) -> None:
+        col = self.get_ancestor(MyComputerColumn)
+        selected_rows = col.selected_rows() if col is not None else []
+        count = len(selected_rows) if self in selected_rows and len(selected_rows) > 1 else 1
+
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         box.add_css_class("mc-column-row")
         box.add_css_class("navigation-sidebar")
 
         icon = Gtk.Image()
-        if self.is_dir:
+        if count > 1:
+            icon.set_from_icon_name("emblem-documents-symbolic")
+        elif self.is_dir:
             icon.set_from_icon_name("folder")
         else:
             icon.set_from_icon_name("text-x-generic")
         box.append(icon)
 
-        label = Gtk.Label(label=self.display_name)
+        label_text = (
+            _n("{n} item", "{n} items", count).format(n=count)
+            if count > 1
+            else self.display_name
+        )
+        label = Gtk.Label(label=label_text)
         box.append(label)
 
         Gtk.DragIcon.get_for_drag(drag).set_child(box)
@@ -1278,14 +1327,13 @@ class MyComputerColumnRow(Gtk.ListBoxRow):
         if not uris:
             return False
 
-        target_norm = self.uri.rstrip("/")
-        uris = [u for u in uris if u.rstrip("/") != target_norm]
-        if not uris:
-            return False
-
         event = drop_target.get_current_event()
         state = event.get_modifier_state() if event is not None else 0
         is_move = not bool(state & Gdk.ModifierType.CONTROL_MASK)
+
+        uris = _droppable_uris(uris, self.uri, is_move=is_move)
+        if not uris:
+            return False
 
         col = self.get_ancestor(MyComputerColumn)
         if col is not None and callable(getattr(col, "_on_drop_files", None)):
@@ -1520,6 +1568,14 @@ _BASIC_TYPE_BY_GENERIC_ICON = {
     "x-office-spreadsheet": N_("Spreadsheet"),
 }
 
+# Rows a column builds synchronously before yielding to the main loop --
+# enough to fill a tall column so the first frame carries real content.
+_COLUMN_FIRST_CHUNK_ROWS = 60
+# Rows per idle turn after that. At the measured ~0.44ms per row this is
+# roughly 20ms of work per turn: short enough that scrolling and clicks stay
+# responsive while a large folder finishes filling in.
+_COLUMN_CHUNK_ROWS = 50
+
 
 def _basic_type_string(content_type: str | None) -> str:
     # get_basic_type_for_mime_type: map the content type to its generic
@@ -1571,6 +1627,12 @@ def _size_key(e: _ColumnEntry) -> tuple:
 # ever considered (nautilus_file_compare_for_sort_internal's
 # directories_first check returns its -1/+1 directly, never through the
 # reversed branch).
+# The only criterion that reads _ColumnEntry.size, which for a directory is
+# its item count rather than a byte size (see _size_key). Every other sort
+# ignores that field, so only this one has to wait for the per-folder counts
+# (see MyComputerColumn._maybe_count_dirs_then_populate).
+_ITEM_COUNT_SORT_CRITERIA = {"size"}
+
 _SORT_KEY_BUILDERS = {
     # compare_by_display_name IS the whole comparison for name sort: no
     # is-hidden bucket, only the sort-last (. or #) rule inside the tiebreak.
@@ -1625,6 +1687,14 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         # press-count tracking on the row before a second click can land.
         self._last_activated_uri: str | None = None
         self._last_activated_time: int = 0
+        # Selection a modifier click already committed, held until Gtk.ListBox
+        # has had its own turn on the matching button release (see
+        # pin_selection/_on_row_activated_internal). None means no modifier
+        # click is in flight and row-activated is a genuine activation.
+        self._pinned_selection: list[MyComputerColumnRow] | None = None
+        # Idle source still building the tail of a large folder's rows (see
+        # _append_rows_in_chunks), or 0.
+        self._fill_id = 0
         # Single source of truth for this column's width (column_view.py's
         # _on_paned_position_changed writes here on drag; _make_paned_chain
         # reads it to set the enclosing Gtk.Paned's initial position). A
@@ -1655,7 +1725,7 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         # places sidebar.
         self.list_box.add_css_class("navigation-sidebar")
         self.list_box.add_css_class("mc-column-list")
-        self.list_box.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self.list_box.set_selection_mode(Gtk.SelectionMode.MULTIPLE)
         # Column view always activates on single click, regardless of the
         # Nautilus double-click setting (ext._nautilus_prefs.click_policy) that the cards use
         # -- Miller columns read naturally as single-click-to-drill-down. A
@@ -1709,14 +1779,13 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         if not uris:
             return False
 
-        col_norm = self.folder_uri.rstrip("/")
-        uris = [u for u in uris if u.rstrip("/") != col_norm]
-        if not uris:
-            return False
-
         event = drop_target.get_current_event()
         state = event.get_modifier_state() if event is not None else 0
         is_move = not bool(state & Gdk.ModifierType.CONTROL_MASK)
+
+        uris = _droppable_uris(uris, self.folder_uri, is_move=is_move)
+        if not uris:
+            return False
 
         self._on_drop_files(uris, destination_uri=self.folder_uri, cut=is_move)
         return True
@@ -1740,7 +1809,11 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         collapsing the Miller chain."""
         self._cancellable.cancel()
         self._cancellable = Gio.Cancellable()
+        self._stop_fill()
         self.clear_active_row()
+        # Every row object below is about to be dropped, so a pinned
+        # selection can only name dead rows from here on.
+        self.clear_pinned_selection()
         self.list_box.set_placeholder(None)
         child = self.list_box.get_first_child()
         while child is not None:
@@ -1789,11 +1862,22 @@ class MyComputerColumn(Gtk.ScrolledWindow):
     def _maybe_count_dirs_then_populate(self, infos: list) -> None:
         # Directory item counts are needed for sorting by size (native
         # Nautilus: a folder's "size" is its item count, never its on-disk
-        # byte size -- see compare_by_size in nautilus-file.c). Always count
-        # regardless of the active sort mode, since sort can change later.
-        dir_names = [
-            info.get_name() for info in infos if info.get_file_type() == Gio.FileType.DIRECTORY
-        ]
+        # byte size -- see compare_by_size in nautilus-file.c).
+        #
+        # Counting means one extra enumeration per subfolder, and nothing is
+        # drawn until the last of them reports back. This used to run for
+        # every sort mode, on the reasoning that the sort can change later --
+        # but a folder holding a few thousand subfolders then paid one
+        # enumeration per subfolder before its first row appeared, for a
+        # number the active sort never even reads (only _size_key does, see
+        # _ITEM_COUNT_SORT_CRITERIA). Changing the sort calls set_sort(),
+        # which reloads this column from scratch anyway, so the counts are
+        # re-derived exactly when something actually needs them.
+        dir_names = (
+            [info.get_name() for info in infos if info.get_file_type() == Gio.FileType.DIRECTORY]
+            if self._sort[0] in _ITEM_COUNT_SORT_CRITERIA
+            else []
+        )
         if not dir_names:
             self._populate_rows(infos, {})
             return
@@ -1932,20 +2016,7 @@ class MyComputerColumn(Gtk.ScrolledWindow):
             # reaches the "if (reversed) result = -result" branch.
             entries.sort(key=lambda e: not e.is_dir)
 
-        base = Gio.File.new_for_uri(self.folder_uri)
-        for entry in entries:
-            child_uri = base.get_child(entry.name).get_uri()
-            row = MyComputerColumnRow(
-                child_uri,
-                entry.display_name,
-                entry.is_dir,
-                entry.icon,
-                entry.is_hidden,
-                content_type=entry.content_type,
-                mtime=entry.mtime,
-                cancellable=self._cancellable,
-            )
-            self.list_box.append(row)
+        self._append_rows_in_chunks(entries)
 
         if not entries:
             self.list_box.set_placeholder(self._empty_page)
@@ -1953,25 +2024,88 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         if callable(self._on_loaded):
             self._on_loaded(self)
 
+    def _append_rows_in_chunks(self, entries: list) -> None:
+        """Build rows for `entries`: the first screenful now, the rest from
+        idle turns.
+
+        Building every row up front froze the main loop for the whole folder
+        before anything was drawn -- roughly a second of widget construction
+        for a folder with a few thousand entries, plus the first layout on top
+        of it, during which the window is simply stuck. The first chunk stays
+        synchronous so the column never flashes empty or shows its "Folder is
+        Empty" placeholder by accident; everything after it lands a batch per
+        idle turn, leaving the loop free to paint, scroll and take clicks
+        while the tail streams in."""
+        base = Gio.File.new_for_uri(self.folder_uri)
+        pending = list(entries)
+        # Captured rather than read back off self: reload() swaps in a fresh
+        # Cancellable, which is how an in-flight fill recognizes that the
+        # folder it was building for is gone.
+        cancellable = self._cancellable
+
+        def append_batch(count: int) -> None:
+            for entry in pending[:count]:
+                self.list_box.append(
+                    MyComputerColumnRow(
+                        base.get_child(entry.name).get_uri(),
+                        entry.display_name,
+                        entry.is_dir,
+                        entry.icon,
+                        entry.is_hidden,
+                        content_type=entry.content_type,
+                        mtime=entry.mtime,
+                        cancellable=cancellable,
+                    )
+                )
+            del pending[:count]
+
+        append_batch(_COLUMN_FIRST_CHUNK_ROWS)
+        if not pending:
+            return
+
+        def fill_more() -> bool:
+            if cancellable is not self._cancellable or cancellable.is_cancelled():
+                # Superseded by a reload that owns _fill_id now -- leave it alone.
+                return GLib.SOURCE_REMOVE
+            append_batch(_COLUMN_CHUNK_ROWS)
+            if pending:
+                return GLib.SOURCE_CONTINUE
+            self._fill_id = 0
+            # Re-run the loaded hook now that the tail exists: the row the
+            # open chain selects (see column_view.py's _sync_column_selections)
+            # may well have been in a batch that had not been built yet when
+            # the first chunk reported in.
+            if callable(self._on_loaded):
+                self._on_loaded(self)
+            return GLib.SOURCE_REMOVE
+
+        self._fill_id = GLib.idle_add(fill_more)
+
     def select_child_for_uri(self, uri: str) -> None:
         """Pre-select (highlight, without activating) the row whose child URI
         matches uri -- used to show which entry leads to the next column when
-        seeding the view from the current location's ancestor chain."""
+        seeding the view from the current location's ancestor chain.
+
+        Exclusive: the list box is in MULTIPLE selection mode, where
+        select_row() only *adds* to the selection, so any previously
+        highlighted row is dropped first. Without that, a column whose
+        selection no longer matches the open chain (e.g. backing up into it
+        from a deeper folder, see column_view.py's sync_to_uri truncation)
+        ends up with two rows highlighted at once."""
         norm = uri.rstrip("/")
         row = self.list_box.get_first_child()
         while row is not None:
             if isinstance(row, MyComputerColumnRow) and row.uri.rstrip("/") == norm:
-                set_row_selected(row, True)
+                selected = self.selected_rows()
+                if selected != [row]:
+                    self.list_box.unselect_all()
+                    set_row_selected(row, True)
                 return
             row = row.get_next_sibling()
 
     def clear_selection(self) -> None:
-        """Drop this column's own row selection -- used by column_view.py's
-        _on_real_row_activated so only the row that led to the current
-        column/preview stays highlighted, never an earlier column too."""
-        row = self.selected_row()
-        if row is not None:
-            set_row_selected(row, False)
+        """Drop all row selections in this column."""
+        self.list_box.unselect_all()
 
     def active_index(self) -> int | None:
         """Return the arrow-key cursor's row index, if this column has one."""
@@ -2033,8 +2167,9 @@ class MyComputerColumn(Gtk.ScrolledWindow):
     def selected_index(self) -> int | None:
         """Index of the currently highlighted row, or None if none is
         selected -- e.g. a freshly drilled-into column before any cursor
-        movement has happened in it."""
-        selected = self.list_box.get_selected_row()
+        movement has happened in it. With several rows selected, the first
+        one in display order."""
+        selected = self.selected_row()
         if selected is None:
             return None
         for i, row in enumerate(self.rows()):
@@ -2043,8 +2178,58 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         return None
 
     def selected_row(self) -> "MyComputerColumnRow | None":
-        selected = self.list_box.get_selected_row()
-        return selected if isinstance(selected, MyComputerColumnRow) else None
+        """The single selected row, or the first one in display order when
+        several are selected.
+
+        Derived from get_selected_rows() rather than get_selected_row():
+        that one returns GTK's internal last-selected pointer, which in
+        MULTIPLE selection mode is not cleared by unselect_row() and so can
+        name a row that is no longer selected at all."""
+        selected = self.selected_rows()
+        return selected[0] if selected else None
+
+    def selected_rows(self) -> list["MyComputerColumnRow"]:
+        """This column's selected rows, in display order -- get_selected_rows()
+        itself returns them in selection order, which callers that index into
+        rows() (range selection, arrow-key cursor) must not depend on."""
+        selected = {
+            row for row in self.list_box.get_selected_rows() if isinstance(row, MyComputerColumnRow)
+        }
+        return [row for row in self.rows() if row in selected]
+
+    def selected_uris(self) -> list[str]:
+        return [row.uri for row in self.selected_rows()]
+
+    def pin_selection(self) -> None:
+        """Hold the current selection against Gtk.ListBox's own click
+        handling. With activate-on-single-click, GtkListBox selects and
+        activates the pressed row from the button *release*, ignoring
+        modifiers -- so a ctrl+click that deselected a row would see it
+        selected again a moment later. column_view.py commits the intended
+        selection on press and pins it here; the release's activation is
+        recognized as that echo and undone (see
+        _on_row_activated_internal)."""
+        self._pinned_selection = self.selected_rows()
+
+    def clear_pinned_selection(self) -> None:
+        """Forget any pinned selection, so the next row-activated counts as a
+        real activation again."""
+        self._pinned_selection = None
+
+    def _restore_pinned_selection(self) -> bool:
+        """Re-apply a pinned selection and report whether one was pending.
+        Rows dropped by a reload in the meantime are skipped rather than
+        re-selected through a dead parent."""
+        pinned = self._pinned_selection
+        self._pinned_selection = None
+        if pinned is None:
+            return False
+        live = [row for row in self.rows() if row in pinned]
+        if self.selected_rows() != live:
+            self.list_box.unselect_all()
+            for row in live:
+                self.list_box.select_row(row)
+        return True
 
     def scroll_position(self) -> float:
         """This column's own vertical scroll offset, read live off the
@@ -2055,8 +2240,22 @@ class MyComputerColumn(Gtk.ScrolledWindow):
     def grab_list_focus(self) -> bool:
         return self.list_box.grab_focus()
 
+    def _stop_fill(self) -> None:
+        """Drop a chunked row fill still in flight (see _append_rows_in_chunks)."""
+        if self._fill_id != 0:
+            GLib.source_remove(self._fill_id)
+            self._fill_id = 0
+
     def _on_row_activated_internal(self, _list_box: Gtk.ListBox, row: Gtk.ListBoxRow) -> None:
         if not isinstance(row, MyComputerColumnRow):
+            return
+
+        # Gtk.ListBox's own release-driven select-and-activate, echoing a
+        # modifier click column_view.py already fully handled on press. Undo
+        # the selection it just forced and drop the activation -- it is not a
+        # new user action, and it must not count toward the double-click
+        # tracking below either.
+        if self._restore_pinned_selection():
             return
 
         now = GLib.get_monotonic_time()
@@ -2083,6 +2282,7 @@ class MyComputerColumn(Gtk.ScrolledWindow):
 
     def destroy_enumeration(self) -> None:
         self._cancellable.cancel()
+        self._stop_fill()
 
 
 def _is_media_content_type(content_type: str) -> bool:
@@ -2144,61 +2344,49 @@ class MyComputerPreviewColumn(Gtk.Box):
 
     __gtype_name__ = "MyComputerPreviewColumn"
 
-    def __init__(self, ext, file_uri: str | None) -> None:
+    def __init__(self, ext, file_uri: str | list[str] | None) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self._ext = ext
-        self.file_uri = file_uri
+        self.file_uris: list[str] = (
+            file_uri if isinstance(file_uri, list) else ([file_uri] if file_uri else [])
+        )
+        self.file_uri: str | None = file_uri if isinstance(file_uri, str) else None
         self._cancellable = Gio.Cancellable()
         self._discoverer = None
 
         self.set_size_request(_COLUMN_PREVIEW_WIDTH, -1)
         self.set_vexpand(True)
         self.set_valign(Gtk.Align.FILL)
-        # The preview column is always the rightmost element, so it always
-        # absorbs slack Finder-style: when the folder columns don't fill the
-        # viewport it stretches to the right edge; once they overflow it sits
-        # at its own _COLUMN_PREVIEW_WIDTH floor and the scroller scrolls. Its
-        # size_request is the floor, hexpand/halign the slack.
         self.set_hexpand(True)
         self.set_halign(Gtk.Align.FILL)
         self.set_overflow(Gtk.Overflow.HIDDEN)
         self.add_css_class("mc-column")
-        # CSS target for the preview column (12px inner padding lives here).
         self.add_css_class("mc-preview-column")
 
-        if file_uri is None:
+        if not self.file_uris:
             return
 
-        # The outer widget is the fixed-height split. The first child is the
-        # only vertically expanding section, so it consumes exactly the space
-        # left after the bottom details area. This keeps details at the window
-        # bottom instead of letting a whole-column scroller move them away.
         preview_area = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         preview_area.set_halign(Gtk.Align.FILL)
         preview_area.set_valign(Gtk.Align.FILL)
         preview_area.set_vexpand(True)
         preview_area.set_hexpand(True)
-        # Open the file with its default app on click, honoring Nautilus'
-        # own single-click/double-click setting via _is_activating_click()
-        # rather than hardcoding one -- unlike the folder columns to its left,
-        # which are always single-click (Miller drill-down, see MyComputerColumn).
-        click = Gtk.GestureClick()
-        click.connect("pressed", self._on_preview_area_clicked)
-        preview_area.add_controller(click)
+
+        if self.file_uri:
+            click = Gtk.GestureClick()
+            click.connect("pressed", self._on_preview_area_clicked)
+            preview_area.add_controller(click)
         self.append(preview_area)
 
         self._icon = Gtk.Image()
         self._icon.set_pixel_size(128)
-        self._icon.set_from_icon_name("text-x-generic")
+        self._icon.set_from_icon_name(
+            "emblem-documents-symbolic" if len(self.file_uris) > 1 else "text-x-generic"
+        )
         self._icon.set_halign(Gtk.Align.CENTER)
         self._icon.set_valign(Gtk.Align.CENTER)
         self._icon.set_vexpand(True)
 
-        # Shown in place of the icon once a thumbnail is ready. The aspect
-        # frame first carves an image-ratio rectangle out of the responsive
-        # preview area. The picture then fills that rectangle, so its rounded
-        # clip follows the actual rendered image rather than the surrounding
-        # CONTAIN letterbox canvas.
         self._thumb_frame = Gtk.AspectFrame.new(0.5, 0.5, 1.0, False)
         self._thumb_frame.set_halign(Gtk.Align.FILL)
         self._thumb_frame.set_valign(Gtk.Align.FILL)
@@ -2216,11 +2404,6 @@ class MyComputerPreviewColumn(Gtk.Box):
         self._thumb.add_css_class("mc-preview-image")
         self._thumb_frame.set_child(self._thumb)
 
-        # Cap the rendered image width so it stops growing past a sane size on a
-        # wide window, while the preview column itself keeps absorbing slack (its
-        # padding/background still fills to the right edge). Adw.Clamp is the
-        # native "cap width, center the overflow" widget -- no custom do_measure,
-        # no resize signal, just a single layout constraint.
         self._thumb_clamp = Adw.Clamp(maximum_size=_COLUMN_PREVIEW_IMAGE_MAX_WIDTH)
         self._thumb_clamp.set_halign(Gtk.Align.FILL)
         self._thumb_clamp.set_valign(Gtk.Align.FILL)
@@ -2228,9 +2411,6 @@ class MyComputerPreviewColumn(Gtk.Box):
         self._thumb_clamp.set_vexpand(True)
         self._thumb_clamp.set_child(self._thumb_frame)
 
-        # Keep every present and future preview type in one stable surface.
-        # Switching a named Gtk.Stack page avoids rebuilding the preview area
-        # as async metadata/decoding work completes.
         self._preview_stack = Gtk.Stack()
         self._preview_stack.set_halign(Gtk.Align.FILL)
         self._preview_stack.set_valign(Gtk.Align.FILL)
@@ -2246,19 +2426,10 @@ class MyComputerPreviewColumn(Gtk.Box):
         self._preview_stack.add_named(loading, PREVIEW_SLOT_LOADING)
         self._preview_stack.add_named(self._icon, PREVIEW_SLOT_ICON)
         self._preview_stack.add_named(self._thumb_clamp, PREVIEW_SLOT_IMAGE)
-        # Reserved semantic pages keep the preview API ready for dedicated
-        # video and document renderers without changing its layout contract.
         self._preview_stack.add_named(Gtk.Box(), PREVIEW_SLOT_VIDEO)
         self._preview_stack.add_named(Gtk.Box(), PREVIEW_SLOT_DOCUMENT)
-        # Start on the image surface itself. It is blank until a paintable is
-        # ready, which avoids both an icon flash and a loading indicator for
-        # the common image-preview path. The loading slot remains available
-        # for future preview types that need explicit progress feedback.
         self.set_preview_slot(PREVIEW_SLOT_IMAGE)
 
-        # The revealer owns the complete preview surface; Gtk.Stack transitions
-        # between semantic pages without changing the surface's allocation or
-        # the aspect-framed image layout.
         self._thumb_revealer = Gtk.Revealer()
         self._thumb_revealer.set_halign(Gtk.Align.FILL)
         self._thumb_revealer.set_valign(Gtk.Align.FILL)
@@ -2276,8 +2447,14 @@ class MyComputerPreviewColumn(Gtk.Box):
         details_area.set_vexpand(False)
         self.append(details_area)
 
-        gfile = Gio.File.new_for_uri(file_uri)
-        self._name_lbl = Gtk.Label(label=gfile.get_basename() or file_uri)
+        if len(self.file_uris) > 1:
+            count = len(self.file_uris)
+            title_text = _n("{n} item selected", "{n} items selected", count).format(n=count)
+        else:
+            gfile = Gio.File.new_for_uri(self.file_uris[0])
+            title_text = gfile.get_basename() or self.file_uris[0]
+
+        self._name_lbl = Gtk.Label(label=title_text)
         self._name_lbl.set_justify(Gtk.Justification.CENTER)
         self._name_lbl.set_wrap(True)
         self._name_lbl.set_max_width_chars(20)
@@ -2300,24 +2477,80 @@ class MyComputerPreviewColumn(Gtk.Box):
         details_area.append(modified_row)
 
         self._dim_row, self._dim_val = _make_kv_row(_("Dimensions"))
-        # Reserve the row's height up front for images/videos (a fast, sync,
-        # I/O-free filename guess -- no MIME sniffing) rather than waiting for
-        # the confirmed content-type and the actual width/height to come back
-        # from their async calls: doing that later popped the row in after the
-        # rest of the details were already laid out, jumping the whole column.
-        # _on_info_ready reconciles this against the real content-type once it
-        # lands, and the width/height calls below only ever touch the label
-        # text of an already-visible row, never its visibility.
-        guessed_type, _uncertain = Gio.content_type_guess(gfile.get_basename(), None)
-        self._dim_row.set_visible(bool(guessed_type) and _is_media_content_type(guessed_type))
         details_area.append(self._dim_row)
 
-        self._load()
+        if len(self.file_uris) > 1:
+            self._dim_row.set_visible(False)
+            self._preview_stack.set_visible_child_name(PREVIEW_SLOT_ICON)
+            self._load_multi(self.file_uris)
+        else:
+            gfile = Gio.File.new_for_uri(self.file_uris[0])
+            guessed_type, _uncertain = Gio.content_type_guess(gfile.get_basename(), None)
+            self._dim_row.set_visible(bool(guessed_type) and _is_media_content_type(guessed_type))
+            self._load()
+
+    def _load_multi(self, uris: list[str]) -> None:
+        """Summarize a multi-item selection: how many files/folders, and the
+        files' total size.
+
+        One async query_info per item, never the sync variant: this runs on
+        every selection change, the count is unbounded (Ctrl+A in a large
+        folder), and on a gvfs mount each sync call would block the main loop
+        for a full network round trip. Same async-only rule the folder
+        columns follow (see MyComputerColumn)."""
+        # Neither timestamp is meaningful for a set of items.
+        self._created_val.get_parent().set_visible(False)
+        self._modified_val.get_parent().set_visible(False)
+
+        totals = {"dirs": 0, "files": 0, "size": 0, "pending": len(uris)}
+
+        def on_info_ready(gfile: Gio.File, result: Gio.AsyncResult, _data=None) -> None:
+            try:
+                info = gfile.query_info_finish(result)
+            except GLib.Error:
+                info = None
+            if info is not None:
+                if info.get_file_type() == Gio.FileType.DIRECTORY:
+                    totals["dirs"] += 1
+                else:
+                    totals["files"] += 1
+                    totals["size"] += info.get_size()
+            totals["pending"] -= 1
+            if totals["pending"] == 0 and not self._cancellable.is_cancelled():
+                self._apply_multi_summary(totals["dirs"], totals["files"], totals["size"])
+
+        for uri in uris:
+            Gio.File.new_for_uri(uri).query_info_async(
+                "standard::type,standard::size",
+                Gio.FileQueryInfoFlags.NONE,
+                GLib.PRIORITY_DEFAULT,
+                self._cancellable,
+                on_info_ready,
+            )
+
+    def _apply_multi_summary(self, n_dirs: int, n_files: int, total_size: int) -> None:
+        # Each count carries its own plural form (a single ngettext string
+        # cannot agree with two different numbers at once), and the pieces
+        # are joined through their own translatable format so a translator
+        # owns the separator and the order.
+        files_text = _n("{n} file", "{n} files", n_files).format(n=n_files)
+        folders_text = _n("{n} folder", "{n} folders", n_dirs).format(n=n_dirs)
+        if n_dirs > 0 and n_files > 0:
+            sub = _("{files}, {folders}").format(files=files_text, folders=folders_text)
+        elif n_dirs > 0:
+            sub = folders_text
+        else:
+            sub = files_text
+
+        if total_size > 0:
+            sub = _("{summary} ({size})").format(summary=sub, size=GLib.format_size(total_size))
+
+        self._detail_lbl.set_label(sub)
 
     def _on_preview_area_clicked(
         self, _gesture: Gtk.GestureClick, n_press: int, _x: float, _y: float
     ) -> None:
-        if _is_activating_click(self._ext, n_press):
+        if self.file_uri and _is_activating_click(self._ext, n_press):
             _open_file_with_default_app(self.file_uri, self._cancellable)
 
     def _load(self) -> None:

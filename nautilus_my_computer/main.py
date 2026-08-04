@@ -561,8 +561,13 @@ _WINDOW_SHORTCUTS: dict[tuple[int, int], str] = {
         int(Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK),
         Gdk.KEY_N,
     ): "_new_folder_in_column_focused_folder",
+    (
+        int(Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK),
+        Gdk.KEY_n,
+    ): "_new_folder_in_column_focused_folder",
     (0, Gdk.KEY_F2): "_rename_column_focused_folder",
     (0, Gdk.KEY_Delete): "_trash_column_focused_folder",
+    (int(Gdk.ModifierType.SHIFT_MASK), Gdk.KEY_Delete): "_trash_column_focused_folder",
 }
 
 # Unmodified keys that must reach the toolbar's own MANAGED GtkShortcutController
@@ -1185,11 +1190,17 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         need their native model for file selection (see _is_file_chooser_window)."""
         if _is_file_chooser_window(win) or not self._gsettings:
             return None
+        if "default-view" not in self._gsettings.list_keys():
+            return None
         value = self._gsettings.get_string("default-view")
         return None if value == "native" else value
 
     def _set_default_view(self, value: str) -> None:
-        if self._gsettings and self._gsettings.get_string("default-view") != value:
+        if (
+            self._gsettings
+            and "default-view" in self._gsettings.list_keys()
+            and self._gsettings.get_string("default-view") != value
+        ):
             self._gsettings.set_string("default-view", value)
 
     def _rename_column_focused_folder(self, win: Gtk.Window) -> bool:
@@ -1326,7 +1337,10 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         # Shared shortcut table (see _WINDOW_SHORTCUTS) -- checked from any
         # visible_view, must run before the VIEW_DISKINFO gate below (that
         # gate is only for the type-ahead-swallow behavior further down).
-        handler_name = _WINDOW_SHORTCUTS.get((int(gtk_state) & _SHORTCUT_MODIFIER_MASK, keyval))
+        mod_mask = int(gtk_state) & _SHORTCUT_MODIFIER_MASK
+        handler_name = _WINDOW_SHORTCUTS.get((mod_mask, keyval))
+        if handler_name is None and keyval:
+            handler_name = _WINDOW_SHORTCUTS.get((mod_mask, Gdk.keyval_to_lower(keyval)))
         if handler_name is not None:
             consumed = getattr(self, handler_name)(win) is not False
             _log(

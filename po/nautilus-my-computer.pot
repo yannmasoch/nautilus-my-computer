@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: My Computer for Nautilus 0.13.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-04 13:44-0700\n"
+"POT-Creation-Date: 2026-08-04 20:47-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -46,7 +46,7 @@ msgstr ""
 msgid "Column View"
 msgstr ""
 
-#: nautilus_my_computer/common.py
+#: nautilus_my_computer/common.py nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{n} item"
 msgid_plural "{n} items"
@@ -436,5 +436,36 @@ msgid "Spreadsheet"
 msgstr ""
 
 #: nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "{n} item selected"
+msgid_plural "{n} items selected"
+msgstr[0] ""
+msgstr[1] ""
+
+#: nautilus_my_computer/widgets.py
 msgid "Dimensions"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "{n} file"
+msgid_plural "{n} files"
+msgstr[0] ""
+msgstr[1] ""
+
+#: nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "{n} folder"
+msgid_plural "{n} folders"
+msgstr[0] ""
+msgstr[1] ""
+
+#: nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "{files}, {folders}"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "{summary} ({size})"
 msgstr ""
