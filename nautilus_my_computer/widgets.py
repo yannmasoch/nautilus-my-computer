@@ -87,6 +87,7 @@ from nautilus_my_computer.common import (
     _GROUP_ICON,
     _INTERNAL_FSTYPES,
     _LIST_BAR_MAX_WIDTH,
+    N_,
     _,
     _disk_icon_size,
     _disk_list_icon_size,
@@ -1420,12 +1421,52 @@ def _name_tiebreak(e: _ColumnEntry) -> tuple:
     return (e.sort_last, e.sort_key)
 
 
-def _type_rank(e: _ColumnEntry) -> int:
-    # Bucket order for Type sort, confirmed against real Nautilus: normal
-    # folders, hidden folders, normal files, hidden files. Within each bucket
-    # the order is alpha-num by name -- NOT grouped by actual file type or
-    # extension, despite the criterion's name.
-    return (0 if e.is_dir else 2) + (1 if e.is_hidden else 0)
+# Transcribed from nautilus-file.c's mime_type_map -- the coarse basic-type
+# string Nautilus's Type sort groups files by (Program, Audio, Image, ...).
+_BASIC_TYPE_BY_GENERIC_ICON = {
+    "application-x-executable": N_("Program"),
+    "audio-x-generic": N_("Audio"),
+    "font-x-generic": N_("Font"),
+    "image-x-generic": N_("Image"),
+    "package-x-generic": N_("Archive"),
+    "text-html": N_("Markup"),
+    "text-x-generic": N_("Text"),
+    "text-x-generic-template": N_("Text"),
+    "text-x-script": N_("Program"),
+    "video-x-generic": N_("Video"),
+    "x-office-address-book": N_("Contacts"),
+    "x-office-calendar": N_("Calendar"),
+    "x-office-document": N_("Document"),
+    "x-office-presentation": N_("Presentation"),
+    "x-office-spreadsheet": N_("Spreadsheet"),
+}
+
+
+def _basic_type_string(content_type: str | None) -> str:
+    # get_basic_type_for_mime_type: map the content type to its generic
+    # themed-icon name, then to Nautilus's coarse type label. These strings
+    # are Nautilus's own and already in its gettext catalog (14/14 locales),
+    # so _native() rather than _() per the #120 convention -- and native
+    # collates the *translated* string, so comparing translated strings here
+    # is what reproduces native's actual on-screen order.
+    if content_type is None:
+        return _native("Other")
+    generic_icon = Gio.content_type_get_generic_icon_name(content_type)
+    key = _BASIC_TYPE_BY_GENERIC_ICON.get(generic_icon or "")
+    return _native(key) if key else _native("Other")
+
+
+def _type_key(e: _ColumnEntry) -> tuple:
+    # compare_by_type: directories always first and tied with each other (a
+    # folder carries no type string) -- unconditional on the dirs-first pref,
+    # same as size (see _size_key in the next commit). Among files: coarse
+    # basic-type string, collated, then the raw mime type, then the same
+    # tiebreak as every other criterion. No hidden bucket here either -- see
+    # _name_tiebreak; the old is-hidden-based 4-bucket model was never what
+    # nautilus-file.c's compare_by_type actually does.
+    if e.is_dir:
+        return (0, "", "", *_name_tiebreak(e))
+    return (1, _basic_type_string(e.content_type), e.content_type or "", *_name_tiebreak(e))
 
 
 # Sort criteria whose bucket order is PINNED regardless of reverse -- only
@@ -1494,9 +1535,7 @@ _SORT_KEY_BUILDERS = {
     "mtime": lambda e: (e.mtime, *_name_tiebreak(e)),
     "btime": lambda e: (e.btime, *_name_tiebreak(e)),
     "atime": lambda e: (e.atime, *_name_tiebreak(e)),
-    # 4 buckets: normal folders, hidden folders, normal files, hidden files;
-    # alpha-num by name within each.
-    "type": lambda e: (_type_rank(e), e.name_lower),
+    "type": _type_key,
 }
 
 

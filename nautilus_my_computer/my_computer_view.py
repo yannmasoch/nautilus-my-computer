@@ -414,9 +414,10 @@ def _classify_mount(m: MountInfo) -> str:
 def _get_local_mount_tier(m: MountInfo) -> tuple[int, bool, str]:
     """Return (tier, is_hidden, name) for hierarchical sorting within 'local'
     group. Tier: 0=root, 1=system partitions, 2=mounted, 3=unmounted.
-    is_hidden is a sub-bucket within each tier, mirroring Column View's
-    type sort (widgets.py's _type_rank: normal items before hidden items
-    within the same bucket). Used by 'sort by type' mode."""
+    is_hidden is a sub-bucket within each tier -- disk mounts have no
+    filename-based sort-last convention the way Column View's files do, so
+    this stays its own, deliberately simpler model. Used by 'sort by type'
+    mode."""
     name = (m.display_name or "").lower()
     if m.mountpoint == "/":
         return (0, m.is_hidden, name)
