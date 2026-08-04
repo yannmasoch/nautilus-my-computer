@@ -1603,7 +1603,7 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         gfile = Gio.File.new_for_uri(self.folder_uri)
         gfile.enumerate_children_async(
             "standard::name,standard::display-name,standard::icon,"
-            "standard::is-hidden,standard::type,standard::content-type,"
+            "standard::is-hidden,standard::is-backup,standard::type,standard::content-type,"
             "standard::size,time::modified,time::created,"
             "metadata::custom-icon,metadata::custom-icon-name",
             Gio.FileQueryInfoFlags.NONE,
@@ -1736,7 +1736,14 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         show_hidden = self._ext._nautilus_prefs.hidden_files()
         entries = []
         for info in infos:
-            is_hidden = info.get_attribute_boolean("standard::is-hidden")
+            # nautilus_file_should_show / update_info_and_name (nautilus-file.c):
+            # a backup file (name~) is treated as hidden even though
+            # standard::is-hidden is false for it -- matches
+            # MyComputerColumn._on_dir_count_next_files, which already reads
+            # both attributes for its item counts.
+            is_hidden = info.get_attribute_boolean(
+                "standard::is-hidden"
+            ) or info.get_attribute_boolean("standard::is-backup")
             if not show_hidden and is_hidden:
                 continue
             name = info.get_name()
