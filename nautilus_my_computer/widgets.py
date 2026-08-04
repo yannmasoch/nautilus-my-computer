@@ -87,6 +87,7 @@ from nautilus_my_computer.common import (
     _GROUP_ICON,
     _INTERNAL_FSTYPES,
     _LIST_BAR_MAX_WIDTH,
+    N_,
     _,
     _disk_icon_size,
     _disk_list_icon_size,
@@ -96,6 +97,7 @@ from nautilus_my_computer.common import (
     _icon_name_renders,
     _is_activating_click,
     _log,
+    _native,
     _nautilus_icon_size,
     _nautilus_list_icon_size,
     _resolve_custom_gicon,
@@ -1394,7 +1396,8 @@ class _ColumnEntry:
     folder's on-disk byte size."""
 
     is_dir: bool
-    name_lower: str
+    sort_key: str
+    sort_last: bool
     name: str
     display_name: str
     icon: Gio.Icon | None
@@ -1403,83 +1406,104 @@ class _ColumnEntry:
     size: int
     mtime: int
     btime: int
+    atime: int
 
 
-def _type_rank(e: _ColumnEntry) -> int:
-    # Bucket order for Type sort, confirmed against real Nautilus: normal
-    # folders, hidden folders, normal files, hidden files. Within each bucket
-    # the order is alpha-num by name -- NOT grouped by actual file type or
-    # extension, despite the criterion's name.
-    return (0 if e.is_dir else 2) + (1 if e.is_hidden else 0)
+def _name_tiebreak(e: _ColumnEntry) -> tuple:
+    """Nautilus's compare_by_full_path is the tiebreak for every criterion
+    (and *is* the entire comparison for name sort), and resolves through
+    compare_by_display_name: names starting with "." or "#" sort last
+    (SORT_LAST_CHAR1/2, nautilus-file.c), otherwise by filename collation
+    key -- g_utf8_collate_key_for_filename, natural-numeric and locale
+    aware, not a plain lowercase compare (img2.png vs img10.png sorted
+    "wrong" under str.lower(), right here)."""
+    return (e.sort_last, e.sort_key)
 
 
-# Sort criteria whose bucket order is PINNED regardless of reverse -- only
-# the within-bucket magnitude flips. Confirmed for "size": Python's
-# reverse=True flips the whole key uniformly (bucket order included, same
-# mechanism confirmed for name sort), but a live test showed files/folders
-# swapping places under reverse=True, which is wrong -- files must always
-# come before folders. Handled separately in _populate_rows via
-# _size_sort_key(reverse), not through _SORT_KEY_BUILDERS + reverse=.
-_FIXED_BUCKET_CRITERIA = {"size"}
+# Transcribed from nautilus-file.c's mime_type_map -- the coarse basic-type
+# string Nautilus's Type sort groups files by (Program, Audio, Image, ...).
+_BASIC_TYPE_BY_GENERIC_ICON = {
+    "application-x-executable": N_("Program"),
+    "audio-x-generic": N_("Audio"),
+    "font-x-generic": N_("Font"),
+    "image-x-generic": N_("Image"),
+    "package-x-generic": N_("Archive"),
+    "text-html": N_("Markup"),
+    "text-x-generic": N_("Text"),
+    "text-x-generic-template": N_("Text"),
+    "text-x-script": N_("Program"),
+    "video-x-generic": N_("Video"),
+    "x-office-address-book": N_("Contacts"),
+    "x-office-calendar": N_("Calendar"),
+    "x-office-document": N_("Document"),
+    "x-office-presentation": N_("Presentation"),
+    "x-office-spreadsheet": N_("Spreadsheet"),
+}
 
 
-def _size_sort_key(reverse: bool):
-    # Ascending (small->big) is the unreversed default -- matches the live
-    # GVfs sort_reversed flag's actual polarity, tested against a real
-    # folder. The sign flips with reverse; e.is_dir (bucket order) never
-    # does, so files always sort before folders either way.
-    sign = -1 if reverse else 1
-    return lambda e: (e.is_dir, sign * e.size, e.name_lower)
+def _basic_type_string(content_type: str | None) -> str:
+    # get_basic_type_for_mime_type: map the content type to its generic
+    # themed-icon name, then to Nautilus's coarse type label. These strings
+    # are Nautilus's own and already in its gettext catalog (14/14 locales),
+    # so _native() rather than _() per the #120 convention -- and native
+    # collates the *translated* string, so comparing translated strings here
+    # is what reproduces native's actual on-screen order.
+    if content_type is None:
+        return _native("Other")
+    generic_icon = Gio.content_type_get_generic_icon_name(content_type)
+    key = _BASIC_TYPE_BY_GENERIC_ICON.get(generic_icon or "")
+    return _native(key) if key else _native("Other")
 
 
-class _Reversed:
-    """Sortable wrapper that reverses `<` for one key component, without
-    reversing the whole tuple (see _size_sort_key_nautilus)."""
-
-    __slots__ = ("value",)
-
-    def __init__(self, value):
-        self.value = value
-
-    def __lt__(self, other: "_Reversed") -> bool:
-        return other.value < self.value
-
-    def __eq__(self, other: object) -> bool:
-        return isinstance(other, _Reversed) and self.value == other.value
+def _type_key(e: _ColumnEntry) -> tuple:
+    # compare_by_type: directories always first and tied with each other (a
+    # folder carries no type string) -- unconditional on the dirs-first pref,
+    # same as size (see _size_key in the next commit). Among files: coarse
+    # basic-type string, collated, then the raw mime type, then the same
+    # tiebreak as every other criterion. No hidden bucket here either -- see
+    # _name_tiebreak; the old is-hidden-based 4-bucket model was never what
+    # nautilus-file.c's compare_by_type actually does.
+    if e.is_dir:
+        return (0, "", "", *_name_tiebreak(e))
+    return (1, _basic_type_string(e.content_type), e.content_type or "", *_name_tiebreak(e))
 
 
-def _size_sort_key_nautilus(reverse: bool):
-    """NOT wired into _populate_rows -- kept dormant in case a user asks for
-    exact native parity. Real Nautilus ties same-size entries in *reverse*
-    alpha order (confirmed by direct observation, not a documented
-    intentional behavior -- reads as a bug in nautilus-file.c's
-    compare_by_size -> compare_by_full_path chain). Our own tiebreak
-    (_size_sort_key, forward alpha) is the one actually in use because it's
-    the more sensible behavior; this variant exists only for a fast switch
-    if that preference changes."""
-    sign = -1 if reverse else 1
-    return lambda e: (e.is_dir, sign * e.size, _Reversed(e.name_lower))
+def _size_key(e: _ColumnEntry) -> tuple:
+    # compare_by_size: directories always first (compared by item count),
+    # files after (compared by byte size) -- baked into the criterion
+    # itself, unconditional on the "Sort Folders Before Files" pref, same as
+    # type. Because this bucketing is part of the criterion's own result
+    # (not a separately-pinned pass), reverse= DOES flip it, same as native:
+    # "if (reversed) result = -result;" negates the whole per-criterion
+    # result, dir/file split included -- there is no fixed-bucket exception
+    # here despite what an earlier version of this code assumed.
+    return (0 if e.is_dir else 1, e.size, *_name_tiebreak(e))
 
 
-# Each remaining sort criterion's confirmed bucket model, live-tested against
-# real Nautilus (see tmp/Memos/2026-07-08-2126-column-view-sorting.md).
-# Bucket membership is encoded as the leading element(s) of the key tuple, so
-# a single `entries.sort(key=..., reverse=reverse_flag)` reproduces both
-# directions correctly -- confirmed empirically for name sort that reversing
-# reverses the whole ordered list (bucket order included), not just the
-# within-bucket order. ("size" is the one exception -- see above.)
+# Each criterion's key, derived directly from nautilus_file_compare_for_sort
+# in nautilus-file.c. A plain `entries.sort(key=..., reverse=)` reproduces
+# native's "if (reversed) result = -result" exactly, because that negates
+# the *whole* per-criterion result, tiebreak and any criterion-local
+# bucketing (size/type's dir-first split) included -- which is also why the
+# separate "Sort Folders Before Files" pref, once wired in, has to be its
+# own post-pass in _populate_rows rather than living inside one of these
+# keys: unlike these, that pinned bucket is applied *before* reversed is
+# ever considered (nautilus_file_compare_for_sort_internal's
+# directories_first check returns its -1/+1 directly, never through the
+# reversed branch).
 _SORT_KEY_BUILDERS = {
-    # 2 buckets: normal items (folders+files mixed) then hidden items
-    # (folders+files mixed), alpha-num within each. No folders-first
-    # grouping at all for name sort.
-    "name": lambda e: (e.is_hidden, e.name_lower),
+    # compare_by_display_name IS the whole comparison for name sort: no
+    # is-hidden bucket, only the sort-last (. or #) rule inside the tiebreak.
+    "name": _name_tiebreak,
     # Flat pool, no buckets -- folders/files/hidden all mixed, sorted purely
-    # by timestamp.
-    "mtime": lambda e: (e.mtime,),
-    "btime": lambda e: (e.btime,),
-    # 4 buckets: normal folders, hidden folders, normal files, hidden files;
-    # alpha-num by name within each.
-    "type": lambda e: (_type_rank(e), e.name_lower),
+    # by timestamp, tiebreak for equal timestamps (matches native's
+    # compare_by_time -> compare_by_full_path chain; btime especially needs
+    # this, since time::created is 0/equal for many files).
+    "mtime": lambda e: (e.mtime, *_name_tiebreak(e)),
+    "btime": lambda e: (e.btime, *_name_tiebreak(e)),
+    "atime": lambda e: (e.atime, *_name_tiebreak(e)),
+    "size": _size_key,
+    "type": _type_key,
 }
 
 
@@ -1568,7 +1592,7 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         # loading has actually finished and the folder is confirmed empty.
         self._empty_page = Adw.StatusPage()
         self._empty_page.set_icon_name("folder-symbolic")
-        self._empty_page.set_title(_("Folder is Empty"))
+        self._empty_page.set_title(_native("Folder is Empty"))
         self._empty_page.add_css_class("compact")
         self.set_child(self.list_box)
 
@@ -1602,8 +1626,8 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         gfile = Gio.File.new_for_uri(self.folder_uri)
         gfile.enumerate_children_async(
             "standard::name,standard::display-name,standard::icon,"
-            "standard::is-hidden,standard::type,standard::content-type,"
-            "standard::size,time::modified,time::created,"
+            "standard::is-hidden,standard::is-backup,standard::type,standard::content-type,"
+            "standard::size,time::modified,time::created,time::access,"
             "metadata::custom-icon,metadata::custom-icon-name",
             Gio.FileQueryInfoFlags.NONE,
             GLib.PRIORITY_DEFAULT,
@@ -1735,7 +1759,14 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         show_hidden = self._ext._nautilus_prefs.hidden_files()
         entries = []
         for info in infos:
-            is_hidden = info.get_attribute_boolean("standard::is-hidden")
+            # nautilus_file_should_show / update_info_and_name (nautilus-file.c):
+            # a backup file (name~) is treated as hidden even though
+            # standard::is-hidden is false for it -- matches
+            # MyComputerColumn._on_dir_count_next_files, which already reads
+            # both attributes for its item counts.
+            is_hidden = info.get_attribute_boolean(
+                "standard::is-hidden"
+            ) or info.get_attribute_boolean("standard::is-backup")
             if not show_hidden and is_hidden:
                 continue
             name = info.get_name()
@@ -1743,27 +1774,36 @@ class MyComputerColumn(Gtk.ScrolledWindow):
             size = (
                 dir_counts.get(name, 0) if is_dir else info.get_attribute_uint64("standard::size")
             )
+            display_name = info.get_display_name() or name
             entries.append(
                 _ColumnEntry(
                     is_dir=is_dir,
-                    name_lower=(info.get_display_name() or name).lower(),
+                    sort_key=GLib.utf8_collate_key_for_filename(display_name, -1),
+                    sort_last=display_name[:1] in (".", "#"),
                     name=name,
-                    display_name=info.get_display_name() or name,
+                    display_name=display_name,
                     icon=_resolve_custom_gicon(info) or info.get_icon(),
                     content_type=info.get_content_type(),
                     is_hidden=is_hidden,
                     size=size,
                     mtime=info.get_attribute_uint64("time::modified"),
                     btime=info.get_attribute_uint64("time::created"),
+                    atime=info.get_attribute_uint64("time::access"),
                 )
             )
 
         col, reverse = self._sort
-        if col in _FIXED_BUCKET_CRITERIA:
-            entries.sort(key=_size_sort_key(reverse))
-        else:
-            key_fn = _SORT_KEY_BUILDERS.get(col, _SORT_KEY_BUILDERS["name"])
-            entries.sort(key=key_fn, reverse=reverse)
+        key_fn = _SORT_KEY_BUILDERS.get(col, _SORT_KEY_BUILDERS["name"])
+        entries.sort(key=key_fn, reverse=reverse)
+
+        if self._ext._nautilus_prefs.sort_directories_first():
+            # Outer, pinned grouping applied after the criterion sort --
+            # Python's sort is stable, so within-bucket order (reverse
+            # included) survives unchanged. Never flipped by reverse: unlike
+            # every key above, compare_for_sort_internal's directories_first
+            # check returns its -1/+1 directly, before the function ever
+            # reaches the "if (reversed) result = -result" branch.
+            entries.sort(key=lambda e: not e.is_dir)
 
         base = Gio.File.new_for_uri(self.folder_uri)
         for entry in entries:
@@ -2126,10 +2166,10 @@ class MyComputerPreviewColumn(Gtk.Box):
         self._detail_lbl.get_style_context().add_class("caption")
         details_area.append(self._detail_lbl)
 
-        created_row, self._created_val = _make_kv_row(_("Created"))
+        created_row, self._created_val = _make_kv_row(_native("Created"))
         details_area.append(created_row)
 
-        modified_row, self._modified_val = _make_kv_row(_("Modified"))
+        modified_row, self._modified_val = _make_kv_row(_native("Modified"))
         details_area.append(modified_row)
 
         self._dim_row, self._dim_val = _make_kv_row(_("Dimensions"))

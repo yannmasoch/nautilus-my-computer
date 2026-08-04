@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-24 12:50-0700\n"
+"POT-Creation-Date: 2026-08-04 11:31-0700\n"
 "PO-Revision-Date: 2026-07-30 05:21+0000\n"
 "Last-Translator: Yann Masoch\n"
 "Language-Team: Arabic\n"
@@ -13,15 +13,8 @@ msgstr ""
 "Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 "
 "&& n%100<=10 ? 3 : n%100>=11 ? 4 : 5;\n"
 
-# ——————————————————————————————
-# Sidebar - Bookmark icon
-# ——————————————————————————————
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
-msgstr ""
-
-#: nautilus_my_computer/bookmarks.py
-msgid "Icon"
 msgstr ""
 
 #: nautilus_my_computer/bookmarks.py
@@ -30,31 +23,6 @@ msgstr ""
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Reset"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
-msgid "New Folder"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
-#, fuzzy, python-format
-msgid "Open With %s"
-msgstr "افتح باستخدام…"
-
-# ——————————————————————————————
-# Panel - Disk card actions
-# ——————————————————————————————
-#: nautilus_my_computer/column_view.py nautilus_my_computer/context_menu.py
-#: nautilus_my_computer/main.py
-msgid "Open"
-msgstr "افتح"
-
-#: nautilus_my_computer/column_view.py
-msgid "Select Move Destination"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
-msgid "Select Copy Destination"
 msgstr ""
 
 #: nautilus_my_computer/column_view.py
@@ -70,27 +38,9 @@ msgid "Early access feature. It may contain bugs or inconsistencies."
 msgstr ""
 
 #: nautilus_my_computer/column_view.py
-msgid "Grid View"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
-msgid "List View"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
 msgid "Column View"
 msgstr ""
 
-# ——————————————————————————————
-# Preferences - Preferred Folders
-# ——————————————————————————————
-#: nautilus_my_computer/column_view.py
-msgid "View Options"
-msgstr ""
-
-# ——————————————————————————————
-# Panel - Preferred Folders - Captions
-# ——————————————————————————————
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} item"
@@ -102,9 +52,6 @@ msgstr[3] "{n} عناصر"
 msgstr[4] "{n} عنصرًا"
 msgstr[5] "{n} عنصر"
 
-# ——————————————————————————————
-# General - Relative Dates
-# ——————————————————————————————
 #: nautilus_my_computer/common.py
 msgid "Today"
 msgstr "اليوم"
@@ -241,17 +188,6 @@ msgstr[3] "خلال {n} سنوات"
 msgstr[4] "خلال {n} سنة"
 msgstr[5] "خلال {n} سنة"
 
-# ——————————————————————————————
-# Panel - Preferred Folders
-# ——————————————————————————————
-#: nautilus_my_computer/components.py
-msgid "Rename Folder"
-msgstr ""
-
-#: nautilus_my_computer/components.py
-msgid "Rename File"
-msgstr ""
-
 #: nautilus_my_computer/components.py
 msgid "Rename"
 msgstr ""
@@ -287,26 +223,6 @@ msgid "Pin to My Computer"
 msgstr ""
 
 #: nautilus_my_computer/context_menu.py
-msgid "Cut"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
-msgid "Copy"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
-msgid "Paste"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
-msgid "Move to…"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
-msgid "Copy to…"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
 msgstr ""
 
@@ -327,81 +243,16 @@ msgid "Compress…"
 msgstr ""
 
 #: nautilus_my_computer/context_menu.py
-msgid "Email…"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
 msgstr ""
 
-#: nautilus_my_computer/context_menu.py
-msgid "Properties"
-msgstr "الخصائص"
-
-# ——————————————————————————————
-# Sidebar
-# ——————————————————————————————
-#: nautilus_my_computer/main.py
-msgid "Computer"
-msgstr "جهاز الكمبيوتر"
-
-# ——————————————————————————————
-# Preferences - General
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
 msgstr "إعدادات جهاز الكمبيوتر"
 
-# ——————————————————————————————
-# Sidebar - Places
-# ——————————————————————————————
-#: nautilus_my_computer/main.py
-msgid "Home"
-msgstr "المنزل"
-
-#: nautilus_my_computer/main.py
-msgid "Loading…"
-msgstr ""
-
 #: nautilus_my_computer/main.py
 msgid "Open My Computer"
 msgstr "افتح جهاز الكمبيوتر"
-
-#: nautilus_my_computer/main.py
-msgid "Recent"
-msgstr "الحديثة"
-
-#: nautilus_my_computer/main.py
-msgid "Starred"
-msgstr "عليه نجمة"
-
-#: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
-msgid "Network"
-msgstr "الشبكة"
-
-#: nautilus_my_computer/main.py
-msgid "Trash"
-msgstr "المهملات"
-
-#: nautilus_my_computer/main.py
-msgid "Open Folder"
-msgstr ""
-
-# ——————————————————————————————
-# Panel - Disk card actions
-# ——————————————————————————————
-#: nautilus_my_computer/main.py
-msgid "Open File"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "Cancel"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-#, python-format
-msgid "Choose an app to open <b>%s</b>"
-msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Recommended Apps"
@@ -412,30 +263,12 @@ msgid "Other Apps"
 msgstr ""
 
 #: nautilus_my_computer/main.py
-msgid "No applications found."
-msgstr ""
-
-#: nautilus_my_computer/main.py
 msgid "General"
 msgstr "عام"
 
-# ——————————————————————————————
-# Preferences - Tabs
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Computer view"
 msgstr "عرض الكمبيوتر"
-
-#: nautilus_my_computer/main.py
-msgid "Sidebar"
-msgstr "الشريط الجانبي"
-
-# ——————————————————————————————
-# Preferences - About
-# ——————————————————————————————
-#: nautilus_my_computer/main.py
-msgid "About"
-msgstr "حول"
 
 #: nautilus_my_computer/main.py
 msgid "Start on the Computer view"
@@ -445,9 +278,6 @@ msgstr "البدء في عرض الكمبيوتر"
 msgid "Launch directly to the Computer view instead of Home"
 msgstr "الفتح مباشرة على عرض الكمبيوتر بدلاً من المجلد الرئيسي"
 
-# ——————————————————————————————
-# Preferences - Panel visibility
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Panel visibility"
 msgstr "ظهور اللوحة"
@@ -473,16 +303,10 @@ msgstr "مدمج"
 msgid "Hidden"
 msgstr "مخفي"
 
-# ——————————————————————————————
-# Panel - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Preferred Folders"
 msgstr "المجلدات المفضلة"
 
-# ——————————————————————————————
-# Preferences - System
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Show system partitions"
 msgstr "إظهار أقسام النظام"
@@ -491,9 +315,6 @@ msgstr "إظهار أقسام النظام"
 msgid "Include boot and EFI partitions in the System group"
 msgstr "تضمين أقسام الإقلاع و EFI في مجموعة النظام"
 
-# ——————————————————————————————
-# Preferences - Sidebar visibility
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
 msgstr "ظهور الشريط الجانبي"
@@ -502,9 +323,6 @@ msgstr "ظهور الشريط الجانبي"
 msgid "Choose which locations appear on the sidebar."
 msgstr "اختر المواقع التي تظهر في الشريط الجانبي."
 
-# ——————————————————————————————
-# Preferences - Bar Color
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Bar Color"
 msgstr "لون الشريط"
@@ -541,9 +359,6 @@ msgstr "لون البداية"
 msgid "End color"
 msgstr "لون النهاية"
 
-# ——————————————————————————————
-# Preferences - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Show captions"
 msgstr "إظهار التسميات التوضيحية"
@@ -565,10 +380,6 @@ msgid "Author"
 msgstr "المؤلف"
 
 #: nautilus_my_computer/main.py
-msgid "License"
-msgstr "الترخيص"
-
-#: nautilus_my_computer/main.py
 msgid "Source code"
 msgstr "شفرة المصدر"
 
@@ -576,29 +387,14 @@ msgstr "شفرة المصدر"
 msgid "GitHub"
 msgstr "جيت هاب"
 
-#: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
-msgid "Unmount"
-msgstr "فصل"
-
 #: nautilus_my_computer/my_computer_view.py
 msgid "Mount"
 msgstr "ضم"
 
 #: nautilus_my_computer/my_computer_view.py
-msgid "Eject"
-msgstr "إخراج"
-
-#: nautilus_my_computer/my_computer_view.py
-msgid "Format…"
-msgstr "تهيئة…"
-
-#: nautilus_my_computer/my_computer_view.py
 msgid "System"
 msgstr "النظام"
 
-# ——————————————————————————————
-# Panel - Group labels
-# ——————————————————————————————
 #: nautilus_my_computer/my_computer_view.py
 msgid "On this Computer"
 msgstr "على هذا الكمبيوتر"
@@ -615,32 +411,63 @@ msgstr "قرص"
 msgid "Not mounted"
 msgstr "غير موصول"
 
-# ——————————————————————————————
-# Panel - Disk card
-# ——————————————————————————————
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{free} free of {total}"
 msgstr "متوفر {free} من {total}"
 
 #: nautilus_my_computer/widgets.py
-msgid "Folder is Empty"
+msgid "Program"
 msgstr ""
 
 #: nautilus_my_computer/widgets.py
-msgid "Created"
+msgid "Audio"
 msgstr ""
 
 #: nautilus_my_computer/widgets.py
-msgid "Modified"
+msgid "Font"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Image"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Archive"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Markup"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Text"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Video"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Contacts"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Calendar"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Document"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Presentation"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Spreadsheet"
 msgstr ""
 
 #: nautilus_my_computer/widgets.py
 msgid "Dimensions"
 msgstr ""
-
-#~ msgid "Show the Preferred Folders group at the top of the view"
-#~ msgstr "إظهار مجموعة المجلدات المفضلة في أعلى العرض"
-
-#~ msgid "Add to Preferred"
-#~ msgstr "أضف إلى المفضلة"

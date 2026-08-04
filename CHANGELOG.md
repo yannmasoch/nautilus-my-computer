@@ -4,6 +4,35 @@ All notable changes to this project are documented here.
 
 ---
 
+## v0.13.1
+Releasing ahead of schedule to ship the fix for a critical bug: navigating to or away from
+Column View could pin a CPU core at full usage and freeze Nautilus.
+
+### Changed
+- Many menu and panel labels (Cut, Copy, Paste, Properties, Unmount, Eject, Network, and more)
+  now use the exact same wording as the rest of your desktop, and are translated in far more
+  languages than we ship ourselves.
+
+### Fixed
+- Fixed a critical bug where navigating to or away from Column View could pin a CPU core at
+  full usage and freeze Nautilus until force-killed.
+- Column View now respects the "Sort folders before files" preference, like the Grid and List
+  views already do.
+- Column View's Type sort now groups files by their actual type (Image, Audio, Document, and
+  so on) instead of sorting alphabetically.
+- Column View sorting now orders filenames the same way Nautilus does, fixing numbered files
+  (like img2.png sorting before img10.png) and dotfiles sorting incorrectly.
+- Column View's Size sort now puts folders before files, matching Nautilus.
+- Column View's time-based sorts now break ties consistently, and the Accessed Time sort
+  option now works correctly instead of behaving like Name sort.
+- Backup files are now correctly hidden in Column View when "Show Hidden Files" is off.
+- Packaging publishing (AUR, COPR, PPA) now waits for the GitHub release to finish before
+  running, preventing a race where packages could start building too early.
+
+Thanks to @selleduardo for reporting the Column View sort issue in #144.
+
+---
+
 ## v0.13.0
 Remember your last-picked view instead of always resetting to the file view, match native
 middle-click behavior everywhere in the Computer and Column views, give the Computer view real

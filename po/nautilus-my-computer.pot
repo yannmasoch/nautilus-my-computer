@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: My Computer for Nautilus 0.12.6\n"
+"Project-Id-Version: My Computer for Nautilus 0.13.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-29 08:40-0700\n"
+"POT-Creation-Date: 2026-08-04 13:44-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -23,37 +23,11 @@ msgid "Change Icon"
 msgstr ""
 
 #: nautilus_my_computer/bookmarks.py
-msgid "Icon"
-msgstr ""
-
-#: nautilus_my_computer/bookmarks.py
 msgid "Search icons…"
 msgstr ""
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Reset"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
-msgid "New Folder"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
-#, python-format
-msgid "Open With %s"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py nautilus_my_computer/context_menu.py
-#: nautilus_my_computer/main.py
-msgid "Open"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
-msgid "Select Move Destination"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
-msgid "Select Copy Destination"
 msgstr ""
 
 #: nautilus_my_computer/column_view.py
@@ -69,19 +43,7 @@ msgid "Early access feature. It may contain bugs or inconsistencies."
 msgstr ""
 
 #: nautilus_my_computer/column_view.py
-msgid "Grid View"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
-msgid "List View"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
 msgid "Column View"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
-msgid "View Options"
 msgstr ""
 
 #: nautilus_my_computer/common.py
@@ -196,14 +158,6 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: nautilus_my_computer/components.py
-msgid "Rename Folder"
-msgstr ""
-
-#: nautilus_my_computer/components.py
-msgid "Rename File"
-msgstr ""
-
-#: nautilus_my_computer/components.py
 msgid "Rename"
 msgstr ""
 
@@ -238,26 +192,6 @@ msgid "Pin to My Computer"
 msgstr ""
 
 #: nautilus_my_computer/context_menu.py
-msgid "Cut"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
-msgid "Copy"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
-msgid "Paste"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
-msgid "Move to…"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
-msgid "Copy to…"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
 msgstr ""
 
@@ -278,19 +212,7 @@ msgid "Compress…"
 msgstr ""
 
 #: nautilus_my_computer/context_menu.py
-msgid "Email…"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
-msgid "Properties"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "Computer"
 msgstr ""
 
 #: nautilus_my_computer/main.py
@@ -298,48 +220,7 @@ msgid "My Computer Settings"
 msgstr ""
 
 #: nautilus_my_computer/main.py
-msgid "Home"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "Loading…"
-msgstr ""
-
-#: nautilus_my_computer/main.py
 msgid "Open My Computer"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "Recent"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "Starred"
-msgstr ""
-
-#: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
-msgid "Network"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "Trash"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "Open Folder"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "Open File"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "Cancel"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-#, python-format
-msgid "Choose an app to open <b>%s</b>"
 msgstr ""
 
 #: nautilus_my_computer/main.py
@@ -351,23 +232,11 @@ msgid "Other Apps"
 msgstr ""
 
 #: nautilus_my_computer/main.py
-msgid "No applications found."
-msgstr ""
-
-#: nautilus_my_computer/main.py
 msgid "General"
 msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Computer view"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "Sidebar"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "About"
 msgstr ""
 
 #: nautilus_my_computer/main.py
@@ -478,10 +347,6 @@ msgid "Author"
 msgstr ""
 
 #: nautilus_my_computer/main.py
-msgid "License"
-msgstr ""
-
-#: nautilus_my_computer/main.py
 msgid "Source code"
 msgstr ""
 
@@ -489,20 +354,8 @@ msgstr ""
 msgid "GitHub"
 msgstr ""
 
-#: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
-msgid "Unmount"
-msgstr ""
-
 #: nautilus_my_computer/my_computer_view.py
 msgid "Mount"
-msgstr ""
-
-#: nautilus_my_computer/my_computer_view.py
-msgid "Eject"
-msgstr ""
-
-#: nautilus_my_computer/my_computer_view.py
-msgid "Format…"
 msgstr ""
 
 #: nautilus_my_computer/my_computer_view.py
@@ -531,15 +384,55 @@ msgid "{free} free of {total}"
 msgstr ""
 
 #: nautilus_my_computer/widgets.py
-msgid "Folder is Empty"
+msgid "Program"
 msgstr ""
 
 #: nautilus_my_computer/widgets.py
-msgid "Created"
+msgid "Audio"
 msgstr ""
 
 #: nautilus_my_computer/widgets.py
-msgid "Modified"
+msgid "Font"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Image"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Archive"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Markup"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Text"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Video"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Contacts"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Calendar"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Document"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Presentation"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Spreadsheet"
 msgstr ""
 
 #: nautilus_my_computer/widgets.py

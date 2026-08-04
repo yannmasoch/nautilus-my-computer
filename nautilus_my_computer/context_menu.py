@@ -11,7 +11,7 @@ gi.require_version("GLib", "2.0")
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gio, GLib, Gtk
 
-from nautilus_my_computer.common import _
+from nautilus_my_computer.common import _, _native
 
 
 @dataclasses.dataclass
@@ -97,7 +97,7 @@ def open_section(
     """
     primary_items = [
         ContextMenuItem(
-            open_label or _("Open"),
+            open_label or _native("Open"),
             action=open_action,
             shortcut="Return" if shortcuts else "",
             enabled=open_enabled,
@@ -130,7 +130,9 @@ def open_section(
         submenu_sections.append(
             ContextMenuSection([ContextMenuItem(_("Open With…"), action=open_with_action)])
         )
-    return ContextMenuSection([ContextMenuItem(_("Open"), submenu=ContextMenu(submenu_sections))])
+    return ContextMenuSection(
+        [ContextMenuItem(_native("Open"), submenu=ContextMenu(submenu_sections))]
+    )
 
 
 def my_computer_additions_section(
@@ -177,19 +179,29 @@ def clipboard_actions_section(
     return ContextMenuSection(
         [
             ContextMenuItem(
-                _("Cut"), action=cut_action, shortcut="<Control>x", enabled=callable(cut_action)
+                _native("Cut"),
+                action=cut_action,
+                shortcut="<Control>x",
+                enabled=callable(cut_action),
             ),
             ContextMenuItem(
-                _("Copy"), action=copy_action, shortcut="<Control>c", enabled=callable(copy_action)
+                _native("Copy"),
+                action=copy_action,
+                shortcut="<Control>c",
+                enabled=callable(copy_action),
             ),
             ContextMenuItem(
-                _("Paste"),
+                _native("Paste"),
                 action=paste_action,
                 shortcut="<Control>v",
                 enabled=callable(paste_action),
             ),
-            ContextMenuItem(_("Move to…"), action=move_to_action, enabled=callable(move_to_action)),
-            ContextMenuItem(_("Copy to…"), action=copy_to_action, enabled=callable(copy_to_action)),
+            ContextMenuItem(
+                _native("Move to…"), action=move_to_action, enabled=callable(move_to_action)
+            ),
+            ContextMenuItem(
+                _native("Copy to…"), action=copy_to_action, enabled=callable(copy_to_action)
+            ),
         ]
     )
 
@@ -223,7 +235,7 @@ def background_clipboard_section(*, paste_action=None) -> ContextMenuSection:
     return ContextMenuSection(
         [
             ContextMenuItem(
-                _("Paste"),
+                _native("Paste"),
                 action=paste_action,
                 shortcut="<Control>v",
                 enabled=callable(paste_action),
@@ -271,7 +283,7 @@ def file_actions_section(
     if show_compress:
         items.append(ContextMenuItem(_("Compress…"), enabled=False))
     if show_email:
-        items.append(ContextMenuItem(_("Email…"), enabled=False))
+        items.append(ContextMenuItem(_native("Email…"), enabled=False))
     if move_to_trash_action is not None:
         items.append(
             ContextMenuItem(
@@ -288,7 +300,7 @@ def properties_section(action, *, enabled: bool = True) -> ContextMenuSection:
     return ContextMenuSection(
         [
             ContextMenuItem(
-                _("Properties"),
+                _native("Properties"),
                 action=action,
                 shortcut="<Alt>Return",
                 enabled=enabled,

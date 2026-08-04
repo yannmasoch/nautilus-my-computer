@@ -14,7 +14,7 @@ gi.require_version("GLib", "2.0")
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gio, GLib, Gtk
 
-from nautilus_my_computer.common import _, _log
+from nautilus_my_computer.common import _, _log, _native
 
 
 def set_row_selected(row: Gtk.ListBoxRow, selected: bool) -> None:
@@ -67,7 +67,9 @@ def show_rename_popover(parent: Gtk.Widget, uri: str, on_renamed, *, item_kind: 
     box.set_margin_end(18)
     popover.set_child(box)
 
-    title = Gtk.Label(label=_("Rename Folder") if item_kind == "folder" else _("Rename File"))
+    title = Gtk.Label(
+        label=_native("Rename Folder") if item_kind == "folder" else _native("Rename File")
+    )
     title.set_margin_bottom(12)
     title.add_css_class("title-2")
     box.append(title)

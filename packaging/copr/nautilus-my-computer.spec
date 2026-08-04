@@ -1,5 +1,5 @@
 Name:           nautilus-my-computer
-Version:        0.13.0
+Version:        0.13.1
 Release:        1%{?dist}
 Summary:        My Computer for Nautilus, what GNOME Files should have always been
 

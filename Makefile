@@ -43,7 +43,7 @@ build/locale/%/LC_MESSAGES/$(GETTEXT_DOMAIN).mo: po/%.po
 
 pot:
 	xgettext --language=Python --from-code=UTF-8 \
-		--keyword=_ --keyword=_n:1,2 --keyword=N_ \
+		--keyword --keyword=_ --keyword=_n:1,2 --keyword=N_ \
 		--add-comments=TRANSLATORS \
 		--add-location=file \
 		--package-name="My Computer for Nautilus" \
@@ -54,6 +54,7 @@ pot:
 po-update: pot
 	@for po in $(PO_FILES); do \
 		msgmerge --update --backup=none --add-location=file "$$po" $(POT_FILE); \
+		msgattrib --no-obsolete --output-file="$$po" "$$po"; \
 	done
 
 install: build

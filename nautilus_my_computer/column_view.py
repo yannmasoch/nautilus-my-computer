@@ -22,6 +22,7 @@ from nautilus_my_computer.common import (
     _bundled_gicon,
     _icon_name_renders,
     _log,
+    _native,
 )
 from nautilus_my_computer.context_menu import (
     ContextMenu,
@@ -636,7 +637,7 @@ class _ColumnViewHost:
     def _create_folder(self, column: Gtk.Widget) -> None:
         """Create a new folder in one column, then refresh its listing."""
         parent = Gio.File.new_for_uri(column.folder_uri)
-        base_name = _("New Folder")
+        base_name = _native("New Folder")
 
         def create_named(name: str, suffix: int) -> None:
             candidate = parent.get_child(name)
@@ -745,8 +746,15 @@ class _ColumnViewHost:
         uri = row.uri
         content_type = row.content_type or "application/octet-stream"
         default_app = Gio.AppInfo.get_default_for_type(content_type, False)
+        open_with_template = _native("Open With %s")
         file_open_label = (
-            _("Open With %s") % default_app.get_display_name() if default_app else _("Open")
+            (
+                open_with_template % default_app.get_display_name()
+                if "%s" in open_with_template
+                else default_app.get_display_name()
+            )
+            if default_app
+            else _native("Open")
         )
 
         open_actions = (
@@ -1081,7 +1089,9 @@ class _ColumnViewHost:
     def _show_destination_picker(self, uri: str, *, move: bool) -> None:
         """Choose a destination folder in Nautilus's modal native file dialog."""
         dialog = Gtk.FileDialog()
-        dialog.set_title(_("Select Move Destination") if move else _("Select Copy Destination"))
+        dialog.set_title(
+            _native("Select Move Destination") if move else _native("Select Copy Destination")
+        )
         dialog.set_accept_label(_("Select"))
         dialog.set_initial_folder(Gio.File.new_for_uri(uri).get_parent())
 
@@ -2121,12 +2131,18 @@ def enter_column_view(ext, win: Gtk.Window, root_uri: str) -> None:
         return
     host = view._mc_column_host
     _log(f"enter_column_view: root_uri={root_uri!r}")
+    # Release the Computer panel's own state first if it currently owns this
+    # slot's stack -- otherwise its notify::visible-child reassert handler
+    # still trusts its own (now stale) elected flag and fights the
+    # set_visible_child below (issue #137's per-slot view-election arbiter).
+    ext._leave_computer_panel_for_slot(win, slot)
     host.sync_to_uri(root_uri)
     stack = view.get_parent()
     current_child = stack.get_visible_child()
     if current_child is not view:
         slot._mc_column_previous_child = current_child
     slot._mc_column_elected = True
+    common.set_slot_view_owner(slot, "column")
     stack.set_visible_child(view)
     host.set_native_cut_observer_active(True)
     populate_column_view(ext, win)
@@ -2143,6 +2159,7 @@ def leave_column_view(slot: Gtk.Widget) -> None:
         return
     stack = view.get_parent()
     slot._mc_column_elected = False
+    common.release_slot_view_owner(slot, "column")
     host = getattr(view, "_mc_column_host", None)
     if host is not None:
         host.set_native_cut_observer_active(False)
@@ -2280,10 +2297,17 @@ def _on_slot_stack_child_changed(stack, _pspec, slot: Gtk.Widget) -> None:
     """Nautilus reasserts its own stack child on its own initiative (e.g.
     leaving global search, nautilus-window-slot.c:1045/1091). Reassert
     Column View if the user elected it for this slot and it hasn't been
-    explicitly left (see enter_column_view/leave_column_view)."""
+    explicitly left (see enter_column_view/leave_column_view).
+
+    Also requires slot_view_owner(slot) == "column": the Computer panel
+    (my_computer_view.py) shares this same stack and has its own reassert
+    handler with its own local elected flag, which can be stale relative to
+    this one (e.g. mid-navigation, before its own notify::location handler
+    has run). Without the shared owner token both handlers could reassert
+    against each other with no termination condition (issue #137)."""
     if getattr(slot, "_mc_reasserting", False):
         return
-    if not getattr(slot, "_mc_column_elected", False):
+    if not getattr(slot, "_mc_column_elected", False) or common.slot_view_owner(slot) != "column":
         return
     view = slot._mc_column_view
     if stack.get_visible_child() is view:
@@ -2313,11 +2337,13 @@ def _maybe_auto_elect_column_view(ext, win: Gtk.Window, slot: Gtk.Widget) -> Non
         # Background tab: elect the stack child directly, without
         # populate_column_view()/enter_column_view() -- both resolve the
         # *active* slot internally and would act on (and focus) the wrong tab.
+        ext._leave_computer_panel_for_slot(win, slot)
         view = slot._mc_column_view
         stack = view.get_parent()
         if stack.get_visible_child() is not view:
             slot._mc_column_previous_child = stack.get_visible_child()
         slot._mc_column_elected = True
+        common.set_slot_view_owner(slot, "column")
         stack.set_visible_child(view)
         view._mc_column_host.set_native_cut_observer_active(True)
     if ext._stop_hidden_native_slot(win, slot):
@@ -2355,8 +2381,10 @@ def _on_slot_location_changed(slot, _pspec, ext, win: Gtk.Window) -> None:
 
 
 _SEGMENTS = (
-    ("grid", _ICON_TARGET_GRID, N_("Grid View")),
-    ("list", _ICON_TARGET_LIST, N_("List View")),
+    # Grid/List always resolve through _native() (see _build_view_switcher), so
+    # their labels need no N_() marker -- only Column View reads our own catalog.
+    ("grid", _ICON_TARGET_GRID, "Grid View"),
+    ("list", _ICON_TARGET_LIST, "List View"),
     ("column", _COLUMN_ICON_NAME, N_("Column View")),
 )
 
@@ -2406,7 +2434,9 @@ def inject_column_view_entry(ext, win: Gtk.Window) -> None:
     split_button.set_visible(False)
     split_button._mc_column_attached = True
 
-    options_btn = Gtk.MenuButton(icon_name="view-more-symbolic", tooltip_text=_("View Options"))
+    options_btn = Gtk.MenuButton(
+        icon_name="view-more-symbolic", tooltip_text=_native("View Options")
+    )
     if popover is not None:
         options_btn.set_popover(popover)
 
@@ -2485,7 +2515,10 @@ def _build_view_switcher(ext, win: Gtk.Window) -> Gtk.Widget:
         (name, icon, tooltip) if name != "column" else (name, _resolve_column_icon(), tooltip)
         for name, icon, tooltip in _SEGMENTS
     ]
-    switcher = MyComputerToggleButton((name, icon, _(tooltip)) for name, icon, tooltip in segments)
+    switcher = MyComputerToggleButton(
+        (name, icon, _(tooltip) if name == "column" else _native(tooltip))
+        for name, icon, tooltip in segments
+    )
     switcher.connect("changed", lambda _w, name: _on_view_segment_activated(ext, win, name))
     return switcher
 

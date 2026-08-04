@@ -69,6 +69,15 @@ class NautilusPrefs:
     def hidden_files(self) -> bool:
         return self._filechooser.get_boolean("show-hidden")
 
+    def sort_directories_first(self) -> bool:
+        """Nautilus Preferences > "Sort Folders Before Files". Lives in the
+        same shared GTK4 file-chooser schema as show-hidden
+        (nautilus-global-preferences.c opens this schema for both). Applied
+        as an outer, pinned grouping that reverse never flips
+        (nautilus-file.c: nautilus_file_compare_for_sort_internal returns its
+        -1/+1 directly, before the function's reversed branch)."""
+        return self._filechooser.get_boolean("sort-directories-first")
+
     def zoom_level(self, view: str = "icon-view") -> str:
         settings = self._list_view if view == "list-view" else self._icon_view
         return settings.get_string("default-zoom-level")
@@ -123,9 +132,10 @@ class NautilusPrefs:
         per-folder override (falling back to the global default), applied
         uniformly across the whole Miller chain -- per-column sort makes no
         UX sense when several folders are visible side by side. Folders-first
-        grouping is not a thing here: each sort criterion has its own
-        confirmed bucket structure (see MyComputerColumn's key builders in
-        widgets.py) that already accounts for folder/file/hidden placement."""
+        grouping is a separate, orthogonal concern: it's read live from
+        sort_directories_first() and applied as its own pass in
+        MyComputerColumn._populate_rows (widgets.py), not baked into this
+        (column, reverse) tuple."""
         folder = self.folder_sort(root_uri)
         if folder is not None:
             col, rev = folder
@@ -169,6 +179,9 @@ class NautilusPrefs:
         self._prefs.connect("changed::default-folder-viewer", self._on_view_mode_changed, ext)
         self._prefs.connect("changed::click-policy", self._on_click_policy_changed, ext)
         self._filechooser.connect("changed::show-hidden", self._on_hidden_files_changed, ext)
+        self._filechooser.connect(
+            "changed::sort-directories-first", self._on_dirs_first_changed, ext
+        )
         self._icon_view.connect("changed::captions", self._on_captions_changed, ext)
         # Zoom is per-view (grid uses icon-view, list uses list-view); either
         # can change via Ctrl+scroll / +/-. Cards read px from the active view's
@@ -189,6 +202,13 @@ class NautilusPrefs:
     def _on_hidden_files_changed(self, _settings: Gio.Settings, _key: str, ext) -> None:
         _log(f"show-hidden changed → {self.hidden_files()}")
         ext._repopulate_visible()
+
+    def _on_dirs_first_changed(self, _settings: Gio.Settings, _key: str, ext) -> None:
+        # Only Column View mixes folders and files in one listing -- the disk
+        # panel shows mounts, and Preferred Folders shows folder cards only,
+        # so neither has anything for this pref to regroup.
+        _log(f"sort-directories-first changed → {self.sort_directories_first()}")
+        ext._repopulate_column_view_only()
 
     def _on_captions_changed(self, _settings: Gio.Settings, _key: str, ext) -> None:
         _log(f"captions changed → {self.captions()}")

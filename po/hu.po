@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-24 12:50-0700\n"
+"POT-Creation-Date: 2026-08-04 11:31-0700\n"
 "PO-Revision-Date: 2026-07-30 05:22+0000\n"
 "Last-Translator: Pelach András <pelach.andras@gmail.com>\n"
 "Language-Team: Hungarian\n"
@@ -16,15 +16,8 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
 "X-Generator: Gtranslator 48.0\n"
 
-# ——————————————————————————————
-# Sidebar - Bookmark icon
-# ——————————————————————————————
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
-msgstr ""
-
-#: nautilus_my_computer/bookmarks.py
-msgid "Icon"
 msgstr ""
 
 #: nautilus_my_computer/bookmarks.py
@@ -33,31 +26,6 @@ msgstr ""
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Reset"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
-msgid "New Folder"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
-#, fuzzy, python-format
-msgid "Open With %s"
-msgstr "Megnyitás ezzel…"
-
-# ——————————————————————————————
-# Panel - Disk card actions
-# ——————————————————————————————
-#: nautilus_my_computer/column_view.py nautilus_my_computer/context_menu.py
-#: nautilus_my_computer/main.py
-msgid "Open"
-msgstr "Megnyitás"
-
-#: nautilus_my_computer/column_view.py
-msgid "Select Move Destination"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
-msgid "Select Copy Destination"
 msgstr ""
 
 #: nautilus_my_computer/column_view.py
@@ -73,27 +41,9 @@ msgid "Early access feature. It may contain bugs or inconsistencies."
 msgstr ""
 
 #: nautilus_my_computer/column_view.py
-msgid "Grid View"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
-msgid "List View"
-msgstr ""
-
-#: nautilus_my_computer/column_view.py
 msgid "Column View"
 msgstr ""
 
-# ——————————————————————————————
-# Preferences - Preferred Folders
-# ——————————————————————————————
-#: nautilus_my_computer/column_view.py
-msgid "View Options"
-msgstr ""
-
-# ——————————————————————————————
-# Panel - Preferred Folders - Captions
-# ——————————————————————————————
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} item"
@@ -101,9 +51,6 @@ msgid_plural "{n} items"
 msgstr[0] "{n} elem"
 msgstr[1] "{n} elem"
 
-# ——————————————————————————————
-# General - Relative Dates
-# ——————————————————————————————
 #: nautilus_my_computer/common.py
 msgid "Today"
 msgstr "Ma"
@@ -208,17 +155,6 @@ msgid_plural "In {n} years"
 msgstr[0] "{n} év múlva"
 msgstr[1] "{n} év múlva"
 
-# ——————————————————————————————
-# Panel - Preferred Folders
-# ——————————————————————————————
-#: nautilus_my_computer/components.py
-msgid "Rename Folder"
-msgstr ""
-
-#: nautilus_my_computer/components.py
-msgid "Rename File"
-msgstr ""
-
 #: nautilus_my_computer/components.py
 msgid "Rename"
 msgstr ""
@@ -254,26 +190,6 @@ msgid "Pin to My Computer"
 msgstr ""
 
 #: nautilus_my_computer/context_menu.py
-msgid "Cut"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
-msgid "Copy"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
-msgid "Paste"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
-msgid "Move to…"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
-msgid "Copy to…"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
 msgstr ""
 
@@ -294,81 +210,16 @@ msgid "Compress…"
 msgstr ""
 
 #: nautilus_my_computer/context_menu.py
-msgid "Email…"
-msgstr ""
-
-#: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
 msgstr ""
 
-#: nautilus_my_computer/context_menu.py
-msgid "Properties"
-msgstr "Tulajdonságok"
-
-# ——————————————————————————————
-# Sidebar
-# ——————————————————————————————
-#: nautilus_my_computer/main.py
-msgid "Computer"
-msgstr "Számítógép"
-
-# ——————————————————————————————
-# Preferences - General
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
 msgstr "Számítógép beállítása"
 
-# ——————————————————————————————
-# Sidebar - Places
-# ——————————————————————————————
-#: nautilus_my_computer/main.py
-msgid "Home"
-msgstr "Saját mappa"
-
-#: nautilus_my_computer/main.py
-msgid "Loading…"
-msgstr ""
-
 #: nautilus_my_computer/main.py
 msgid "Open My Computer"
 msgstr "Számítógép nyitása"
-
-#: nautilus_my_computer/main.py
-msgid "Recent"
-msgstr "Legutóbbi"
-
-#: nautilus_my_computer/main.py
-msgid "Starred"
-msgstr "Csillagozott"
-
-#: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
-msgid "Network"
-msgstr "Hálózat"
-
-#: nautilus_my_computer/main.py
-msgid "Trash"
-msgstr "Kuka"
-
-#: nautilus_my_computer/main.py
-msgid "Open Folder"
-msgstr ""
-
-# ——————————————————————————————
-# Panel - Disk card actions
-# ——————————————————————————————
-#: nautilus_my_computer/main.py
-msgid "Open File"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-msgid "Cancel"
-msgstr ""
-
-#: nautilus_my_computer/main.py
-#, python-format
-msgid "Choose an app to open <b>%s</b>"
-msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Recommended Apps"
@@ -379,30 +230,12 @@ msgid "Other Apps"
 msgstr ""
 
 #: nautilus_my_computer/main.py
-msgid "No applications found."
-msgstr ""
-
-#: nautilus_my_computer/main.py
 msgid "General"
 msgstr "Általános"
 
-# ——————————————————————————————
-# Preferences - Tabs
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Computer view"
 msgstr "Számítógép nézet"
-
-#: nautilus_my_computer/main.py
-msgid "Sidebar"
-msgstr "Oldalsáv"
-
-# ——————————————————————————————
-# Preferences - About
-# ——————————————————————————————
-#: nautilus_my_computer/main.py
-msgid "About"
-msgstr "Névjegy"
 
 #: nautilus_my_computer/main.py
 msgid "Start on the Computer view"
@@ -412,9 +245,6 @@ msgstr "Számítógép nézetben indul"
 msgid "Launch directly to the Computer view instead of Home"
 msgstr "Közvetlenül a Számítógép nézetbe indítás a Kezdőlap helyett"
 
-# ——————————————————————————————
-# Preferences - Panel visibility
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Panel visibility"
 msgstr "Panel láthatóság"
@@ -441,16 +271,10 @@ msgstr "Egyesített"
 msgid "Hidden"
 msgstr "Rejtett"
 
-# ——————————————————————————————
-# Panel - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Preferred Folders"
 msgstr "Kedvelt mappák"
 
-# ——————————————————————————————
-# Preferences - System
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Show system partitions"
 msgstr "Látható rendszer partíció"
@@ -459,9 +283,6 @@ msgstr "Látható rendszer partíció"
 msgid "Include boot and EFI partitions in the System group"
 msgstr "A rendszerindító és az EFI partíciók hozzáadása a Rendszer csoporthoz"
 
-# ——————————————————————————————
-# Preferences - Sidebar visibility
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
 msgstr "Oldalsáv láthatósága"
@@ -470,9 +291,6 @@ msgstr "Oldalsáv láthatósága"
 msgid "Choose which locations appear on the sidebar."
 msgstr "Válassza ki, hogy mely helyek jelenjenek meg az oldalsávon."
 
-# ——————————————————————————————
-# Preferences - Bar Color
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Bar Color"
 msgstr "Sáv színe"
@@ -509,9 +327,6 @@ msgstr "Induló szín"
 msgid "End color"
 msgstr "Záró szín"
 
-# ——————————————————————————————
-# Preferences - Preferred Folders
-# ——————————————————————————————
 #: nautilus_my_computer/main.py
 msgid "Show captions"
 msgstr "Feliratok megjelenítése"
@@ -533,10 +348,6 @@ msgid "Author"
 msgstr "Szerző"
 
 #: nautilus_my_computer/main.py
-msgid "License"
-msgstr "Licenc"
-
-#: nautilus_my_computer/main.py
 msgid "Source code"
 msgstr "Forráskód"
 
@@ -544,29 +355,14 @@ msgstr "Forráskód"
 msgid "GitHub"
 msgstr "GitHub"
 
-#: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
-msgid "Unmount"
-msgstr "Leválasztás"
-
 #: nautilus_my_computer/my_computer_view.py
 msgid "Mount"
 msgstr "Csatolás"
 
 #: nautilus_my_computer/my_computer_view.py
-msgid "Eject"
-msgstr "Kiadás"
-
-#: nautilus_my_computer/my_computer_view.py
-msgid "Format…"
-msgstr "Formázás…"
-
-#: nautilus_my_computer/my_computer_view.py
 msgid "System"
 msgstr "Rendszer"
 
-# ——————————————————————————————
-# Panel - Group labels
-# ——————————————————————————————
 #: nautilus_my_computer/my_computer_view.py
 msgid "On this Computer"
 msgstr "Számítógép"
@@ -583,32 +379,63 @@ msgstr "Lemez"
 msgid "Not mounted"
 msgstr "Nincs csatolva"
 
-# ——————————————————————————————
-# Panel - Disk card
-# ——————————————————————————————
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{free} free of {total}"
 msgstr "{free} szabad {total}-ból"
 
 #: nautilus_my_computer/widgets.py
-msgid "Folder is Empty"
+msgid "Program"
 msgstr ""
 
 #: nautilus_my_computer/widgets.py
-msgid "Created"
+msgid "Audio"
 msgstr ""
 
 #: nautilus_my_computer/widgets.py
-msgid "Modified"
+msgid "Font"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Image"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Archive"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Markup"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Text"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Video"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Contacts"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Calendar"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Document"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Presentation"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Spreadsheet"
 msgstr ""
 
 #: nautilus_my_computer/widgets.py
 msgid "Dimensions"
 msgstr ""
-
-#~ msgid "Show the Preferred Folders group at the top of the view"
-#~ msgstr "A Kedvelt mappák csoport megjelenítése a nézet tetején"
-
-#~ msgid "Add to Preferred"
-#~ msgstr "Hozzáadás a kedveltekhez"

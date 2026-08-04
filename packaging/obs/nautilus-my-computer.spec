@@ -1,5 +1,5 @@
 Name:           nautilus-my-computer
-Version:        0.13.0
+Version:        0.13.1
 Release:        0
 Summary:        My Computer for Nautilus, what GNOME Files should have always been
 
@@ -42,6 +42,17 @@ make build
 %{_datadir}/glib-2.0/schemas/io.github.yannmasoch.nautilus-my-computer.gschema.xml
 
 %changelog
+* Tue Aug 04 2026 Yann Masoch <231734284+yannmasoch@users.noreply.github.com> - 0.13.1-0
+- Fix a critical bug where navigating to or away from Column View could pin a CPU core and freeze Nautilus
+- Column View now respects the "Sort folders before files" preference
+- Column View's Type sort now groups files by their actual type instead of sorting alphabetically
+- Fix Column View sorting to order filenames the same way Nautilus does (numbered files, dotfiles)
+- Column View's Size sort now puts folders before files, matching Nautilus
+- Column View's time-based sorts now break ties consistently; fix the Accessed Time sort option
+- Fix backup files not being hidden in Column View when "Show Hidden Files" is off
+- Packaging publishing (AUR, COPR, PPA) now waits for the GitHub release to finish before running
+- Many menu and panel labels now use the exact same wording as the rest of your desktop, translated in far more languages
+
 * Sun Aug 02 2026 Yann Masoch <231734284+yannmasoch@users.noreply.github.com> - 0.13.0-0
 - Remember the last-picked view (Grid, List, or Column) instead of always resetting to the file view
 - Middle-click disk cards, Preferred Folder cards, and Column View rows to open a background tab; Ctrl+middle-click opens a new window

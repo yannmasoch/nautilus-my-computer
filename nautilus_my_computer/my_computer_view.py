@@ -49,6 +49,7 @@ from nautilus_my_computer.common import (
     _format_permissions,
     _log,
     _mc_date_to_str,
+    _native,
     _resolve_custom_gicon,
     _uri_is_hidden,
 )
@@ -183,12 +184,14 @@ def _disk_context_menu(ext, win, m) -> ContextMenu:
                     ContextMenuItem(_("Mount"), action=lambda: _do_mount(ext, m, win))
                 )
         elif m.can_eject:
-            device_items.append(ContextMenuItem(_("Eject"), action=lambda: _do_eject(ext, m)))
+            device_items.append(ContextMenuItem(_native("Eject"), action=lambda: _do_eject(ext, m)))
         elif m.can_unmount:
-            device_items.append(ContextMenuItem(_("Unmount"), action=lambda: _do_unmount(ext, m)))
+            device_items.append(
+                ContextMenuItem(_native("Unmount"), action=lambda: _do_unmount(ext, m))
+            )
         if device.startswith("/dev/"):
             device_items.append(
-                ContextMenuItem(_("Format…"), action=lambda: _do_format(ext, device))
+                ContextMenuItem(_native("Format…"), action=lambda: _do_format(ext, device))
             )
     if device_items:
         sections.append(ContextMenuSection(device_items))
@@ -411,9 +414,10 @@ def _classify_mount(m: MountInfo) -> str:
 def _get_local_mount_tier(m: MountInfo) -> tuple[int, bool, str]:
     """Return (tier, is_hidden, name) for hierarchical sorting within 'local'
     group. Tier: 0=root, 1=system partitions, 2=mounted, 3=unmounted.
-    is_hidden is a sub-bucket within each tier, mirroring Column View's
-    type sort (widgets.py's _type_rank: normal items before hidden items
-    within the same bucket). Used by 'sort by type' mode."""
+    is_hidden is a sub-bucket within each tier -- disk mounts have no
+    filename-based sort-last convention the way Column View's files do, so
+    this stays its own, deliberately simpler model. Used by 'sort by type'
+    mode."""
     name = (m.display_name or "").lower()
     if m.mountpoint == "/":
         return (0, m.is_hidden, name)
@@ -431,7 +435,9 @@ _GROUP_SPEC: list[tuple[str, str, str | None]] = [
     ("local", N_("On this Computer"), None),
     ("removable", N_("Removable"), "visibility-removable"),
     ("disc", N_("Disc"), "visibility-disc"),
-    ("network", N_("Network"), "visibility-network"),
+    # "Network" always resolves through _native() (see _populate), so it needs
+    # no N_() marker -- gvfs already has the exact wording in every language.
+    ("network", "Network", "visibility-network"),
 ]
 
 
@@ -1107,11 +1113,21 @@ def _on_slot_stack_child_changed(stack, _pspec, slot: Gtk.Widget) -> None:
     """Nautilus reasserts its own stack child on its own initiative (e.g.
     leaving global search, nautilus-window-slot.c:1045/1091). Reassert the
     panel if it is currently elected for this slot (mirrors Column View's
-    _on_slot_stack_child_changed, issue #118)."""
+    _on_slot_stack_child_changed, issue #118).
+
+    Also requires common.slot_view_owner(slot) == "computer": Column View
+    (column_view.py) shares this same stack and has its own reassert handler
+    with its own local elected flag, which can be stale relative to this
+    one. Without the shared owner token both handlers could reassert against
+    each other with no termination condition (issue #137)."""
     if getattr(slot, "_mc_computer_reasserting", False):
         return
     state = getattr(slot, "_mc_computer", None)
-    if state is None or state.get("visible_view") != VIEW_DISKINFO:
+    if (
+        state is None
+        or state.get("visible_view") != VIEW_DISKINFO
+        or common.slot_view_owner(slot) != "computer"
+    ):
         return
     panel = state["panel"]
     if stack.get_visible_child() is panel:
@@ -1223,6 +1239,13 @@ def _enter_panel(ext, win: Gtk.Window, slot: Gtk.Widget) -> None:
     stack = state["panel"].get_parent()
     if stack is None:
         return
+    # Release Column View's own state first if it currently owns this slot's
+    # stack -- otherwise its notify::visible-child reassert handler still
+    # trusts its own (now stale) elected flag and fights the
+    # set_visible_child below (issue #137's per-slot view-election arbiter).
+    # Must run before previous_child is captured, or it would capture the
+    # Column View widget itself instead of the native content beneath it.
+    ext._leave_column_view_for_slot(slot)
     state["previous_child"] = stack.get_visible_child()
     _populate_slot(ext, slot)
     # Cancel the covered native load before unmapping it (stack.set_visible_child
@@ -1235,6 +1258,7 @@ def _enter_panel(ext, win: Gtk.Window, slot: Gtk.Widget) -> None:
     # card, and _on_flow_selection_changed must not record that as a real
     # selection in the meantime (see _claim_panel_focus).
     state["_deselecting"] = True
+    common.set_slot_view_owner(slot, "computer")
     stack.set_visible_child(state["panel"])
     state["visible_view"] = VIEW_DISKINFO
     state["location_filter_owned"] = False
@@ -1251,6 +1275,7 @@ def _leave_panel(ext, win: Gtk.Window, slot: Gtk.Widget) -> None:
     # fires notify::visible-child synchronously, and _on_slot_stack_child_changed
     # reasserts the panel whenever it still reads VIEW_DISKINFO here.
     state["visible_view"] = VIEW_FILES
+    common.release_slot_view_owner(slot, "computer")
     state["filter_query"] = ""
     state["location_filter_owned"] = False
     if stack is not None and stack.get_visible_child() is state["panel"]:
@@ -1841,14 +1866,17 @@ def _populate_slot(ext, slot) -> None:
     # Build PanelGroup objects, reading visibility state from gsettings
     groups: dict[str, PanelGroup] = {}
     for gkey, glabel, gskey in _GROUP_SPEC:
+        # "Network" matches gvfs's own wording; the rest (including "System",
+        # our own disk-group meaning, not GTK's generic setting label) are ours.
+        label = _native(glabel) if gkey == "network" else _(glabel)
         if gskey is None:
             # "On this Computer" is the merge target -- always visible, never merged
-            groups[gkey] = PanelGroup(key=gkey, label=_(glabel), visible=True, merged=False)
+            groups[gkey] = PanelGroup(key=gkey, label=label, visible=True, merged=False)
             continue
         vis_str = ext._gsettings.get_string(gskey) if ext._gsettings else "visible"
         visible = vis_str != "hidden"
         merged = vis_str == "merged"
-        groups[gkey] = PanelGroup(key=gkey, label=_(glabel), visible=visible, merged=merged)
+        groups[gkey] = PanelGroup(key=gkey, label=label, visible=visible, merged=merged)
 
     # Classify each mount into its group
     for m in _disk_data.values():
@@ -2148,7 +2176,7 @@ def _on_folder_icon_ready(ext, gfile: Gio.File, result: Gio.AsyncResult, folder_
     # "home" has no xdg-user-dirs name to defer to -- its real basename is just
     # the username, which GIO happily reports but Nautilus itself never shows
     # (nautilus-file-utilities.c / nautilus-bookmark.c always substitute their
-    # own translated "Home" instead). Keep our _nautilus_string("Home") label there;
+    # own translated "Home" instead). Keep our _native("Home") label there;
     # only the named special-dir tokens (Documents/Downloads/...) defer to GIO.
     display_name = (
         pf.display_name if folder_key == "home" else (info.get_display_name() or pf.display_name)
