@@ -1396,6 +1396,8 @@ class _ColumnEntry:
 
     is_dir: bool
     name_lower: str
+    sort_key: str
+    sort_last: bool
     name: str
     display_name: str
     icon: Gio.Icon | None
@@ -1405,6 +1407,17 @@ class _ColumnEntry:
     mtime: int
     btime: int
     atime: int
+
+
+def _name_tiebreak(e: _ColumnEntry) -> tuple:
+    """Nautilus's compare_by_full_path is the tiebreak for every criterion
+    (and *is* the entire comparison for name sort), and resolves through
+    compare_by_display_name: names starting with "." or "#" sort last
+    (SORT_LAST_CHAR1/2, nautilus-file.c), otherwise by filename collation
+    key -- g_utf8_collate_key_for_filename, natural-numeric and locale
+    aware, not a plain lowercase compare (img2.png vs img10.png sorted
+    "wrong" under str.lower(), right here)."""
+    return (e.sort_last, e.sort_key)
 
 
 def _type_rank(e: _ColumnEntry) -> int:
@@ -1471,17 +1484,16 @@ def _size_sort_key_nautilus(reverse: bool):
 # reverses the whole ordered list (bucket order included), not just the
 # within-bucket order. ("size" is the one exception -- see above.)
 _SORT_KEY_BUILDERS = {
-    # 2 buckets: normal items (folders+files mixed) then hidden items
-    # (folders+files mixed), alpha-num within each. No folders-first
-    # grouping at all for name sort.
-    "name": lambda e: (e.is_hidden, e.name_lower),
+    # compare_by_display_name IS the whole comparison for name sort: no
+    # is-hidden bucket, only the sort-last (. or #) rule inside the tiebreak.
+    "name": _name_tiebreak,
     # Flat pool, no buckets -- folders/files/hidden all mixed, sorted purely
-    # by timestamp, alpha-num tiebreak for equal timestamps (matches native's
+    # by timestamp, tiebreak for equal timestamps (matches native's
     # compare_by_time -> compare_by_full_path chain; btime especially needs
     # this, since time::created is 0/equal for many files).
-    "mtime": lambda e: (e.mtime, e.name_lower),
-    "btime": lambda e: (e.btime, e.name_lower),
-    "atime": lambda e: (e.atime, e.name_lower),
+    "mtime": lambda e: (e.mtime, *_name_tiebreak(e)),
+    "btime": lambda e: (e.btime, *_name_tiebreak(e)),
+    "atime": lambda e: (e.atime, *_name_tiebreak(e)),
     # 4 buckets: normal folders, hidden folders, normal files, hidden files;
     # alpha-num by name within each.
     "type": lambda e: (_type_rank(e), e.name_lower),
@@ -1755,12 +1767,15 @@ class MyComputerColumn(Gtk.ScrolledWindow):
             size = (
                 dir_counts.get(name, 0) if is_dir else info.get_attribute_uint64("standard::size")
             )
+            display_name = info.get_display_name() or name
             entries.append(
                 _ColumnEntry(
                     is_dir=is_dir,
-                    name_lower=(info.get_display_name() or name).lower(),
+                    name_lower=display_name.lower(),
+                    sort_key=GLib.utf8_collate_key_for_filename(display_name, -1),
+                    sort_last=display_name[:1] in (".", "#"),
                     name=name,
-                    display_name=info.get_display_name() or name,
+                    display_name=display_name,
                     icon=_resolve_custom_gicon(info) or info.get_icon(),
                     content_type=info.get_content_type(),
                     is_hidden=is_hidden,
