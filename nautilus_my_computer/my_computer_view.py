@@ -1113,11 +1113,21 @@ def _on_slot_stack_child_changed(stack, _pspec, slot: Gtk.Widget) -> None:
     """Nautilus reasserts its own stack child on its own initiative (e.g.
     leaving global search, nautilus-window-slot.c:1045/1091). Reassert the
     panel if it is currently elected for this slot (mirrors Column View's
-    _on_slot_stack_child_changed, issue #118)."""
+    _on_slot_stack_child_changed, issue #118).
+
+    Also requires common.slot_view_owner(slot) == "computer": Column View
+    (column_view.py) shares this same stack and has its own reassert handler
+    with its own local elected flag, which can be stale relative to this
+    one. Without the shared owner token both handlers could reassert against
+    each other with no termination condition (issue #137)."""
     if getattr(slot, "_mc_computer_reasserting", False):
         return
     state = getattr(slot, "_mc_computer", None)
-    if state is None or state.get("visible_view") != VIEW_DISKINFO:
+    if (
+        state is None
+        or state.get("visible_view") != VIEW_DISKINFO
+        or common.slot_view_owner(slot) != "computer"
+    ):
         return
     panel = state["panel"]
     if stack.get_visible_child() is panel:
@@ -1229,6 +1239,13 @@ def _enter_panel(ext, win: Gtk.Window, slot: Gtk.Widget) -> None:
     stack = state["panel"].get_parent()
     if stack is None:
         return
+    # Release Column View's own state first if it currently owns this slot's
+    # stack -- otherwise its notify::visible-child reassert handler still
+    # trusts its own (now stale) elected flag and fights the
+    # set_visible_child below (issue #137's per-slot view-election arbiter).
+    # Must run before previous_child is captured, or it would capture the
+    # Column View widget itself instead of the native content beneath it.
+    ext._leave_column_view_for_slot(slot)
     state["previous_child"] = stack.get_visible_child()
     _populate_slot(ext, slot)
     # Cancel the covered native load before unmapping it (stack.set_visible_child
@@ -1241,6 +1258,7 @@ def _enter_panel(ext, win: Gtk.Window, slot: Gtk.Widget) -> None:
     # card, and _on_flow_selection_changed must not record that as a real
     # selection in the meantime (see _claim_panel_focus).
     state["_deselecting"] = True
+    common.set_slot_view_owner(slot, "computer")
     stack.set_visible_child(state["panel"])
     state["visible_view"] = VIEW_DISKINFO
     state["location_filter_owned"] = False
@@ -1257,6 +1275,7 @@ def _leave_panel(ext, win: Gtk.Window, slot: Gtk.Widget) -> None:
     # fires notify::visible-child synchronously, and _on_slot_stack_child_changed
     # reasserts the panel whenever it still reads VIEW_DISKINFO here.
     state["visible_view"] = VIEW_FILES
+    common.release_slot_view_owner(slot, "computer")
     state["filter_query"] = ""
     state["location_filter_owned"] = False
     if stack is not None and stack.get_visible_child() is state["panel"]:

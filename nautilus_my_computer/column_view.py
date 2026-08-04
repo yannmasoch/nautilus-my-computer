@@ -2131,12 +2131,18 @@ def enter_column_view(ext, win: Gtk.Window, root_uri: str) -> None:
         return
     host = view._mc_column_host
     _log(f"enter_column_view: root_uri={root_uri!r}")
+    # Release the Computer panel's own state first if it currently owns this
+    # slot's stack -- otherwise its notify::visible-child reassert handler
+    # still trusts its own (now stale) elected flag and fights the
+    # set_visible_child below (issue #137's per-slot view-election arbiter).
+    ext._leave_computer_panel_for_slot(win, slot)
     host.sync_to_uri(root_uri)
     stack = view.get_parent()
     current_child = stack.get_visible_child()
     if current_child is not view:
         slot._mc_column_previous_child = current_child
     slot._mc_column_elected = True
+    common.set_slot_view_owner(slot, "column")
     stack.set_visible_child(view)
     host.set_native_cut_observer_active(True)
     populate_column_view(ext, win)
@@ -2153,6 +2159,7 @@ def leave_column_view(slot: Gtk.Widget) -> None:
         return
     stack = view.get_parent()
     slot._mc_column_elected = False
+    common.release_slot_view_owner(slot, "column")
     host = getattr(view, "_mc_column_host", None)
     if host is not None:
         host.set_native_cut_observer_active(False)
@@ -2290,10 +2297,17 @@ def _on_slot_stack_child_changed(stack, _pspec, slot: Gtk.Widget) -> None:
     """Nautilus reasserts its own stack child on its own initiative (e.g.
     leaving global search, nautilus-window-slot.c:1045/1091). Reassert
     Column View if the user elected it for this slot and it hasn't been
-    explicitly left (see enter_column_view/leave_column_view)."""
+    explicitly left (see enter_column_view/leave_column_view).
+
+    Also requires slot_view_owner(slot) == "column": the Computer panel
+    (my_computer_view.py) shares this same stack and has its own reassert
+    handler with its own local elected flag, which can be stale relative to
+    this one (e.g. mid-navigation, before its own notify::location handler
+    has run). Without the shared owner token both handlers could reassert
+    against each other with no termination condition (issue #137)."""
     if getattr(slot, "_mc_reasserting", False):
         return
-    if not getattr(slot, "_mc_column_elected", False):
+    if not getattr(slot, "_mc_column_elected", False) or common.slot_view_owner(slot) != "column":
         return
     view = slot._mc_column_view
     if stack.get_visible_child() is view:
@@ -2323,11 +2337,13 @@ def _maybe_auto_elect_column_view(ext, win: Gtk.Window, slot: Gtk.Widget) -> Non
         # Background tab: elect the stack child directly, without
         # populate_column_view()/enter_column_view() -- both resolve the
         # *active* slot internally and would act on (and focus) the wrong tab.
+        ext._leave_computer_panel_for_slot(win, slot)
         view = slot._mc_column_view
         stack = view.get_parent()
         if stack.get_visible_child() is not view:
             slot._mc_column_previous_child = stack.get_visible_child()
         slot._mc_column_elected = True
+        common.set_slot_view_owner(slot, "column")
         stack.set_visible_child(view)
         view._mc_column_host.set_native_cut_observer_active(True)
     if ext._stop_hidden_native_slot(win, slot):

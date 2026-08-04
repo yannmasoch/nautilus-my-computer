@@ -42,6 +42,7 @@ from nautilus_my_computer.common import (
     _native,
     _pin_icon,
     _resolve_gtype,
+    slot_view_owner,
 )
 from nautilus_my_computer.context_menu import (
     ContextMenu,
@@ -1249,6 +1250,22 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         if _is_file_chooser_window(win):
             return False
         return slot.activate_action("slot.stop", None)
+
+    def _leave_computer_panel_for_slot(self, win: Gtk.Window, slot: Gtk.Widget) -> None:
+        """Bridge for column_view.py: release the Computer panel's own state
+        on `slot` before Column View claims the shared per-slot GtkStack.
+        column_view.py may not import my_computer_view.py directly (CLAUDE.md
+        target-module isolation), so this thin delegate is the only path
+        between them (issue #137's per-slot view-election arbiter)."""
+        if slot_view_owner(slot) == "computer" and getattr(slot, "_mc_computer", None) is not None:
+            my_computer_view._leave_panel(self, win, slot)
+
+    def _leave_column_view_for_slot(self, slot: Gtk.Widget) -> None:
+        """Bridge for my_computer_view.py: release Column View's own state
+        on `slot` before the Computer panel claims the shared per-slot
+        GtkStack (issue #137's per-slot view-election arbiter)."""
+        if slot_view_owner(slot) == "column":
+            column_view.leave_column_view(slot)
 
     def _reload_native_slot_after_column(self, win: Gtk.Window, slot: Gtk.Widget) -> bool:
         """Reload a native model that Column View previously stopped for `slot`.

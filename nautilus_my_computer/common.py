@@ -352,6 +352,30 @@ def _log(msg: str) -> None:
         print(f"{DEBUG_LOG_PREFIX}: {msg}", flush=True)
 
 
+def slot_view_owner(slot) -> str | None:
+    """Which per-slot view target ("column" or "computer") currently owns
+    the slot's shared GtkStack -- the arbiter both column_view.py and
+    my_computer_view.py consult before touching that stack. Without it, a
+    navigation that makes both targets want the same slot at once can drive
+    their independent notify::visible-child reassert handlers into fighting
+    each other forever (issue #137): each handler used to trust only its own
+    module-local "elected" flag, which can be stale relative to the other
+    module's, so both kept reasserting against each other with no
+    termination condition."""
+    return getattr(slot, "_mc_view_owner", None)
+
+
+def set_slot_view_owner(slot, owner: str) -> None:
+    slot._mc_view_owner = owner
+
+
+def release_slot_view_owner(slot, owner: str) -> None:
+    """Clear the owner token only if `owner` is still the current holder --
+    a stale/late release must never clobber a newer claim."""
+    if getattr(slot, "_mc_view_owner", None) == owner:
+        slot._mc_view_owner = None
+
+
 def _all_widgets(widget):
     """Depth-first walk of widget and every descendant (widget itself first)."""
     if not widget:
