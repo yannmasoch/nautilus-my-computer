@@ -1,3 +1,17 @@
+nautilus-my-computer (0.13.1-1) UNRELEASED; urgency=medium
+
+  * Fix a critical bug where navigating to or away from Column View could pin a CPU core and freeze Nautilus
+  * Column View now respects the "Sort folders before files" preference
+  * Column View's Type sort now groups files by their actual type instead of sorting alphabetically
+  * Fix Column View sorting to order filenames the same way Nautilus does (numbered files, dotfiles)
+  * Column View's Size sort now puts folders before files, matching Nautilus
+  * Column View's time-based sorts now break ties consistently; fix the Accessed Time sort option
+  * Fix backup files not being hidden in Column View when "Show Hidden Files" is off
+  * Packaging publishing (AUR, COPR, PPA) now waits for the GitHub release to finish before running
+  * Many menu and panel labels now use the exact same wording as the rest of your desktop, translated in far more languages
+
+ -- Yann Masoch <231734284+yannmasoch@users.noreply.github.com>  Tue, 04 Aug 2026 13:44:13 -0700
+
 nautilus-my-computer (0.13.0-1) UNRELEASED; urgency=medium
 
   * Remember the last-picked view (Grid, List, or Column) instead of always resetting to the file view

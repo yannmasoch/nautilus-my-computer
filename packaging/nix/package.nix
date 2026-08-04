@@ -22,7 +22,7 @@
 stdenv.mkDerivation {
   pname = "nautilus-my-computer";
   # Keep in sync with pyproject.toml, the Fedora spec and the Arch PKGBUILD.
-  version = "0.13.0";
+  version = "0.13.1";
 
   inherit src;
 
