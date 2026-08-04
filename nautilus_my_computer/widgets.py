@@ -1396,7 +1396,6 @@ class _ColumnEntry:
     folder's on-disk byte size."""
 
     is_dir: bool
-    name_lower: str
     sort_key: str
     sort_last: bool
     name: str
@@ -1469,61 +1468,29 @@ def _type_key(e: _ColumnEntry) -> tuple:
     return (1, _basic_type_string(e.content_type), e.content_type or "", *_name_tiebreak(e))
 
 
-# Sort criteria whose bucket order is PINNED regardless of reverse -- only
-# the within-bucket magnitude flips. Confirmed for "size": Python's
-# reverse=True flips the whole key uniformly (bucket order included, same
-# mechanism confirmed for name sort), but a live test showed files/folders
-# swapping places under reverse=True, which is wrong -- files must always
-# come before folders. Handled separately in _populate_rows via
-# _size_sort_key(reverse), not through _SORT_KEY_BUILDERS + reverse=.
-_FIXED_BUCKET_CRITERIA = {"size"}
+def _size_key(e: _ColumnEntry) -> tuple:
+    # compare_by_size: directories always first (compared by item count),
+    # files after (compared by byte size) -- baked into the criterion
+    # itself, unconditional on the "Sort Folders Before Files" pref, same as
+    # type. Because this bucketing is part of the criterion's own result
+    # (not a separately-pinned pass), reverse= DOES flip it, same as native:
+    # "if (reversed) result = -result;" negates the whole per-criterion
+    # result, dir/file split included -- there is no fixed-bucket exception
+    # here despite what an earlier version of this code assumed.
+    return (0 if e.is_dir else 1, e.size, *_name_tiebreak(e))
 
 
-def _size_sort_key(reverse: bool):
-    # Ascending (small->big) is the unreversed default -- matches the live
-    # GVfs sort_reversed flag's actual polarity, tested against a real
-    # folder. The sign flips with reverse; e.is_dir (bucket order) never
-    # does, so files always sort before folders either way.
-    sign = -1 if reverse else 1
-    return lambda e: (e.is_dir, sign * e.size, e.name_lower)
-
-
-class _Reversed:
-    """Sortable wrapper that reverses `<` for one key component, without
-    reversing the whole tuple (see _size_sort_key_nautilus)."""
-
-    __slots__ = ("value",)
-
-    def __init__(self, value):
-        self.value = value
-
-    def __lt__(self, other: "_Reversed") -> bool:
-        return other.value < self.value
-
-    def __eq__(self, other: object) -> bool:
-        return isinstance(other, _Reversed) and self.value == other.value
-
-
-def _size_sort_key_nautilus(reverse: bool):
-    """NOT wired into _populate_rows -- kept dormant in case a user asks for
-    exact native parity. Real Nautilus ties same-size entries in *reverse*
-    alpha order (confirmed by direct observation, not a documented
-    intentional behavior -- reads as a bug in nautilus-file.c's
-    compare_by_size -> compare_by_full_path chain). Our own tiebreak
-    (_size_sort_key, forward alpha) is the one actually in use because it's
-    the more sensible behavior; this variant exists only for a fast switch
-    if that preference changes."""
-    sign = -1 if reverse else 1
-    return lambda e: (e.is_dir, sign * e.size, _Reversed(e.name_lower))
-
-
-# Each remaining sort criterion's confirmed bucket model, live-tested against
-# real Nautilus (see tmp/Memos/2026-07-08-2126-column-view-sorting.md).
-# Bucket membership is encoded as the leading element(s) of the key tuple, so
-# a single `entries.sort(key=..., reverse=reverse_flag)` reproduces both
-# directions correctly -- confirmed empirically for name sort that reversing
-# reverses the whole ordered list (bucket order included), not just the
-# within-bucket order. ("size" is the one exception -- see above.)
+# Each criterion's key, derived directly from nautilus_file_compare_for_sort
+# in nautilus-file.c. A plain `entries.sort(key=..., reverse=)` reproduces
+# native's "if (reversed) result = -result" exactly, because that negates
+# the *whole* per-criterion result, tiebreak and any criterion-local
+# bucketing (size/type's dir-first split) included -- which is also why the
+# separate "Sort Folders Before Files" pref, once wired in, has to be its
+# own post-pass in _populate_rows rather than living inside one of these
+# keys: unlike these, that pinned bucket is applied *before* reversed is
+# ever considered (nautilus_file_compare_for_sort_internal's
+# directories_first check returns its -1/+1 directly, never through the
+# reversed branch).
 _SORT_KEY_BUILDERS = {
     # compare_by_display_name IS the whole comparison for name sort: no
     # is-hidden bucket, only the sort-last (. or #) rule inside the tiebreak.
@@ -1535,6 +1502,7 @@ _SORT_KEY_BUILDERS = {
     "mtime": lambda e: (e.mtime, *_name_tiebreak(e)),
     "btime": lambda e: (e.btime, *_name_tiebreak(e)),
     "atime": lambda e: (e.atime, *_name_tiebreak(e)),
+    "size": _size_key,
     "type": _type_key,
 }
 
@@ -1810,7 +1778,6 @@ class MyComputerColumn(Gtk.ScrolledWindow):
             entries.append(
                 _ColumnEntry(
                     is_dir=is_dir,
-                    name_lower=display_name.lower(),
                     sort_key=GLib.utf8_collate_key_for_filename(display_name, -1),
                     sort_last=display_name[:1] in (".", "#"),
                     name=name,
@@ -1826,11 +1793,8 @@ class MyComputerColumn(Gtk.ScrolledWindow):
             )
 
         col, reverse = self._sort
-        if col in _FIXED_BUCKET_CRITERIA:
-            entries.sort(key=_size_sort_key(reverse))
-        else:
-            key_fn = _SORT_KEY_BUILDERS.get(col, _SORT_KEY_BUILDERS["name"])
-            entries.sort(key=key_fn, reverse=reverse)
+        key_fn = _SORT_KEY_BUILDERS.get(col, _SORT_KEY_BUILDERS["name"])
+        entries.sort(key=key_fn, reverse=reverse)
 
         base = Gio.File.new_for_uri(self.folder_uri)
         for entry in entries:
