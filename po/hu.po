@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-08-04 11:31-0700\n"
-"PO-Revision-Date: 2026-07-30 05:22+0000\n"
+"PO-Revision-Date: 2026-08-04 18:39+0000\n"
 "Last-Translator: Pelach András <pelach.andras@gmail.com>\n"
 "Language-Team: Hungarian\n"
 "Language: hu\n"
@@ -18,31 +18,32 @@ msgstr ""
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
-msgstr ""
+msgstr "Ikon cseréje"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Search icons…"
-msgstr ""
+msgstr "Ikon keresése…"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Reset"
-msgstr ""
+msgstr "Visszaállítás"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select"
-msgstr ""
+msgstr "Kiválaszt"
 
 #: nautilus_my_computer/column_view.py
 msgid "Beta"
-msgstr ""
+msgstr "Béta"
 
 #: nautilus_my_computer/column_view.py
 msgid "Early access feature. It may contain bugs or inconsistencies."
 msgstr ""
+"Korai hozzáférésű funkció. Hibákat vagy következetlenségeket tartalmazhat."
 
 #: nautilus_my_computer/column_view.py
 msgid "Column View"
-msgstr ""
+msgstr "Oszlop nézet"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
@@ -157,7 +158,7 @@ msgstr[1] "{n} év múlva"
 
 #: nautilus_my_computer/components.py
 msgid "Rename"
-msgstr ""
+msgstr "Átnevezés"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Tab"
@@ -173,45 +174,45 @@ msgstr "Megnyitás ezzel…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Remove from Bookmarks"
-msgstr ""
+msgstr "Eltávolítás a könyvjelzőkből"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Add to Bookmarks"
-msgstr ""
+msgstr "Hozzáadás a könyvjelzőkhöz"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Unpin from My Computer"
-msgstr ""
+msgstr "Kitűzés eltvávolítása a Számítógépből"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Pin to My Computer"
-msgstr ""
+msgstr "Kitűzés a Számítógéphez"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
-msgstr ""
+msgstr "Új mappa…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Document"
-msgstr ""
+msgstr "Új dokumentum"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in Terminal"
-msgstr ""
+msgstr "Megnyitás terminálban"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Rename…"
-msgstr ""
+msgstr "Átnevezezés…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Compress…"
-msgstr ""
+msgstr "Csomagolás…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
-msgstr ""
+msgstr "Áthelyezés a Kukába"
 
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
@@ -223,11 +224,11 @@ msgstr "Számítógép nyitása"
 
 #: nautilus_my_computer/main.py
 msgid "Recommended Apps"
-msgstr ""
+msgstr "Ajánlott Appok"
 
 #: nautilus_my_computer/main.py
 msgid "Other Apps"
-msgstr ""
+msgstr "Egyéb Appok"
 
 #: nautilus_my_computer/main.py
 msgid "General"
@@ -438,4 +439,4 @@ msgstr ""
 
 #: nautilus_my_computer/widgets.py
 msgid "Dimensions"
-msgstr ""
+msgstr "Dimenziók"
