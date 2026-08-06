@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: My Computer for Nautilus 0.12.6\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-08-04 11:31-0700\n"
-"PO-Revision-Date: 2026-07-30 16:05+0000\n"
+"PO-Revision-Date: 2026-08-06 17:34+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: none\n"
 "Language: et\n"
@@ -183,12 +183,12 @@ msgstr "Lisa järjehoidjaks"
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Unpin from My Computer"
-msgstr ""
+msgstr "Lõpeta minu arvutis esiletõstmine"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Pin to My Computer"
-msgstr ""
+msgstr "Tõsta minu arvutis esile"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
@@ -423,9 +423,8 @@ msgid "Calendar"
 msgstr ""
 
 #: nautilus_my_computer/widgets.py
-#, fuzzy
 msgid "Document"
-msgstr "Uus dokument"
+msgstr "Dokument"
 
 #: nautilus_my_computer/widgets.py
 msgid "Presentation"
