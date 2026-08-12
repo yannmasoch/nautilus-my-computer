@@ -34,14 +34,19 @@ from nautilus_my_computer import (
     preferred_folders,
 )
 from nautilus_my_computer.common import (
+    ACTION_OPEN_LOCATION,
     _,
+    _action_names_for_version,
     _all_widgets,
+    _detect_nautilus_version,
     _find_widget,
     _icon_name_renders,
     _log,
     _native,
+    _nautilus_version,
     _pin_icon,
     _resolve_gtype,
+    _slot_action,
     slot_view_owner,
 )
 from nautilus_my_computer.context_menu import (
@@ -131,6 +136,7 @@ _REFRESH_DEBOUNCE_MS = 300  # coalesce rapid mount/unmount/plug events
 _WIN_INIT_RETRY_MS = 20  # retry interval while waiting for NautilusWindow widget tree
 _WIN_INIT_MAX_ATTEMPTS = 100  # ~2 s budget waiting for the first view load to settle
 _NAV_RETRY_MS = 60  # retry interval while navigating to computer:///
+_NAV_RETRY_MAX_ATTEMPTS = 25  # 25 x 60 ms ~= 1.5 s budget, then stay on Home
 _TAB_WAIT_MS = 50  # retry interval while waiting for a new tab slot
 _USAGE_GATE_MS = 1000  # idle cadence: try a statvfs sweep this often, skip while disk is busy
 _USAGE_POLL_FAST_MS = 250  # fast cadence while writes are buffered (Dirty+Writeback elevated)
@@ -583,6 +589,10 @@ _LOCATION_ENTRY_KEYVALS = frozenset(
 class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def __init__(self):
         super().__init__()
+        # Detect the running Nautilus version exactly once, here, before any
+        # window exists. Every navigation call site reads the cached result
+        # via _nautilus_version() -- none of them re-detect or wait.
+        _detect_nautilus_version()
         # Maps each NautilusWindow to its per-window chrome state dict (sidebar
         # row, pathbar/sort watches, start_on_computer, native place hiding).
         # The Computer panel itself is per-slot state (slot._mc_computer, see
@@ -1721,6 +1731,10 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         GLib.idle_add(_fire_and_wait)
 
     def _do_open_window(self, mountpoint: str) -> None:
+        """Open mountpoint in a guaranteed new window. Shells out to Nautilus's
+        own CLI flag rather than an in-process action, so it needs no
+        Nautilus-version gating - "--new-window" has been stable since long
+        before the 46/47 open-location action migration."""
         subprocess.Popen(["nautilus", "--new-window", mountpoint])
 
     def _do_properties(self, nav_uri: str, win: Gtk.Window) -> None:
@@ -2047,45 +2061,49 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         else:
             pref_win.present(win)
 
-    def _navigate_to_disks(self, win: Gtk.Window) -> None:
-        """Navigate a window to computer:/// at startup, retrying until the slot
-        is ready. The slot often isn't navigable the instant the window settles
-        on Home, so a single open-location call silently no-ops; we retry on a
-        short bounded poll and stop as soon as the location actually changes
-        (the active slot's own per-slot handler shows the panel at that point,
-        see my_computer_view._on_slot_location_changed)."""
-        attempts = [0]
+    @staticmethod
+    def _activate_qualified_action(name: str, param: GLib.Variant | None, win: Gtk.Window) -> bool:
+        """Activate one fully qualified "prefix.action" on the window's active
+        slot, falling back to the window itself. Prefers the active slot so a
+        background tab is never acted on instead of the visible one (issue #132);
+        the window's muxer carries both its own "win" group and the active
+        slot's "slot" group (inserted by nautilus_window_slot_set_active).
 
-        def _try() -> bool:
-            if win not in self._windows:
-                return GLib.SOURCE_REMOVE
-            if my_computer_view._window_is_at_disks(win):
-                return GLib.SOURCE_REMOVE
-            attempts[0] += 1
-            if attempts[0] > 25:  # ~1.5 s budget, then give up
-                return GLib.SOURCE_REMOVE
-            self._navigate_to(DISKS_URI, win)
-            return GLib.SOURCE_CONTINUE
+        Mechanism only, not a safety guarantee: it activates whatever name it is
+        given, including actions with side effects such as "win.new-tab".
+        Callers that need an in-place guarantee must pass only open-location
+        names.
 
-        GLib.timeout_add(_NAV_RETRY_MS, _try)
-
-    def _navigate_to(self, uri: str, win: Gtk.Window) -> bool:
-        # Target the active slot directly rather than walking every "Slot"
-        # widget in the window: with 2+ tabs open, a blind walk can hand the
-        # action to a background tab's slot first, silently navigating the
-        # wrong tab while the visible one looks frozen (issue #132).
-        slot = _active_slot(win)
-        if slot is not None:
+        Returns True if Nautilus accepted the action; the effect may still land
+        asynchronously."""
+        for target in (_active_slot(win), win):
+            if target is None:
+                continue
             try:
-                if slot.activate_action("open-location", GLib.Variant("s", uri)):
-                    return False
+                if target.activate_action(name, param):
+                    return True
             except Exception:
                 pass
-        try:
-            if win.activate_action("slot.open-location", GLib.Variant("s", uri)):
-                return False
-        except Exception:
-            pass
+        return False
+
+    def _navigate_current_in_place(self, uri: str, win: Gtk.Window) -> bool:
+        """Navigate the window's current tab to uri. Never opens a window or a
+        tab. Tries the open-location name for the running Nautilus first, the
+        other as a fallback. Returns False if neither resolved."""
+        param = GLib.Variant("s", uri)
+        for name in _action_names_for_version(ACTION_OPEN_LOCATION, _nautilus_version()):
+            if self._activate_qualified_action(name, param, win):
+                return True
+        return False
+
+    def _show_folder_via_file_manager(self, uri: str) -> None:
+        """Ask the file manager to show uri over the freedesktop D-Bus interface.
+        Placement is NOT guaranteed: ShowFolders reuses
+        gtk_application_get_active_window() when there is one and creates a new
+        window when there is not (nautilus_application_open_location_full,
+        flags == 0). Only ever call this from a deliberate user action - never
+        from automatic navigation, where an unexpected window is a defect
+        rather than a recoverable miss."""
 
         def _on_proxy(_, result):
             try:
@@ -2111,6 +2129,85 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             None,
             _on_proxy,
         )
+
+    def _navigate_to_disks(self, win: Gtk.Window) -> None:
+        """Navigate a window to computer:/// at startup, in place, retrying
+        until the slot is ready. Never opens a window: this passes only
+        open-location names to _activate_qualified_action and never calls a
+        function containing the D-Bus code. If every attempt fails the window
+        stays on Home, which is the correct automatic outcome - a second window
+        is only ever acceptable from a deliberate user action.
+
+        version is read once, here, from the cache _detect_nautilus_version()
+        populated at extension startup (MyComputerExtension.__init__) - this
+        never re-detects or waits, so it is exactly the version the extension
+        found the one time it checked, not a per-navigation re-check.
+
+          >= 47     "slot.open-location" every tick; "win.open-location" also
+                    tried on the final tick.
+          <= 46     nothing until the final tick, then "win.open-location"
+                    followed by "slot.open-location". The legacy action
+                    succeeds on its first try, but navigating that early raced
+                    Nautilus's allocation pass and tripped
+                    gtk_widget_ensure_allocate_on_children (~1 in 14 launches
+                    on Zorin OS 18.1). Deferring to the settled tick is the
+                    mitigation, verified on Zorin.
+          unknown   treated as modern, so both names still get tried on the
+                    final tick.
+        """
+        version = _nautilus_version()
+        is_legacy = version is not None and version[0] <= 46
+        attempts = [0]
+
+        def _try() -> bool:
+            if win not in self._windows:
+                return GLib.SOURCE_REMOVE
+            if my_computer_view._window_is_at_disks(win):
+                return GLib.SOURCE_REMOVE
+
+            attempts[0] += 1
+            final = attempts[0] >= _NAV_RETRY_MAX_ATTEMPTS
+
+            if final:
+                # Settled: preferred name for this version, then the other.
+                # This is the only tick the legacy action may run on.
+                names = _action_names_for_version(ACTION_OPEN_LOCATION, version)
+            elif not is_legacy:
+                names = (_slot_action(ACTION_OPEN_LOCATION),)
+            else:
+                names = ()
+
+            param = GLib.Variant("s", DISKS_URI)
+            # any() short-circuits: the second name is only tried if the first
+            # was not accepted.
+            activated = any(self._activate_qualified_action(n, param, win) for n in names)
+
+            if final:
+                # Do not wait for a 26th tick to confirm. activate_action()
+                # returning True means Nautilus accepted the action, but the
+                # location change can land asynchronously after this tick;
+                # treating acceptance as success avoids logging a false
+                # failure for navigation still in flight.
+                if not activated:
+                    _log(
+                        f"_navigate_to_disks: no in-place navigation after "
+                        f"{attempts[0]} attempts (nautilus {version}), staying on Home"
+                    )
+                return GLib.SOURCE_REMOVE
+            return GLib.SOURCE_CONTINUE
+
+        GLib.timeout_add(_NAV_RETRY_MS, _try)
+
+    def _navigate_to(self, uri: str, win: Gtk.Window) -> bool:
+        """Go to uri in the current window, from a deliberate user action
+        (Computer sidebar row, a card, a menu item). In place if possible,
+        otherwise handed to the file manager, which may open a window -
+        acceptable because the user asked to go somewhere. Returns False so it
+        can be used directly as a GLib.idle_add callback."""
+        if self._navigate_current_in_place(uri, win):
+            return False
+        _log(f"_navigate_to: no in-place action (nautilus {_nautilus_version()}), D-Bus for {uri}")
+        self._show_folder_via_file_manager(uri)
         return False
 
     # ── Chrome icon fix (path bar chip) ─────────────────────────────────────
