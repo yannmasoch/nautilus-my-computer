@@ -941,13 +941,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             uri = steps[idx[0]]
             idx[0] += 1
             _log(f"SELFTEST step -> {uri}")
-            for w in _all_widgets(win):
-                if "Slot" in type(w).__name__:
-                    try:
-                        if w.activate_action("open-location", GLib.Variant("s", uri)):
-                            break
-                    except Exception:
-                        pass
+            self._navigate_current_in_place(uri, win)
             return GLib.SOURCE_CONTINUE
 
         GLib.timeout_add(2500, step)
