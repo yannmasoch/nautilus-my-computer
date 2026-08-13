@@ -537,6 +537,7 @@ class _ColumnViewHost:
         for row in _column.rows():
             click = Gtk.GestureClick(button=0)
             click.connect("pressed", self._on_row_pressed, _column, row)
+            click.connect("released", self._on_row_released, _column, row)
             row.add_controller(click)
         self._set_cut_rows()
 
@@ -710,18 +711,87 @@ class _ColumnViewHost:
             self._on_row_right_clicked(gesture, n_press, x, y, column, row)
             return
 
-        # Every other button, primary above all, belongs to Gtk.ListBox's own
-        # gesture (row-activated drives Miller navigation). Deny rather than
-        # just return: a GtkGestureSingle with button=0 tracks the first
-        # button pressed and ignores the rest until that sequence ends, and
-        # primary activation rebuilds the paned chain (_rebuild_chain), which
-        # can swallow the matching release. An undenied sequence would then
-        # linger and make the gesture drop the next secondary/middle press --
-        # the menu-needs-two-clicks symptom. DENIED resets it at once and
-        # leaves the event free to propagate. Native has no equivalent branch
-        # because its cell gesture handles primary itself
-        # (nautilus-list-base.c on_item_click_released).
+        if button == Gdk.BUTTON_PRIMARY:
+            # #161: primary is driven end to end by _on_row_pressed/
+            # _on_row_released ourselves, same pattern as the Computer view
+            # cards, rather than left to Gtk.ListBox's own competing gesture.
+            #
+            # Deliberately left UNCLAIMED here, and not denied either. Claiming
+            # on press would deny every other still-recognizing gesture up the
+            # propagation chain -- including the enclosing Gtk.ScrolledWindow's
+            # own scroll gestures (policy AUTOMATIC, see _build_scroller), so a
+            # touch/kinetic drag starting on a row would no longer scroll the
+            # column. Dispatch happens on release instead, matching GtkListBox's
+            # own native release-only commit timing (gtklistbox.c
+            # gtk_list_box_click_gesture_released).
+            #
+            # The lingering-sequence hazard the DENIED branch below guards
+            # against does not apply: whenever the sequence does end in a
+            # primary release, _on_row_released sets the state explicitly
+            # either way (CLAIMED when the release is a real click on this row,
+            # DENIED otherwise). A sequence cancelled before that point emits
+            # "cancel" rather than "released", but GTK resolves it itself, so
+            # either way nothing is left pending into the next press.
+            return
+
+        # Any remaining button belongs to Gtk.ListBox's own gesture. Deny
+        # rather than just return: a GtkGestureSingle with button=0 tracks the
+        # first button pressed and ignores the rest until that sequence ends,
+        # and primary activation rebuilds the paned chain (_rebuild_chain),
+        # which can swallow the matching release. An undenied sequence would
+        # then linger and make the gesture drop the next secondary/middle
+        # press -- the menu-needs-two-clicks symptom. DENIED resets it at once
+        # and leaves the event free to propagate.
         gesture.set_state(Gtk.EventSequenceState.DENIED)
+
+    def _on_row_released(
+        self,
+        gesture: Gtk.GestureClick,
+        _n_press: int,
+        x: float,
+        y: float,
+        column: Gtk.Widget,
+        row: Gtk.Widget,
+    ) -> None:
+        """Primary-click release counterpart to _on_row_pressed (#161).
+
+        Press leaves the sequence unclaimed (so the enclosing ScrolledWindow
+        can still scroll); claiming here instead cancels Gtk.ListBox's own
+        gesture before its released handler runs, so activation happens once,
+        through us. Drives the same real behaviour click used to:
+        MyComputerColumn's own _on_row_activated_internal --
+        same-file-reopens-to-open, double-click-window, and drill-into-folder
+        dispatch -- which already applies the real native selection via
+        _sync_column_selections downstream, so no separate cosmetic state-flag
+        handling is needed here.
+
+        Two details mirror GtkListBox's own released handler rather than
+        simplifying past it:
+        - **Release must still be over the pressed row.** Native explicitly
+          re-checks (`box->active_row == gtk_list_box_get_row_at_y(box, y)`)
+          before selecting or activating, so pressing one row and releasing
+          over another (or off the list) does nothing. Our controller is on
+          the row itself, so the equivalent test is a bounds check on the
+          row's own allocation.
+        - **Every press count dispatches, not just the first.**
+          `_on_row_activated_internal` detects repeat clicks by *timing*, not
+          `n_press`, precisely because a chain rebuild resets GTK's press-count
+          tracking mid-double-click (see MyComputerColumn's own
+          `_last_activated_uri` comment). A second release can therefore arrive
+          as either n_press 1 or 2 depending on whether the row survived, so
+          filtering on n_press would silently swallow the open-already-previewed-file
+          click in the cases where it does survive.
+        """
+        if gesture.get_current_button() != Gdk.BUTTON_PRIMARY:
+            return
+        if not (0 <= x < row.get_width() and 0 <= y < row.get_height()):
+            # Released off the row it was pressed on: not a click. Deny rather
+            # than just return, so the sequence ends now instead of lingering
+            # into the next press (see _on_row_pressed's DENIED branch).
+            gesture.set_state(Gtk.EventSequenceState.DENIED)
+            return
+        gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+        column._on_row_activated_internal(column.list_box, row)
 
     def _on_row_right_clicked(
         self,
