@@ -258,19 +258,6 @@ def _mc_date_to_str(unix_time: int) -> str:
     return relative
 
 
-def _is_activating_click(ext, n_press: int) -> bool:
-    """True if a Gtk.GestureClick "pressed" event (n_press) should activate,
-    given Nautilus' own click-policy setting (ext._nautilus_prefs.click_policy,
-    'single' or 'double').
-
-    Only needed for raw GestureClick wiring on plain widgets that have no
-    built-in "activate-on-single-click" (Gtk.FlowBox/Gtk.ListBox already expose
-    that as a widget property -- see widgets.py's flow.set_activate_on_single_click
-    calls, which don't need this helper)."""
-    single_click = ext._nautilus_prefs.click_policy == "single"
-    return (single_click and n_press == 1) or (not single_click and n_press == 2)
-
-
 def _gicon_renders(gicon) -> bool:
     """True if gicon is non-None and resolves in the current icon theme."""
     if gicon is None:
