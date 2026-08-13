@@ -62,7 +62,7 @@ from nautilus_my_computer.context_menu import (
 )
 from nautilus_my_computer.preferred_folders import PreferredFolder
 from nautilus_my_computer.widgets import (
-    MyComputerCardSection,
+    MyComputerCardGroup,
     MyComputerDiskCard,
     MyComputerFolderCard,
 )
@@ -1463,7 +1463,7 @@ def _poll_sort(ext) -> bool:
 
 def apply_card_filter(ext, win: Gtk.Window, query: str) -> None:
     """Forward `query` to every section's own filter (see
-    MyComputerCardSection.set_query in widgets.py -- each group filters its
+    MyComputerCardGroup.set_query in widgets.py -- each group filters its
     own cards and self-hides when empty). Stored on state so _populate()
     re-applies it after a live refresh or a navigate-away-and-back."""
     state = ext._active_panel_state(win)
@@ -1947,7 +1947,7 @@ def _populate_slot(ext, slot) -> None:
             _refresh_folder_captions_async(ext, pf)
         _sync_folder_rename_watchers(ext, folders)
         if folders:
-            section = MyComputerCardSection(
+            section = MyComputerCardGroup(
                 ext,
                 win,
                 _("Preferred Folders"),
@@ -2006,7 +2006,7 @@ def _populate_slot(ext, slot) -> None:
         if not render_items:
             continue
 
-        section = MyComputerCardSection(
+        section = MyComputerCardGroup(
             ext,
             win,
             group.label,

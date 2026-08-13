@@ -626,7 +626,7 @@ class MyComputerFolderCard(Gtk.Widget):
     def _build_list(self) -> None:
         """List-view compact cell: keep Preferred Folders multi-column (the
         section's FlowBox stays in grid layout -- see always_grid on its
-        MyComputerCardSection) while rendering each card as a compact
+        MyComputerCardGroup) while rendering each card as a compact
         horizontal icon+name row instead of the full icon-grid cell."""
         pf = self.model
         self.set_valign(Gtk.Align.FILL)
@@ -937,11 +937,11 @@ class MyComputerCappedGridFlowBox(Gtk.FlowBox):
         Gtk.FlowBox.do_size_allocate(self, width, height, baseline)
 
 
-class MyComputerCardSection(Gtk.Box):
+class MyComputerCardGroup(Gtk.Box):
     """A heading + FlowBox of cards. Dedups the section setup shared by the
     Preferred Folders block and each disk group in _populate()."""
 
-    __gtype_name__ = "MyComputerCardSection"
+    __gtype_name__ = "MyComputerCardGroup"
 
     def __init__(
         self,
