@@ -121,8 +121,12 @@ class MyComputerDiskCard(Gtk.Box):
         self.sub_label: Gtk.Label | None = None
 
         self.get_style_context().add_class("nautilus-view-cell")
-        self.set_focusable(True)
-        self.set_focus_on_click(True)
+        # Deliberately not set_focusable/set_focus_on_click (issue #161): a focusable inner
+        # widget lets gtk_flow_box_child_focus's backward-entry branch grab focus on this Box
+        # directly instead of the FlowBoxChild wrapper, so Shift+Tab landing fresh on this card
+        # would skip the wrapper's own selection/focus-visible state entirely
+        # (gtk_flow_box_child_set_focus never runs). Arrow-key nav is unaffected -- it goes
+        # through GtkFlowBox's own move-cursor handler, which always focuses the wrapper.
         self._build()
 
         # One gesture on all buttons, dispatched from "pressed", mirroring
