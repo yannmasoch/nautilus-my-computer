@@ -724,6 +724,9 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _on_card_pressed(self, gesture, n, x, y, win: Gtk.Window, card: Gtk.Box) -> None:
         my_computer_view._on_card_pressed(self, gesture, n, x, y, win, card)
 
+    def _on_card_released(self, gesture, n, x, y, win: Gtk.Window, card: Gtk.Box) -> None:
+        my_computer_view._on_card_released(self, gesture, n, x, y, win, card)
+
     # ── Initialisation ────────────────────────────────────────────────────────
 
     def _late_init(self) -> bool:

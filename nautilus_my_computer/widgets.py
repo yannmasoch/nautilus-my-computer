@@ -129,13 +129,15 @@ class MyComputerDiskCard(Gtk.Box):
         # through GtkFlowBox's own move-cursor handler, which always focuses the wrapper.
         self._build()
 
-        # One gesture on all buttons, dispatched from "pressed", mirroring
-        # nautilus-list-base.c:880-886 (on_item_click_pressed / button=0).
-        # Primary is left unclaimed -- activation stays on FlowBox's own
-        # child-activated binding (_on_card_activated).
+        # One gesture on all buttons, dispatched from "pressed"/"released",
+        # mirroring nautilus-list-base.c:880-886 (on_item_click_pressed /
+        # button=0). Primary is claimed and driven end to end by
+        # _on_card_pressed/_on_card_released (#161) rather than left to
+        # FlowBox's own competing click gesture.
         click = Gtk.GestureClick()
         click.set_button(0)
         click.connect("pressed", self._ext._on_card_pressed, self._win, self)
+        click.connect("released", self._ext._on_card_released, self._win, self)
         self.add_controller(click)
 
     @property
@@ -341,13 +343,15 @@ class MyComputerFolderCard(Gtk.Widget):
         # floats outside the FlowBox and is never a drop target. See
         # _build_drag_ghost / _build_reorder_placeholder.
         if interactive:
-            # One gesture on all buttons, dispatched from "pressed", mirroring
-            # nautilus-list-base.c:880-886 (on_item_click_pressed / button=0).
-            # Primary is left unclaimed -- activation stays on FlowBox's own
-            # child-activated binding (_on_card_activated).
+            # One gesture on all buttons, dispatched from "pressed"/"released",
+            # mirroring nautilus-list-base.c:880-886 (on_item_click_pressed /
+            # button=0). Primary is claimed and driven end to end by
+            # _on_card_pressed/_on_card_released (#161) rather than left to
+            # FlowBox's own competing click gesture.
             click = Gtk.GestureClick()
             click.set_button(0)
             click.connect("pressed", self._ext._on_card_pressed, self._win, self)
+            click.connect("released", self._ext._on_card_released, self._win, self)
             self.add_controller(click)
 
             self._wire_drag()
