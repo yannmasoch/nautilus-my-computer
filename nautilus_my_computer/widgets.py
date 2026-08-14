@@ -47,6 +47,11 @@ except (ValueError, ImportError):
 # at once.
 _ROW_THUMBNAIL_SEMAPHORE = threading.Semaphore(4)
 
+# Frames MyComputerColumn.with_selected_row waits for a scrolled-to row to
+# actually bind before giving up. Generous: the realize lands within a frame
+# or two of the scroll_to in practice, this is only the ceiling for a stall.
+_SELECTED_ROW_REALIZE_FRAMES = 30
+
 # Named pages of MyComputerPreviewColumn's stable preview surface.  The
 # contents of a page may evolve (for example, video can later become a real
 # player), but callers only select a semantic slot and never rebuild the UI.
@@ -102,7 +107,6 @@ from nautilus_my_computer.common import (
     _resolve_custom_gicon,
     _set_regular_icon,
 )
-from nautilus_my_computer.components import set_row_active, set_row_selected
 
 
 class MyComputerDiskCard(Gtk.Box):
@@ -1052,14 +1056,18 @@ class MyComputerCardGroup(Gtk.Box):
         self.set_visible(any_match)
 
 
-class MyComputerColumnRow(Gtk.ListBoxRow):
-    """One entry in a Column View column: icon, name, and a trailing chevron
-    for folders (visual affordance that activating the row opens a child
-    column). Holds the plain file attributes the column/orchestration layer
-    needs -- no MountInfo/PreferredFolder model, this is native filesystem
-    browsing, not a disk/folder-shortcut card."""
+class _ColumnRowItem(GObject.Object):
+    """One Gio.ListStore entry backing a Gtk.ListView row in a Miller column.
 
-    __gtype_name__ = "MyComputerColumnRow"
+    Plain mutable data, no GObject.Property machinery -- nothing binds to
+    these declaratively, MyComputerColumnRow.bind() just reads the attributes
+    directly on each recycle. ``is_cut`` is the one field mutated in place
+    after construction (see MyComputerColumn.apply_cut_uris): cut state must
+    survive scrolling an item out of and back into view, so it lives on the
+    model item, not on the transient row widget.
+    """
+
+    __gtype_name__ = "MyComputerColumnRowItem"
 
     def __init__(
         self,
@@ -1070,27 +1078,49 @@ class MyComputerColumnRow(Gtk.ListBoxRow):
         is_hidden: bool = False,
         content_type: str | None = None,
         mtime: int = 0,
-        cancellable: Gio.Cancellable | None = None,
     ) -> None:
         super().__init__()
         self.uri = uri
         self.display_name = display_name
         self.is_dir = is_dir
+        self.icon = gio_icon
+        self.is_hidden = is_hidden
         self.content_type = content_type
+        self.mtime = mtime
+        self.is_cut = False
+
+
+class MyComputerColumnRow(Gtk.Box):
+    """One recyclable Gtk.ListView row widget for a Column View column: icon,
+    name, and a trailing chevron for folders (visual affordance that
+    activating the row opens a child column).
+
+    Unlike the old Gtk.ListBoxRow version, one instance is reused across many
+    different _ColumnRowItem entries as the list scrolls (GTK's documented
+    ListView/GtkSignalListItemFactory recycling lifecycle) -- the static
+    widget tree is built once in __init__, and bind()/unbind() apply and tear
+    down per-item state (label text, icon, thumbnail request, cut styling) on
+    every recycle. ``self.item`` always reflects whichever entry this widget
+    instance currently represents, so external code reading row.uri/row.is_dir
+    at click time (column_view.py's press/release dispatch) sees live data
+    without needing to be re-wired on every bind.
+    """
+
+    __gtype_name__ = "MyComputerColumnRow"
+
+    def __init__(self) -> None:
+        super().__init__(orientation=Gtk.Orientation.HORIZONTAL, spacing=_COLUMN_ROW_SPACING)
+        self.item: _ColumnRowItem | None = None
         self._is_cut = False
+        self._thumb_cancellable: Gio.Cancellable | None = None
 
         # No manual margin here -- .navigation-sidebar > row already carries
         # its own native inset (padding: 0 9px, margin-top: 3px between rows;
         # see ~/Downloads/nautilus/src/resources/style.css and gtk.css). A box
         # margin on top of that native row padding double-inset the content.
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=_COLUMN_ROW_SPACING)
-        # box.get_style_context().add_class("nautilus-view-cell")
-        box.add_css_class("mc-column-row-content")
-        box.set_hexpand(True)
-        box.set_vexpand(True)
-        self.add_css_class("mc-column-row")
-
-        self._is_hidden = is_hidden
+        self.add_css_class("mc-column-row-content")
+        self.set_hexpand(True)
+        self.set_vexpand(True)
 
         # Fixed 24x24 slot: the icon column's stable footprint, so every row's
         # label starts at the same x regardless of what's drawn inside (themed
@@ -1111,30 +1141,12 @@ class MyComputerColumnRow(Gtk.ListBoxRow):
         icon = Gtk.Image()
         icon.set_halign(Gtk.Align.CENTER)
         icon.set_valign(Gtk.Align.CENTER)
-
-        # gio_icon is already the fully-resolved icon by the time it gets here (custom
-        # icon if the caller found one, else GIO's own real icon for the path -- see
-        # _populate_rows) -- _set_regular_icon (not a plain set_from_icon_name +
-        # set_pixel_size) forces the full-color variant: at this small 24px size GTK
-        # would otherwise auto-select a monochrome/symbolic-looking fixed-size theme
-        # variant on some themes. See common._set_regular_icon.
-        if _gicon_renders(gio_icon):
-            _set_regular_icon(icon, _COLUMN_ROW_ICON_SIZE, gicon=gio_icon)
-        else:
-            _set_regular_icon(
-                icon, _COLUMN_ROW_ICON_SIZE, icon_name=("folder" if is_dir else "text-x-generic")
-            )
-        # Same class/opacity Nautilus's own grid/list cells use to dim hidden
-        # entries (nautilus-grid-cell.c, nautilus-name-cell.c), applied only to
-        # the icon -- not the label or the whole row -- to match native exactly.
-        if is_hidden:
-            icon.add_css_class("hidden-file")
         self._icon = icon
 
         # Normal state has its own stable pages too: a themed icon is shown
         # immediately, then a completed thumbnail simply becomes the other
         # page. The async thumbnail path consequently never mutates the row's
-        # widget tree after construction.
+        # widget tree, only which stack page is visible.
         thumbnail = Gtk.Picture()
         thumbnail.set_hexpand(True)
         thumbnail.set_halign(Gtk.Align.CENTER)
@@ -1142,8 +1154,6 @@ class MyComputerColumnRow(Gtk.ListBoxRow):
         thumbnail.set_content_fit(Gtk.ContentFit.SCALE_DOWN)
         thumbnail.set_overflow(Gtk.Overflow.HIDDEN)
         thumbnail.add_css_class("mc-row-thumbnail")
-        if is_hidden:
-            thumbnail.add_css_class("hidden-file")
         self._thumbnail = thumbnail
 
         regular_stack = Gtk.Stack()
@@ -1183,20 +1193,10 @@ class MyComputerColumnRow(Gtk.ListBoxRow):
         icon_stack.add_named(icon_slot, "regular")
         icon_stack.add_named(cut_slot, "cut")
         icon_stack.set_visible_child_name("regular")
-        box.append(icon_stack)
+        self.append(icon_stack)
         self._icon_stack = icon_stack
 
-        # macOS Finder-style: files show a real image/document thumbnail
-        # instead of the generic icon when one is available. Same
-        # GnomeDesktop.DesktopThumbnailFactory engine as the preview column
-        # (see MyComputerPreviewColumn) -- a cached thumbnail is read inline
-        # (cheap, already-scaled file read), a miss is generated on a daemon
-        # thread and swapped in once ready, never on the main loop. Folders
-        # never go through this: their icon is already the real folder icon.
-        if not is_dir and content_type and _thumb_factory is not None and cancellable is not None:
-            self._load_row_thumbnail(content_type, mtime, cancellable)
-
-        name_lbl = Gtk.Label(label=display_name)
+        name_lbl = Gtk.Label()
         name_lbl.set_xalign(0.0)
         name_lbl.set_hexpand(True)
         name_lbl.set_ellipsize(Pango.EllipsizeMode.END)
@@ -1210,20 +1210,103 @@ class MyComputerColumnRow(Gtk.ListBoxRow):
         # + hexpand=True is the standard idiom: natural request shrinks to
         # near-zero, but it still fills the row via hexpand at allocation time.
         name_lbl.set_max_width_chars(1)
-        box.append(name_lbl)
+        self.append(name_lbl)
+        self._name_lbl = name_lbl
 
-        if is_dir:
-            chevron = Gtk.Image.new_from_icon_name("go-next-symbolic")
-            chevron.set_pixel_size(12)
-            chevron.get_style_context().add_class("dim-label")
-            box.append(chevron)
+        chevron = Gtk.Image.new_from_icon_name("go-next-symbolic")
+        chevron.set_pixel_size(12)
+        chevron.get_style_context().add_class("dim-label")
+        chevron.set_visible(False)
+        self.append(chevron)
+        self._chevron = chevron
 
-        self.set_child(box)
+    @property
+    def uri(self) -> str | None:
+        return self.item.uri if self.item is not None else None
+
+    @property
+    def is_dir(self) -> bool:
+        return bool(self.item is not None and self.item.is_dir)
+
+    @property
+    def display_name(self) -> str | None:
+        return self.item.display_name if self.item is not None else None
+
+    @property
+    def content_type(self) -> str | None:
+        return self.item.content_type if self.item is not None else None
+
+    def bind(self, item: _ColumnRowItem) -> None:
+        """Apply one model entry's data to this recycled widget instance.
+
+        A fresh per-bind Gio.Cancellable backs any thumbnail lookup this
+        bind starts, so a lookup/generation begun for a since-recycled item
+        can never land on the widget after it has been rebound to a
+        different one (see unbind()).
+        """
+        self.item = item
+        self._name_lbl.set_label(item.display_name)
+        self._chevron.set_visible(item.is_dir)
+
+        # gio_icon is already the fully-resolved icon by the time it gets
+        # here (custom icon if the caller found one, else GIO's own real icon
+        # for the path -- see MyComputerColumn._populate_rows) --
+        # _set_regular_icon (not a plain set_from_icon_name + set_pixel_size)
+        # forces the full-color variant: at this small 24px size GTK would
+        # otherwise auto-select a monochrome/symbolic-looking fixed-size
+        # theme variant on some themes. See common._set_regular_icon.
+        if _gicon_renders(item.icon):
+            _set_regular_icon(self._icon, _COLUMN_ROW_ICON_SIZE, gicon=item.icon)
+        else:
+            _set_regular_icon(
+                self._icon,
+                _COLUMN_ROW_ICON_SIZE,
+                icon_name=("folder" if item.is_dir else "text-x-generic"),
+            )
+        # Same class/opacity Nautilus's own grid/list cells use to dim hidden
+        # entries (nautilus-grid-cell.c, nautilus-name-cell.c), applied only
+        # to the icon/thumbnail -- not the label or the whole row -- to match
+        # native exactly.
+        self._icon.set_visible(True)
+        if item.is_hidden:
+            self._icon.add_css_class("hidden-file")
+            self._thumbnail.add_css_class("hidden-file")
+        else:
+            self._icon.remove_css_class("hidden-file")
+            self._thumbnail.remove_css_class("hidden-file")
+        self._thumbnail.set_paintable(None)
+        self._regular_stack.set_visible_child_name("icon")
+
+        self.set_cut(item.is_cut)
+
+        # macOS Finder-style: files show a real image/document thumbnail
+        # instead of the generic icon when one is available. Same
+        # GnomeDesktop.DesktopThumbnailFactory engine as the preview column
+        # (see MyComputerPreviewColumn) -- a cached thumbnail is read inline
+        # (cheap, already-scaled file read), a miss is generated on a daemon
+        # thread and swapped in once ready, never on the main loop. Folders
+        # never go through this: their icon is already the real folder icon.
+        if not item.is_dir and item.content_type and _thumb_factory is not None:
+            self._thumb_cancellable = Gio.Cancellable()
+            self._load_row_thumbnail(
+                item.uri, item.content_type, item.mtime, self._thumb_cancellable
+            )
+
+    def unbind(self) -> None:
+        """Release this widget's binding to its current item before GTK
+        recycles it for a different one. Cancelling the per-bind thumbnail
+        cancellable is what stops a stale async lookup/generation for the
+        outgoing item from ever calling back into this (now differently
+        bound) widget -- see bind()'s cancellable layering."""
+        if self._thumb_cancellable is not None:
+            self._thumb_cancellable.cancel()
+            self._thumb_cancellable = None
+        self.item = None
 
     def do_snapshot(self, snapshot: Gtk.Snapshot) -> None:
         """Draw the complete cut treatment in the padded row's bounds."""
         if not self._is_cut:
-            Gtk.ListBoxRow.do_snapshot(self, snapshot)
+            Gtk.Box.do_snapshot(self, snapshot)
             return
 
         width = float(self.get_width())
@@ -1232,7 +1315,7 @@ class MyComputerColumnRow(Gtk.ListBoxRow):
         # with the row surface instead of floating inside it.
         inset = 1.0
         if width <= inset * 2 or height <= inset * 2:
-            Gtk.ListBoxRow.do_snapshot(self, snapshot)
+            Gtk.Box.do_snapshot(self, snapshot)
             return
 
         bounds = Graphene.Rect()
@@ -1250,7 +1333,7 @@ class MyComputerColumnRow(Gtk.ListBoxRow):
         cr.fill()
         del cr
 
-        Gtk.ListBoxRow.do_snapshot(self, snapshot)
+        Gtk.Box.do_snapshot(self, snapshot)
 
         cr = snapshot.append_cairo(bounds)
         opacity = 0.5 if Adw.StyleManager.get_default().get_high_contrast() else 0.15
@@ -1317,10 +1400,10 @@ class MyComputerColumnRow(Gtk.ListBoxRow):
         return Gdk.Texture.new_for_pixbuf(pixbuf)
 
     def _load_row_thumbnail(
-        self, content_type: str, mtime: int, cancellable: Gio.Cancellable
+        self, uri: str, content_type: str, mtime: int, cancellable: Gio.Cancellable
     ) -> None:
         # Nautilus-style icon-then-thumbnail: the row already shows its plain
-        # icon (set just above, in __init__) the instant it's built. Both the
+        # icon (set just above, in bind()) the instant it's bound. Both the
         # cache lookup AND the fallback generation run entirely on a daemon
         # thread -- previously the lookup ran inline on the main thread during
         # row construction, and with many files in a folder that serial chain
@@ -1331,7 +1414,7 @@ class MyComputerColumnRow(Gtk.ListBoxRow):
         # finishes -- one by one, never blocking the others.
         threading.Thread(
             target=self._row_thumbnail_worker,
-            args=(self.uri, content_type, mtime, cancellable),
+            args=(uri, content_type, mtime, cancellable),
             daemon=True,
         ).start()
 
@@ -1531,6 +1614,8 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         on_row_activated,
         on_loaded=None,
         sort: tuple[str, bool] = ("name", False),
+        on_row_pressed=None,
+        on_row_released=None,
     ) -> None:
         super().__init__()
         self._ext = ext
@@ -1538,10 +1623,25 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         self._on_row_activated = on_row_activated
         self._on_loaded = on_loaded
         self._sort = sort
+        # Persistent per-row-widget GestureClick installed once, in the
+        # factory's "setup" (see _on_factory_setup): unlike the retired
+        # Gtk.ListBox version, a recycled ListView row widget is never
+        # revisited after load to attach a controller (column_view.py used to
+        # loop column.rows() in _on_column_loaded for exactly that -- gone
+        # now, since "loaded" is not the same event as "a widget exists").
+        # These callbacks receive (gesture, n_press, x, y, column, row), same
+        # signature _ColumnViewHost._on_row_pressed/_released already expect.
+        self._on_row_pressed = on_row_pressed
+        self._on_row_released = on_row_released
         self._cancellable = Gio.Cancellable()
         # Keyboard navigation is a cursor, not a change to the committed
-        # Gtk.ListBox selection. It is rendered with GTK's :active state so
-        # the selected path and the arrow-key target can coexist.
+        # selection. It is rendered with GTK's :active state so the selected
+        # path and the arrow-key target can coexist. Currently unreachable:
+        # arrow-key nav is gated off entirely by column_view.py's
+        # _COLUMN_KEYBOARD_NAV = False, so set_active_index() has no callers
+        # and this never actually gets set -- kept only so clear_active_row()
+        # (still called unconditionally from _sync_column_selections) stays a
+        # correct no-op rather than needing special-casing there.
         self._keyboard_active_row: MyComputerColumnRow | None = None
         # Manual repeat-click detection for opening the already-previewed file row
         # (see _on_row_activated_internal): a raw GestureClick on the row can't be
@@ -1569,41 +1669,153 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         self.set_overflow(Gtk.Overflow.HIDDEN)
         self.add_css_class("mc-column")
 
-        self.list_box = Gtk.ListBox()
+        # GListModel-backed, recycling row list (experimental replacement for
+        # the former Gtk.ListBox -- see issue #139: native Nautilus's own
+        # "lazy load based on what's visible" is an emergent property of this
+        # exact recycling mechanism, not an explicit visibility check). Rows
+        # no longer exist 1:1 with folder entries; only entries currently
+        # scrolled into view have a live MyComputerColumnRow widget at all
+        # (see _row_widgets, populated/depopulated from the factory's
+        # bind/unbind, GTK's documented GtkSignalListItemFactory lifecycle).
+        self._store: Gio.ListStore = Gio.ListStore(item_type=_ColumnRowItem)
+        self._selection = Gtk.SingleSelection(
+            model=self._store, autoselect=False, can_unselect=True
+        )
+        self._row_widgets: dict[int, MyComputerColumnRow] = {}
+
+        factory = Gtk.SignalListItemFactory()
+        factory.connect("setup", self._on_factory_setup)
+        factory.connect("bind", self._on_factory_bind)
+        factory.connect("unbind", self._on_factory_unbind)
+        factory.connect("teardown", self._on_factory_teardown)
+
+        self.list_view = Gtk.ListView(model=self._selection, factory=factory)
         # Same style class the native Nautilus sidebar (a Gtk.ListBox) carries:
         # gives rows the sidebar's rounded-corner selection shape and
-        # theme-aware hover highlight. Its native :selected fill is a neutral
+        # theme-aware hover highlight. GtkListView's per-item container uses
+        # the same "row" CSS node name as GtkListBox specifically for this
+        # kind of style compatibility. Its native :selected fill is a neutral
         # grey (sidebar convention, not accent) -- .mc-column-list below
-        # re-tints just the selected state to accent (see _CSS in main.py),
-        # keeping the sidebar's shape/hover but with content-view-style
+        # re-tints just the selected state to accent (see my_computer_view.py's
+        # _CSS), keeping the sidebar's shape/hover but with content-view-style
         # selection color, since this is a Miller *browsing* view, not a
         # places sidebar.
-        self.list_box.add_css_class("navigation-sidebar")
-        self.list_box.add_css_class("mc-column-list")
-        self.list_box.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self.list_view.add_css_class("navigation-sidebar")
+        self.list_view.add_css_class("mc-column-list")
         # Column view always activates on single click, regardless of the
         # Nautilus double-click setting (ext._nautilus_prefs.click_policy) that the cards use
         # -- Miller columns read naturally as single-click-to-drill-down. A
         # future Column View settings tab may make this configurable; for now
-        # it's fixed.
-        self.list_box.set_activate_on_single_click(True)
-        self.list_box.connect("row-activated", self._on_row_activated_internal)
+        # it's fixed. This is the keyboard-activation (Enter/Space) path;
+        # pointer clicks are dispatched manually by the per-row GestureClick
+        # installed in _on_factory_setup, same #161 press/release pattern the
+        # old Gtk.ListBox version used, ported onto the persistent recycled
+        # widget instead of a per-row post-load loop.
+        self.list_view.set_single_click_activate(True)
+        self.list_view.connect("activate", self._on_view_activated)
+
         # Matches Nautilus's own empty-folder state (nautilus-files-view.c
         # update_empty_view -- AdwStatusPage, "folder-symbolic" icon, "Folder
         # is Empty" title, no description). .compact keeps it readable at
-        # column width. Not installed as the GtkListBox placeholder yet --
-        # GtkListBox shows its placeholder natively the instant it has zero
-        # rows, which is true of every column for the whole async-enumerate
-        # window, so setting it up front flashes "Folder is Empty" before a
-        # non-empty folder's rows land. _populate_rows installs it only once
-        # loading has actually finished and the folder is confirmed empty.
+        # column width. Gtk.ListView has no built-in placeholder concept (that
+        # was GtkListBox-specific), so this simply *replaces* the scrolled
+        # window's child when the folder turns out to be empty (see
+        # _show_empty_page) -- only once loading has actually finished, so the
+        # whole async-enumerate window doesn't flash "Folder is Empty" first.
+        #
+        # Deliberately NOT a Gtk.Stack holding both: Gtk.Stack does not
+        # implement Gtk.Scrollable, so a Stack in this position makes
+        # Gtk.ScrolledWindow wrap it in an internal Gtk.Viewport and hand the
+        # ListView its full natural height instead of the viewport height.
+        # GtkListView virtualizes against its own allocation, so that
+        # allocation being the whole list's height means it realizes rows for
+        # (nearly) the entire folder -- measured at ~205 bound rows for both a
+        # 240-item and a 1001-item folder, i.e. no virtualization at all. The
+        # ListView has to be the ScrolledWindow's direct child for its
+        # adjustments to be driven by real scrolling.
         self._empty_page = Adw.StatusPage()
         self._empty_page.set_icon_name("folder-symbolic")
         self._empty_page.set_title(_native("Folder is Empty"))
         self._empty_page.add_css_class("compact")
-        self.set_child(self.list_box)
+
+        self.set_child(self.list_view)
 
         self._load()
+
+    def _show_empty_page(self, empty: bool) -> None:
+        """Swap the scrolled window's child between the row list and the
+        empty-folder status page. See the __init__ comment above for why this
+        is a child swap rather than a Gtk.Stack."""
+        wanted = self._empty_page if empty else self.list_view
+        if self.get_child() is not wanted:
+            self.set_child(wanted)
+
+    def _on_factory_setup(self, _factory, list_item: Gtk.ListItem) -> None:
+        row = MyComputerColumnRow()
+        list_item.set_child(row)
+        # GtkListView's internal per-item container runs its own
+        # Gtk.GestureClick that grabs keyboard focus unconditionally on press
+        # when focusable (same mechanism as GtkGridView's GtkListFactoryWidget
+        # -- see project memory project_gtk_state_flag_mechanics.md), which
+        # paints a premature focus-visible outline before our own release-time
+        # dispatch below ever runs. set_focusable(False) here is the
+        # documented fix, proxying straight through to that container.
+        list_item.set_focusable(False)
+
+        click = Gtk.GestureClick(button=0)
+        click.connect("pressed", self._on_row_widget_pressed, row)
+        click.connect("released", self._on_row_widget_released, row)
+        row.add_controller(click)
+
+    def _on_row_widget_pressed(
+        self,
+        gesture: Gtk.GestureClick,
+        n_press: int,
+        x: float,
+        y: float,
+        row: "MyComputerColumnRow",
+    ) -> None:
+        if self._on_row_pressed is not None and row.item is not None:
+            self._on_row_pressed(gesture, n_press, x, y, self, row)
+
+    def _on_row_widget_released(
+        self,
+        gesture: Gtk.GestureClick,
+        n_press: int,
+        x: float,
+        y: float,
+        row: "MyComputerColumnRow",
+    ) -> None:
+        if self._on_row_released is not None and row.item is not None:
+            self._on_row_released(gesture, n_press, x, y, self, row)
+
+    def _on_factory_bind(self, _factory, list_item: Gtk.ListItem) -> None:
+        item: _ColumnRowItem = list_item.get_item()
+        row: MyComputerColumnRow = list_item.get_child()
+        row.bind(item)
+        self._row_widgets[id(item)] = row
+
+    def _on_factory_unbind(self, _factory, list_item: Gtk.ListItem) -> None:
+        row: MyComputerColumnRow = list_item.get_child()
+        if row.item is not None:
+            self._row_widgets.pop(id(row.item), None)
+        row.unbind()
+
+    def _on_factory_teardown(self, _factory, list_item: Gtk.ListItem) -> None:
+        list_item.set_child(None)
+
+    def _on_view_activated(self, _list_view: Gtk.ListView, position: int) -> None:
+        """Keyboard (Enter/Space) activation path. Pointer single-clicks are
+        claimed and dispatched by the manual press/release controller in
+        _on_factory_setup instead (see that controller's docstring), so this
+        only ever fires from real keyboard activation on a focused row --
+        which by definition has a live, bound widget."""
+        item = self._store.get_item(position)
+        if item is None:
+            return
+        row = self._row_widgets.get(id(item))
+        if row is not None:
+            self._on_row_activated_internal(row)
 
     def set_sort(self, sort: tuple[str, bool, bool]) -> None:
         """Update this column's sort and reload. Always reloads regardless of
@@ -1621,12 +1833,8 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         self._cancellable.cancel()
         self._cancellable = Gio.Cancellable()
         self.clear_active_row()
-        self.list_box.set_placeholder(None)
-        child = self.list_box.get_first_child()
-        while child is not None:
-            next_child = child.get_next_sibling()
-            self.list_box.remove(child)
-            child = next_child
+        self._show_empty_page(False)
+        self._store.remove_all()
         self._load()
 
     def _load(self) -> None:
@@ -1813,118 +2021,145 @@ class MyComputerColumn(Gtk.ScrolledWindow):
             entries.sort(key=lambda e: not e.is_dir)
 
         base = Gio.File.new_for_uri(self.folder_uri)
-        for entry in entries:
-            child_uri = base.get_child(entry.name).get_uri()
-            row = MyComputerColumnRow(
-                child_uri,
+        items = [
+            _ColumnRowItem(
+                base.get_child(entry.name).get_uri(),
                 entry.display_name,
                 entry.is_dir,
                 entry.icon,
                 entry.is_hidden,
                 content_type=entry.content_type,
                 mtime=entry.mtime,
-                cancellable=self._cancellable,
             )
-            self.list_box.append(row)
-
-        if not entries:
-            self.list_box.set_placeholder(self._empty_page)
+            for entry in entries
+        ]
+        self._show_empty_page(not items)
+        if items:
+            self._store.splice(0, 0, items)
 
         if callable(self._on_loaded):
             self._on_loaded(self)
+
+    def _index_for_uri(self, uri: str) -> int | None:
+        norm = uri.rstrip("/")
+        for i in range(self._store.get_n_items()):
+            if self._store.get_item(i).uri.rstrip("/") == norm:
+                return i
+        return None
 
     def select_child_for_uri(self, uri: str) -> None:
         """Pre-select (highlight, without activating) the row whose child URI
         matches uri -- used to show which entry leads to the next column when
         seeding the view from the current location's ancestor chain."""
-        norm = uri.rstrip("/")
-        row = self.list_box.get_first_child()
-        while row is not None:
-            if isinstance(row, MyComputerColumnRow) and row.uri.rstrip("/") == norm:
-                set_row_selected(row, True)
-                return
-            row = row.get_next_sibling()
+        index = self._index_for_uri(uri)
+        if index is not None:
+            self._selection.select_item(index, True)
 
     def clear_selection(self) -> None:
         """Drop this column's own row selection -- used by column_view.py's
         _on_real_row_activated so only the row that led to the current
         column/preview stays highlighted, never an earlier column too."""
-        row = self.selected_row()
-        if row is not None:
-            set_row_selected(row, False)
-
-    def active_index(self) -> int | None:
-        """Return the arrow-key cursor's row index, if this column has one."""
-        active = self._keyboard_active_row
-        if active is None:
-            return None
-        for i, row in enumerate(self.rows()):
-            if row is active:
-                return i
-        self._keyboard_active_row = None
-        return None
-
-    def active_row(self) -> "MyComputerColumnRow | None":
-        """Return the temporary :active row used by arrow-key navigation."""
-        return self._keyboard_active_row
+        self._selection.unselect_all()
 
     def clear_active_row(self) -> None:
-        """Clear this column's temporary arrow-key cursor."""
-        if self._keyboard_active_row is not None:
-            set_row_active(self._keyboard_active_row, False)
-            self._keyboard_active_row = None
-
-    def set_active_index(self, index: int) -> None:
-        """Move the temporary :active cursor without changing :selected."""
-        rows = self.rows()
-        if not rows:
-            return
-        clamped = max(0, min(index, len(rows) - 1))
-        target = rows[clamped]
-        if target is self._keyboard_active_row:
-            return
-        self.clear_active_row()
-        set_row_active(target, True)
-        self._keyboard_active_row = target
+        """Clear this column's temporary arrow-key cursor. A no-op today:
+        arrow-key nav is gated off entirely by column_view.py's
+        _COLUMN_KEYBOARD_NAV = False, so self._keyboard_active_row is never
+        actually set -- kept only so _sync_column_selections's unconditional
+        call stays valid."""
+        self._keyboard_active_row = None
 
     def set_current_column(self, is_current: bool) -> None:
         """Mark whether this column is the one whose selected row should read
         as *the* accent-highlighted selection (see the .mc-current-column CSS
-        rule in main.py). Driven by column_view.py's own tracked
+        rule in my_computer_view.py). Driven by column_view.py's own tracked
         focused_index -- i.e. whichever column was last clicked (or, when
         arrow-key nav is enabled, last focused) -- rather than by actual GTK
         keyboard focus, so it works independent of any real focus-grabbing."""
         if is_current:
-            self.list_box.add_css_class("mc-current-column")
+            self.list_view.add_css_class("mc-current-column")
         else:
-            self.list_box.remove_css_class("mc-current-column")
+            self.list_view.remove_css_class("mc-current-column")
 
-    def rows(self) -> list["MyComputerColumnRow"]:
-        """This column's rows in display order -- the keyboard-cursor helpers
-        below index into this rather than tracking a separate list."""
-        result = []
-        row = self.list_box.get_first_child()
-        while row is not None:
-            if isinstance(row, MyComputerColumnRow):
-                result.append(row)
-            row = row.get_next_sibling()
-        return result
+    def apply_cut_uris(self, cut_uris: set[str]) -> None:
+        """Apply cut styling to every item whose uri is in cut_uris, and clear
+        it from every other item. Cut state lives on the model item (see
+        _ColumnRowItem.is_cut), not just the transient widget, so scrolling an
+        item back into view after it was cut off-screen still shows it cut;
+        any currently realized widget is also patched immediately via
+        _row_widgets so an on-screen row updates without waiting for a rebind."""
+        for i in range(self._store.get_n_items()):
+            item = self._store.get_item(i)
+            item.is_cut = item.uri in cut_uris
+            widget = self._row_widgets.get(id(item))
+            if widget is not None:
+                widget.set_cut(item.is_cut)
 
-    def selected_index(self) -> int | None:
-        """Index of the currently highlighted row, or None if none is
-        selected -- e.g. a freshly drilled-into column before any cursor
-        movement has happened in it."""
-        selected = self.list_box.get_selected_row()
-        if selected is None:
-            return None
-        for i, row in enumerate(self.rows()):
-            if row is selected:
-                return i
-        return None
+    def realized_rows(self) -> list["MyComputerColumnRow"]:
+        """Every row widget currently bound to a model item -- i.e. every
+        entry actually scrolled into view right now. Used only for
+        transient, purely-visual per-widget state (clearing a stray :active
+        flag left by a closed context menu, see column_view.py's
+        _clear_cut_rows) -- persistent state belongs on the model item
+        instead (see apply_cut_uris), since an off-screen entry has no live
+        widget at all under GtkListView's recycling."""
+        return list(self._row_widgets.values())
+
+    def selected_item(self) -> "_ColumnRowItem | None":
+        """The selected entry's model item, realized on screen or not.
+
+        This -- not selected_row() -- is what anything acting on the selected
+        *file* should read (trash, cut/copy, paste target): under
+        GtkListView's recycling an item scrolled out of view has no widget at
+        all, so a selection-driven shortcut keyed off the widget would
+        silently do nothing purely because the user had scrolled away."""
+        return self._selection.get_selected_item()
 
     def selected_row(self) -> "MyComputerColumnRow | None":
-        selected = self.list_box.get_selected_row()
-        return selected if isinstance(selected, MyComputerColumnRow) else None
+        """The currently selected row's widget, if it is realized (scrolled
+        into view) right now -- a selected item scrolled out of view has no
+        live widget, per GtkListView's recycling model. Prefer
+        selected_item() unless a real widget is genuinely required (only
+        Rename is, as a popover anchor -- see with_selected_row)."""
+        item = self._selection.get_selected_item()
+        if item is None:
+            return None
+        return self._row_widgets.get(id(item))
+
+    def with_selected_row(self, on_row_ready) -> bool:
+        """Hand the selected entry's row widget to on_row_ready, scrolling it
+        back into view first if recycling has left it unrealized.
+
+        Only Rename needs this: its popover has to anchor on a real widget.
+        Everything else selection-driven reads selected_item() instead. The
+        wait is a bounded tick callback rather than one GLib.idle_add because
+        the bind happens during the frame-clock layout that scroll_to
+        schedules, which a single default-priority idle can still beat."""
+        position = self._selection.get_selected()
+        if position == Gtk.INVALID_LIST_POSITION:
+            return False
+        item = self._store.get_item(position)
+        if item is None:
+            return False
+
+        row = self._row_widgets.get(id(item))
+        if row is not None:
+            on_row_ready(row)
+            return True
+
+        self.list_view.scroll_to(position, Gtk.ListScrollFlags.NONE, None)
+        state = {"ticks_left": _SELECTED_ROW_REALIZE_FRAMES}
+
+        def _deliver_on_tick(_widget, _frame_clock) -> bool:
+            widget = self._row_widgets.get(id(item))
+            if widget is not None:
+                on_row_ready(widget)
+                return GLib.SOURCE_REMOVE
+            state["ticks_left"] -= 1
+            return GLib.SOURCE_CONTINUE if state["ticks_left"] > 0 else GLib.SOURCE_REMOVE
+
+        self.list_view.add_tick_callback(_deliver_on_tick)
+        return True
 
     def scroll_position(self) -> float:
         """This column's own vertical scroll offset, read live off the
@@ -1933,12 +2168,9 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         return self.get_vadjustment().get_value()
 
     def grab_list_focus(self) -> bool:
-        return self.list_box.grab_focus()
+        return self.list_view.grab_focus()
 
-    def _on_row_activated_internal(self, _list_box: Gtk.ListBox, row: Gtk.ListBoxRow) -> None:
-        if not isinstance(row, MyComputerColumnRow):
-            return
-
+    def _on_row_activated_internal(self, row: "MyComputerColumnRow") -> None:
         # Miller browsing itself is always single-click, for every policy: one
         # click drills into a folder or previews a file, exactly like the
         # folder-column drill-down (set_activate_on_single_click above). Once a

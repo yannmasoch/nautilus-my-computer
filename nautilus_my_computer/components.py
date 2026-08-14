@@ -17,17 +17,6 @@ from gi.repository import Gio, GLib, Gtk
 from nautilus_my_computer.common import _, _log, _native
 
 
-def set_row_selected(row: Gtk.ListBoxRow, selected: bool) -> None:
-    """Select or unselect one row through its owning ``Gtk.ListBox``."""
-    list_box = row.get_parent()
-    if not isinstance(list_box, Gtk.ListBox):
-        return
-    if selected:
-        list_box.select_row(row)
-    else:
-        list_box.unselect_row(row)
-
-
 def set_row_active(row: Gtk.Widget, active: bool) -> None:
     """Apply or clear GTK's pressed-state styling on a row-like widget."""
     if active:

@@ -510,6 +510,8 @@ class _ColumnViewHost:
             self._on_real_row_activated,
             on_loaded=self._on_column_loaded,
             sort=self._sort,
+            on_row_pressed=self._on_row_pressed,
+            on_row_released=self._on_row_released,
         )
         right_click = Gtk.GestureClick(button=3)
         right_click.connect("pressed", self._on_column_background_right_clicked, column)
@@ -521,24 +523,25 @@ class _ColumnViewHost:
         populating its rows. _sync_column_selections runs synchronously right
         after a column is created (in _on_real_row_activated / sync_to_uri),
         before that async load has had any chance to complete -- for a brand
-        new column (list_box still empty at that point), select_child_for_uri
-        silently finds nothing to select. Re-apply now that the rows
-        actually exist, so the committed-path highlight (and which column
-        reads as "current", see _apply_focused_column_style) isn't lost for
-        a chain that got freshly rebuilt rather than reusing existing
-        columns."""
+        new column (its Gio.ListStore still empty at that point),
+        select_child_for_uri silently finds nothing to select. Re-apply now
+        that the rows actually exist, so the committed-path highlight (and
+        which column reads as "current", see _apply_focused_column_style)
+        isn't lost for a chain that got freshly rebuilt rather than reusing
+        existing columns.
+
+        Row press/release/right-click controllers are no longer installed
+        here: a GtkListView row widget is recycled across many different
+        folder entries as the list scrolls, so a per-row post-load loop like
+        this one used to run (column.rows()) can no longer reach "every
+        row" -- only whichever are currently realized. MyComputerColumn now
+        installs one persistent controller per *widget slot* itself, in its
+        GtkSignalListItemFactory's "setup" step (see widgets.py), wired
+        through the on_row_pressed/on_row_released callbacks passed into its
+        constructor above.
+        """
         self._sync_column_selections()
         self._apply_focused_column_style()
-
-        # Rows are recreated for every enumeration, so install their
-        # context-menu controllers only after this batch has populated.
-        # The menu itself is still built on demand below, keeping bookmark
-        # and Preferred Folder state current at the instant it opens.
-        for row in _column.rows():
-            click = Gtk.GestureClick(button=0)
-            click.connect("pressed", self._on_row_pressed, _column, row)
-            click.connect("released", self._on_row_released, _column, row)
-            row.add_controller(click)
         self._set_cut_rows()
 
     def _on_column_background_right_clicked(
@@ -791,7 +794,7 @@ class _ColumnViewHost:
             gesture.set_state(Gtk.EventSequenceState.DENIED)
             return
         gesture.set_state(Gtk.EventSequenceState.CLAIMED)
-        column._on_row_activated_internal(column.list_box, row)
+        column._on_row_activated_internal(row)
 
     def _on_row_right_clicked(
         self,
@@ -1044,16 +1047,15 @@ class _ColumnViewHost:
 
     def _set_cut_rows(self) -> None:
         """Apply persistent cut state to rows represented by our clipboard."""
+        cut_uris = set(self._clipboard_uris)
         for column in self.columns:
-            for row in column.rows():
-                if row.uri in self._clipboard_uris:
-                    row.set_cut(True)
+            column.apply_cut_uris(cut_uris)
 
     def _clear_cut_rows(self) -> None:
-        """Clear all visible Miller cut-row styling."""
+        """Clear all Miller cut-row styling."""
         for column in self.columns:
-            for row in column.rows():
-                row.set_cut(False)
+            column.apply_cut_uris(set())
+            for row in column.realized_rows():
                 components.set_row_active(row, False)
 
     def _clear_context_active_row(self, row: Gtk.Widget) -> None:
@@ -1183,41 +1185,51 @@ class _ColumnViewHost:
 
         dialog.select_folder(self._win, None, on_destination_selected, None)
 
+    # These four read the selected *model item* (column.selected_item()), not
+    # the selected row widget: under Gtk.ListView's recycling an item scrolled
+    # out of view has no widget at all, so keying a shortcut off the widget
+    # made it silently no-op whenever the user had scrolled away from their
+    # own selection. Rename is the one exception -- see below.
+
     def trash_focused_folder(self) -> bool:
         """Move the focused local Miller item to trash (the Delete target)."""
         column = self._focused_column()
-        row = column.selected_row() if column is not None else None
-        if row is None or not row.uri.startswith("file://"):
+        item = column.selected_item() if column is not None else None
+        if item is None or not item.uri.startswith("file://"):
             return False
-        self._move_to_trash(column, row.uri)
+        self._move_to_trash(column, item.uri)
         return True
 
     def copy_focused_folder_to_clipboard(self, *, cut: bool) -> bool:
         """Copy or cut the focused Miller item (the Ctrl+X/Ctrl+C targets)."""
         column = self._focused_column()
-        row = column.selected_row() if column is not None else None
-        if row is None:
+        item = column.selected_item() if column is not None else None
+        if item is None:
             return False
-        self._copy_to_clipboard(row.uri, cut=cut)
+        self._copy_to_clipboard(item.uri, cut=cut)
         return True
 
     def paste_into_focused_folder(self) -> bool:
         """Paste into the focused Miller folder (the Ctrl+V target)."""
         column = self._focused_column()
-        row = column.selected_row() if column is not None else None
-        if row is None or not row.is_dir or not self._clipboard_has_pasteable_files():
+        item = column.selected_item() if column is not None else None
+        if item is None or not item.is_dir or not self._clipboard_has_pasteable_files():
             return False
-        self._paste_into_folder(row.uri)
+        self._paste_into_folder(item.uri)
         return True
 
     def rename_focused_folder(self) -> bool:
-        """Open Rename for the focused local Miller item (the F2 target)."""
+        """Open Rename for the focused local Miller item (the F2 target).
+
+        Unlike the three above, Rename's popover has to anchor on a real row
+        widget, so it cannot run off the model item alone -- with_selected_row
+        scrolls the selection back into view first when recycling has left it
+        unrealized, then opens the popover once the row has actually bound."""
         column = self._focused_column()
-        row = column.selected_row() if column is not None else None
-        if row is None or not row.uri.startswith("file://"):
+        item = column.selected_item() if column is not None else None
+        if item is None or not item.uri.startswith("file://"):
             return False
-        self._show_rename_popover(column, row)
-        return True
+        return column.with_selected_row(lambda row: self._show_rename_popover(column, row))
 
     def _on_real_row_activated(self, column: Gtk.Widget, row: Gtk.Widget) -> None:
         # Single-click navigation. Activating a row always replaces the entire
@@ -1536,7 +1548,7 @@ class _ColumnViewHost:
         navigate its real (hidden-behind-our-overlay) slot. That navigation
         finishes asynchronously and, once it does, Nautilus's own GtkGridView
         for the new location grabs focus for itself -- stealing it from our
-        list_box a frame or more after our own grab_focus() already
+        list_view a frame or more after our own grab_focus() already
         succeeded. One-shot GLib.idle_add loses this race. Same class of
         problem as _queue_stale_generation_release's multi-frame wait
         elsewhere in this file: re-assert our grab every frame for a bounded
@@ -1551,7 +1563,7 @@ class _ColumnViewHost:
             state["ticks_left"] -= 1
             return GLib.SOURCE_CONTINUE if state["ticks_left"] > 0 else GLib.SOURCE_REMOVE
 
-        col.list_box.add_tick_callback(_retry_on_tick)
+        col.list_view.add_tick_callback(_retry_on_tick)
 
     def _make_preview_column(self) -> Gtk.Widget:
         # Starts empty (nothing selected yet); a fresh preview is built each
