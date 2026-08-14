@@ -1368,6 +1368,16 @@ class MyComputerColumnRow(Gtk.Box):
         cr.arc(left + radius, top + radius, radius, math.pi, math.pi * 1.5)
         cr.close_path()
 
+    def row_node(self) -> Gtk.Widget | None:
+        """The GTK-owned GtkListItemWidget wrapping this row -- the actual
+        CSS node named "row" that carries :selected/:hover/:active, since
+        under Gtk.ListView this Gtk.Box is only its content, not the row
+        itself (unlike the old Gtk.ListBoxRow subclass). Callers that need to
+        apply a state flag or CSS class the sidebar/:selected rules expect on
+        "row" (e.g. set_row_active for the right-click anchor) must target
+        this, not self."""
+        return self.get_parent()
+
     def set_cut(self, cut: bool) -> None:
         """Switch between the row-owned regular and cut visual pages."""
         if self._is_cut == cut:
@@ -1702,16 +1712,17 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         # places sidebar.
         self.list_view.add_css_class("navigation-sidebar")
         self.list_view.add_css_class("mc-column-list")
-        # Column view always activates on single click, regardless of the
-        # Nautilus double-click setting (ext._nautilus_prefs.click_policy) that the cards use
-        # -- Miller columns read naturally as single-click-to-drill-down. A
-        # future Column View settings tab may make this configurable; for now
-        # it's fixed. This is the keyboard-activation (Enter/Space) path;
-        # pointer clicks are dispatched manually by the per-row GestureClick
-        # installed in _on_factory_setup, same #161 press/release pattern the
-        # old Gtk.ListBox version used, ported onto the persistent recycled
-        # widget instead of a per-row post-load loop.
-        self.list_view.set_single_click_activate(True)
+        # Deliberately NOT set_single_click_activate(True): on Gtk.ListView
+        # (unlike Gtk.ListBox's activate-on-single-click) that flag also makes
+        # GtkListItemWidget select whatever row the pointer is hovering, which
+        # fights _sync_column_selections' committed Miller-path selection --
+        # the blue/grey row would jump to the mouse and vanish on mouse-out.
+        # Pointer clicks don't need it anyway: they are dispatched manually by
+        # the per-row GestureClick installed in _on_factory_setup, same #161
+        # press/release pattern the old Gtk.ListBox version used, ported onto
+        # the persistent recycled widget instead of a per-row post-load loop.
+        # Gtk.ListView still emits "activate" for keyboard (Enter/Space) with
+        # the flag off, so that path is unaffected.
         self.list_view.connect("activate", self._on_view_activated)
 
         # Matches Nautilus's own empty-folder state (nautilus-files-view.c
@@ -2071,15 +2082,21 @@ class MyComputerColumn(Gtk.ScrolledWindow):
 
     def set_current_column(self, is_current: bool) -> None:
         """Mark whether this column is the one whose selected row should read
-        as *the* accent-highlighted selection (see the .mc-current-column CSS
-        rule in my_computer_view.py). Driven by column_view.py's own tracked
-        focused_index -- i.e. whichever column was last clicked (or, when
-        arrow-key nav is enabled, last focused) -- rather than by actual GTK
-        keyboard focus, so it works independent of any real focus-grabbing."""
+        as *the* accent-highlighted selection (see the
+        .mc-column-view-highlighted-row CSS rule in my_computer_view.py).
+        Driven by column_view.py's own tracked focused_index -- i.e.
+        whichever column was last clicked (or, when arrow-key nav is
+        enabled, last focused) -- rather than by actual GTK keyboard focus,
+        so it works independent of any real focus-grabbing. The class is
+        toggled on this column's own Gtk.ListView (there's no cheaper way to
+        scope the CSS to "whichever row is selected in this column," since
+        the selected row's widget can be recycled away under Gtk.ListView),
+        but it names the row-level effect it produces, not the column it's
+        attached to."""
         if is_current:
-            self.list_view.add_css_class("mc-current-column")
+            self.list_view.add_css_class("mc-column-view-highlighted-row")
         else:
-            self.list_view.remove_css_class("mc-current-column")
+            self.list_view.remove_css_class("mc-column-view-highlighted-row")
 
     def apply_cut_uris(self, cut_uris: set[str]) -> None:
         """Apply cut styling to every item whose uri is in cut_uris, and clear

@@ -552,18 +552,21 @@ _CSS = b"""
 .mc-row-thumbnail {
     border-radius: 3px;
 }
-/* GtkListBoxRow normally applies the sidebar's horizontal padding around its
-   child. Move that inset into the Miller child box so it fills the outer row
-   allocation exactly, while its contents retain the native 8px inset. */
-.mc-column-list > row.mc-column-row {
+/* GtkListView's per-item "row" node (GtkListItemWidget) normally applies the
+   sidebar's horizontal padding around its child, same as GtkListBoxRow did
+   pre-#139-refactor. Move that inset into the Miller child box
+   (.mc-column-row-content, see widgets.MyComputerColumnRow) so it fills the
+   outer row allocation exactly, while its contents retain the native 8px
+   inset. */
+.mc-column-list > row {
     padding-left: 0;
     padding-right: 0;
 }
-.mc-column-list > row.mc-column-row > .mc-column-row-content {
+.mc-column-list > row > .mc-column-row-content {
     padding-left: 8px;
     padding-right: 8px;
 }
-.mc-column-list > row.mc-column-row.mc-row-cut {
+.mc-column-list > row > .mc-column-row-content.mc-row-cut {
     opacity: 0.50;
 }
 /* Miller columns reuse .navigation-sidebar for its rounded-corner selection
@@ -574,15 +577,17 @@ _CSS = b"""
    selected state to the native accent tokens, keep everything else
    (hover, shape, spacing) untouched.
 
-   Scoped to .mc-current-column, not plain :selected: only the column that
-   was last clicked (column_view.py's tracked focused_index, applied via
-   MyComputerColumn.set_current_column) reads as accent -- an ancestor
-   column still further back on the committed path keeps its row selected
-   internally (so navigating still works) but falls back to the plain
-   native :selected grey instead of competing for attention with accent
-   color. This is plain Python-tracked state, not GTK keyboard focus -- no
-   dependency on any focus-grabbing. */
-.mc-column-list.navigation-sidebar.mc-current-column row:selected {
+   Scoped to .mc-column-view-highlighted-row, not plain :selected: only the
+   column that was last clicked (column_view.py's tracked focused_index,
+   applied via MyComputerColumn.set_current_column) reads as accent -- an
+   ancestor column still further back on the committed path keeps its row
+   selected internally (so navigating still works) but falls back to the
+   plain native :selected grey instead of competing for attention with
+   accent color. This is plain Python-tracked state, not GTK keyboard focus
+   -- no dependency on any focus-grabbing. The class itself is toggled on
+   the column's Gtk.ListView (see set_current_column), not the row -- it
+   names the effect this rule produces, not the widget it's attached to. */
+.mc-column-list.navigation-sidebar.mc-column-view-highlighted-row row:selected {
     background-color: @accent_bg_color;
     color: @accent_fg_color;
 }

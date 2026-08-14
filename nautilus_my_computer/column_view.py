@@ -815,7 +815,7 @@ class _ColumnViewHost:
         gesture.set_state(Gtk.EventSequenceState.CLAIMED)
         # Keep the context-menu target in GTK's native dark-grey :active
         # state; it must not become the Miller column's blue :selected row.
-        components.set_row_active(row, True)
+        components.set_row_active(row.row_node(), True)
         uri = row.uri
         content_type = row.content_type or "application/octet-stream"
         default_app = Gio.AppInfo.get_default_for_type(content_type, False)
@@ -907,7 +907,7 @@ class _ColumnViewHost:
             # :active. Match Rename's anchor behavior by reasserting it on
             # the next main-loop turn for the menu's full lifetime.
             if popover.get_mapped():
-                components.set_row_active(row, True)
+                components.set_row_active(row.row_node(), True)
             return GLib.SOURCE_REMOVE
 
         GLib.idle_add(keep_anchor_active)
@@ -1056,11 +1056,11 @@ class _ColumnViewHost:
         for column in self.columns:
             column.apply_cut_uris(set())
             for row in column.realized_rows():
-                components.set_row_active(row, False)
+                components.set_row_active(row.row_node(), False)
 
     def _clear_context_active_row(self, row: Gtk.Widget) -> None:
         """Clear the temporary :active state used while a menu is open."""
-        components.set_row_active(row, False)
+        components.set_row_active(row.row_node(), False)
 
     def _paste_into_folder(self, destination_uri: str) -> None:
         """Paste known Miller sources, or read an external file list on demand."""
@@ -1518,7 +1518,8 @@ class _ColumnViewHost:
     def _apply_focused_column_style(self) -> None:
         """Mark exactly self.columns[self.focused_index] as *the* column
         whose selection reads as accent (see MyComputerColumn.set_current_column
-        / the .mc-current-column CSS rule in main.py) -- called after every
+        / the .mc-column-view-highlighted-row CSS rule in my_computer_view.py)
+        -- called after every
         place focused_index is set (a click, sync_to_uri's echo, and the
         keyboard-nav methods below) so the single highlighted row always
         tracks the last-clicked/-focused column, never the whole committed
