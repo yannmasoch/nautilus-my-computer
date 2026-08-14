@@ -592,6 +592,32 @@ _CSS = b"""
    Reuses the same alpha(@window_fg_color, 0.07) hover-overlay formula as
    the panel's grid-cell hover overlay for both the pill background and the
    button hover tint. */
+.mc-preview-text {
+    font-family: monospace;
+    font-size: 11px;
+    padding: 8px;
+    background-color: alpha(@window_fg_color, 0.05);
+    border-radius: 6px;
+}
+.mc-video-controls {
+    background-color: alpha(@window_fg_color, 0.05);
+    border-radius: 8px;
+    padding: 4px 6px;
+}
+.mc-pdf-toolbar {
+    background-color: alpha(@window_fg_color, 0.05);
+    border-radius: 8px;
+    padding: 2px 6px;
+}
+/* One page in the continuous PDF view. The pale fill matters before the
+   page's pixels arrive -- the slot is already laid out at the right size,
+   so this is what makes it read as a page still loading rather than a gap
+   in the document -- and the border keeps consecutive pages distinct once
+   they have rendered. */
+.mc-pdf-page {
+    background-color: @card_bg_color;
+    border: 1px solid alpha(@window_fg_color, 0.12);
+}
 .mc-toggle-group {
     background-color: alpha(@window_fg_color, 0.07);
     border-radius: 9px;

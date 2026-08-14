@@ -12,6 +12,9 @@
 # Dev branch:
 #   curl -fsSL https://.../install.sh | sh -s -- --branch=dev
 #
+# Optional local PaddleOCR backend:
+#   ./install.sh --with-paddleocr
+#
 # Uninstall:
 #   curl -fsSL https://.../install.sh | sh -s -- --uninstall
 
@@ -37,6 +40,7 @@ Install or remove the Nautilus My Computer extension.
 
 Options:
   --uninstall          Remove the extension and its user settings.
+  --with-paddleocr     Install/update isolated local PaddleOCR support.
   --version=VERSION    Install a specific release or git ref from GitHub.
   --branch=BRANCH      Install from a GitHub branch (default: main).
   -h, --help           Show this help message and exit.
@@ -47,6 +51,7 @@ precedence when both are provided.
 
 Examples:
   ./install.sh
+  ./install.sh --with-paddleocr
   ./install.sh --uninstall
   ./install.sh --version=v0.1.1
   ./install.sh --branch=dev
@@ -55,11 +60,13 @@ EOF
 
 # --- Argument parsing ---------------------------------------------------------
 MODE="install"
+WITH_PADDLEOCR=false
 VERSION="${VERSION:-}"
 BRANCH="${BRANCH:-}"
 for arg in "$@"; do
     case "$arg" in
         --uninstall) MODE="uninstall" ;;
+        --with-paddleocr) WITH_PADDLEOCR=true ;;
         --version=*) VERSION="${arg#--version=}" ;;
         --branch=*) BRANCH="${arg#--branch=}" ;;
         -h|--help) usage; exit 0 ;;
@@ -324,9 +331,17 @@ download_files() {
     [ -f "$src/$EXT_FILE" ]    || die "$EXT_FILE not found in source."
     [ -f "$src/$SCHEMA_FILE" ] || die "$SCHEMA_FILE not found in source."
     [ -d "$src/$PKG_DIR" ]     || die "$PKG_DIR not found in source."
+    if [ "$WITH_PADDLEOCR" = true ]; then
+        [ -f "$src/paddleocr-runtime.json" ] || die "paddleocr-runtime.json not found in source."
+        [ -f "$src/install-paddleocr.sh" ] || die "install-paddleocr.sh not found in source."
+    fi
 
     cp "$src/$EXT_FILE"    "$TEMP_DIR/$EXT_FILE"
     cp "$src/$SCHEMA_FILE" "$TEMP_DIR/$SCHEMA_FILE"
+    if [ "$WITH_PADDLEOCR" = true ]; then
+        cp "$src/paddleocr-runtime.json" "$TEMP_DIR/paddleocr-runtime.json"
+        cp "$src/install-paddleocr.sh" "$TEMP_DIR/install-paddleocr.sh"
+    fi
     mkdir -p "$TEMP_DIR/$PKG_DIR"
     cp "$src/$PKG_DIR"/*.py "$TEMP_DIR/$PKG_DIR/"
     [ -d "$src/$PKG_DIR/icons" ] && cp -r "$src/$PKG_DIR/icons" "$TEMP_DIR/$PKG_DIR/icons"
@@ -424,6 +439,14 @@ do_install() {
     fi
     install_files
 
+    if [ "$WITH_PADDLEOCR" = true ]; then
+        echo ""
+        printf '%s\n' "${BOLD}Optional PaddleOCR${RESET}"
+        sh "$TEMP_DIR/install-paddleocr.sh" \
+            --manifest="$TEMP_DIR/paddleocr-runtime.json" \
+            --helper="$TEMP_DIR/$PKG_DIR/paddle_ocr_helper.py"
+    fi
+
     echo ""
     printf '%s\n' "${BOLD}${CYAN}🚀 Installation complete!${RESET}"
     echo ""
@@ -446,6 +469,13 @@ do_uninstall() {
     if [ -d "$EXT_DIR/$PKG_DIR" ]; then
         rm -rf "$EXT_DIR/$PKG_DIR"
         line "Extension dir" "$EXT_DIR/$PKG_DIR/"
+        found=true
+    fi
+
+    PADDLE_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/nautilus-my-computer/paddleocr"
+    if [ -d "$PADDLE_HOME" ]; then
+        rm -rf -- "$PADDLE_HOME"
+        line "PaddleOCR" "$PADDLE_HOME/"
         found=true
     fi
 

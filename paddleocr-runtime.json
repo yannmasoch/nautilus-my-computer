@@ -1,0 +1,17 @@
+{
+  "schema_version": 2,
+  "runtime_revision": 2,
+  "python": {
+    "minimum": "3.9",
+    "maximum_exclusive": "3.14"
+  },
+  "packages": {
+    "paddlepaddle": "3.3.0",
+    "paddleocr": "3.5.0"
+  },
+  "models": {
+    "detection": "PP-OCRv5_mobile_det",
+    "recognition": "latin_PP-OCRv5_mobile_rec",
+    "layout": "PP-DocLayout-M"
+  }
+}

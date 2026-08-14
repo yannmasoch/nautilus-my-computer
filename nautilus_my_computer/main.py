@@ -22,6 +22,7 @@ gi.require_version("Gio", "2.0")
 gi.require_version("GLib", "2.0")
 gi.require_version("GObject", "2.0")
 gi.require_version("Gtk", "4.0")
+gi.require_version("Nautilus", "4.1")
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk, Nautilus, Pango
 
 from nautilus_my_computer import (
@@ -40,8 +41,10 @@ from nautilus_my_computer.common import (
     _all_widgets,
     _detect_nautilus_version,
     _find_widget,
+    _focus_owns_text_selection,
     _icon_name_renders,
     _log,
+    _n,
     _native,
     _nautilus_version,
     _pin_icon,
@@ -563,6 +566,84 @@ _WINDOW_SHORTCUTS: dict[tuple[int, int], str] = {
     (int(Gdk.ModifierType.CONTROL_MASK), Gdk.KEY_x): "_cut_column_focused_folder",
     (int(Gdk.ModifierType.CONTROL_MASK), Gdk.KEY_c): "_copy_column_focused_folder",
     (int(Gdk.ModifierType.CONTROL_MASK), Gdk.KEY_v): "_paste_into_column_focused_folder",
+    (int(Gdk.ModifierType.CONTROL_MASK), Gdk.KEY_o): "_open_column_focused_selection",
+    (int(Gdk.ModifierType.ALT_MASK), Gdk.KEY_Down): "_open_column_focused_selection",
+    (
+        int(Gdk.ModifierType.CONTROL_MASK),
+        Gdk.KEY_Return,
+    ): "_open_column_focused_selection_in_tab",
+    (
+        int(Gdk.ModifierType.CONTROL_MASK),
+        Gdk.KEY_KP_Enter,
+    ): "_open_column_focused_selection_in_tab",
+    (
+        int(Gdk.ModifierType.CONTROL_MASK),
+        Gdk.KEY_ISO_Enter,
+    ): "_open_column_focused_selection_in_tab",
+    (
+        int(Gdk.ModifierType.SHIFT_MASK),
+        Gdk.KEY_Return,
+    ): "_open_column_focused_selection_in_window",
+    (
+        int(Gdk.ModifierType.SHIFT_MASK),
+        Gdk.KEY_KP_Enter,
+    ): "_open_column_focused_selection_in_window",
+    (
+        int(Gdk.ModifierType.SHIFT_MASK),
+        Gdk.KEY_ISO_Enter,
+    ): "_open_column_focused_selection_in_window",
+    (int(Gdk.ModifierType.CONTROL_MASK), Gdk.KEY_i): "_show_column_focused_properties",
+    (int(Gdk.ModifierType.ALT_MASK), Gdk.KEY_Return): "_show_column_focused_properties",
+    (int(Gdk.ModifierType.ALT_MASK), Gdk.KEY_KP_Enter): "_show_column_focused_properties",
+    (int(Gdk.ModifierType.ALT_MASK), Gdk.KEY_ISO_Enter): "_show_column_focused_properties",
+    (0, Gdk.KEY_F5): "_refresh_column_focused_view",
+    (int(Gdk.ModifierType.CONTROL_MASK), Gdk.KEY_r): "_refresh_column_focused_view",
+    (
+        int(Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK),
+        Gdk.KEY_I,
+    ): "_invert_column_selection",
+    (
+        int(Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK),
+        Gdk.KEY_i,
+    ): "_invert_column_selection",
+    (int(Gdk.ModifierType.CONTROL_MASK), Gdk.KEY_s): "_select_matching_column_items",
+    (int(Gdk.ModifierType.CONTROL_MASK), Gdk.KEY_m): "_paste_links_in_column",
+    (int(Gdk.ModifierType.CONTROL_MASK), Gdk.KEY_plus): "_zoom_column_in",
+    (
+        int(Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK),
+        Gdk.KEY_plus,
+    ): "_zoom_column_in",
+    (int(Gdk.ModifierType.CONTROL_MASK), Gdk.KEY_equal): "_zoom_column_in",
+    (int(Gdk.ModifierType.CONTROL_MASK), Gdk.KEY_KP_Add): "_zoom_column_in",
+    (int(Gdk.ModifierType.CONTROL_MASK), Gdk.KEY_minus): "_zoom_column_out",
+    (int(Gdk.ModifierType.CONTROL_MASK), Gdk.KEY_KP_Subtract): "_zoom_column_out",
+    (int(Gdk.ModifierType.CONTROL_MASK), Gdk.KEY_0): "_reset_column_zoom",
+    (int(Gdk.ModifierType.CONTROL_MASK), Gdk.KEY_KP_0): "_reset_column_zoom",
+    (
+        int(Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK),
+        Gdk.KEY_M,
+    ): "_create_links_for_column_selection",
+    (
+        int(Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK),
+        Gdk.KEY_m,
+    ): "_create_links_for_column_selection",
+    (int(Gdk.ModifierType.CONTROL_MASK), Gdk.KEY_z): "_undo_column_file_operation",
+    (
+        int(Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK),
+        Gdk.KEY_Z,
+    ): "_redo_column_file_operation",
+    (
+        int(Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK),
+        Gdk.KEY_z,
+    ): "_redo_column_file_operation",
+    (int(Gdk.ModifierType.SHIFT_MASK), Gdk.KEY_F10): "_show_column_context_menu",
+    (0, Gdk.KEY_Menu): "_show_column_context_menu",
+    # Native Nautilus uses Space for its selection-backed quick preview.
+    # Miller already keeps a live preview beside the selected row, so the
+    # correct action is deliberately a no-op -- but it must still be
+    # consumed or the covered native view can preview its stale selection.
+    (0, Gdk.KEY_space): "_consume_column_native_selection_shortcut",
+    (0, Gdk.KEY_KP_Space): "_consume_column_native_selection_shortcut",
     (
         int(Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK),
         Gdk.KEY_N,
@@ -573,7 +654,12 @@ _WINDOW_SHORTCUTS: dict[tuple[int, int], str] = {
     ): "_new_folder_in_column_focused_folder",
     (0, Gdk.KEY_F2): "_rename_column_focused_folder",
     (0, Gdk.KEY_Delete): "_trash_column_focused_folder",
-    (int(Gdk.ModifierType.SHIFT_MASK), Gdk.KEY_Delete): "_trash_column_focused_folder",
+    (0, Gdk.KEY_KP_Delete): "_trash_column_focused_folder",
+    (int(Gdk.ModifierType.SHIFT_MASK), Gdk.KEY_Delete): "_delete_permanently_column_focused_folder",
+    (
+        int(Gdk.ModifierType.SHIFT_MASK),
+        Gdk.KEY_KP_Delete,
+    ): "_delete_permanently_column_focused_folder",
 }
 
 # Unmodified keys that must reach the toolbar's own MANAGED GtkShortcutController
@@ -829,6 +915,12 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             "view_switcher": None,
             "view_options_menu_button": None,
             "header_motion": None,  # Gtk.EventControllerMotion on the header bar
+            # Kept separate from the Computer panel's legacy header_motion
+            # marker: both observe the same button, but each serves a
+            # different metadata target and callback.
+            "prefs_sort_watch_button": None,
+            "prefs_sort_poll_id": 0,
+            "prefs_sort_popover_active": False,
             "location_filter_watch_attached": False,
             # A file-picker dialog should never auto-navigate itself to
             # computer:/// on open - that heuristic is normal-window-only.
@@ -1158,24 +1250,17 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         )
 
     def _show_column_view(self, win: Gtk.Window) -> None:
-        """Ctrl+3: tmp shortcut, replaces the old location-trigger hack. Not
-        a toggle -- always (re)opens Column View, reconciled to wherever
-        Nautilus really is right now (see column_view.enter_column_view).
-        Since drill-downs commit slot.open-location, that location is
-        normally the deepest column already open, so this preserves the
-        whole chain on a round-trip through Ctrl+1/Ctrl+2 instead of
-        collapsing it to a single column (see _ColumnViewHost.sync_to_uri for
-        the ancestor-truncate / re-root cases). See
-        _leave_column_view_for_native_mode for the mirror-image case."""
+        """Ctrl+3: (re)opens Column View starting at current location or Home directory."""
         slot = self._active_slot_widget(win)
         if slot is None or getattr(slot, "_mc_column_view", None) is None:
             _log("_show_column_view: active slot not ready")
             return
         loc = _active_slot_location(win)
         if not self._column_view_available_at(loc):
-            _log("_show_column_view: unavailable for the current virtual location")
-            return False
-        root_uri = loc.get_uri() if loc is not None else column_view.default_root_uri()
+            _log("_show_column_view: current location is unavailable")
+            return
+        root_uri = loc.get_uri()
+
         _log(f"_show_column_view: entering column view at root_uri={root_uri!r}")
         column_view.enter_column_view(self, win, root_uri)
         column_view.refresh_column_view_chrome(self, win)
@@ -1185,10 +1270,12 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     @staticmethod
     def _column_view_available_at(location: Gio.File | None) -> bool:
         """Whether Miller view can be used for a Nautilus slot location."""
-        return location is None or location.get_uri() not in MILLER_VIEW_UNAVAILABLE_URIS
+        return location is not None and location.get_uri() not in MILLER_VIEW_UNAVAILABLE_URIS
 
     def _column_view_available_for_window(self, win: Gtk.Window) -> bool:
-        return self._column_view_available_at(_active_slot_location(win))
+        return not _is_file_chooser_window(win) and self._column_view_available_at(
+            _active_slot_location(win)
+        )
 
     def _auto_elect_view_for_slot(self, win: Gtk.Window) -> str | None:
         """Which of our own views a slot should open into, or None to leave
@@ -1216,17 +1303,28 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             return False
         # While the rename entry itself owns focus, leave F2 to that editor
         # rather than creating a second popover.
-        if isinstance(win.get_focus(), Gtk.Editable):
+        if _focus_owns_text_selection(win.get_focus()):
             return False
-        return column_view.rename_focused_folder(self, win)
+        column_view.rename_focused_folder(self, win)
+        return True
 
     def _trash_column_focused_folder(self, win: Gtk.Window) -> bool:
         """Delete: move the selected local Miller item to Nautilus's trash."""
         if not self._active_slot_showing_column(win):
             return False
-        if isinstance(win.get_focus(), Gtk.Editable):
+        if _focus_owns_text_selection(win.get_focus()):
             return False
-        return column_view.trash_focused_folder(self, win)
+        column_view.trash_focused_folder(self, win)
+        return True
+
+    def _delete_permanently_column_focused_folder(self, win: Gtk.Window) -> bool:
+        """Shift+Delete: prompt confirmation and permanently delete the selected item(s)."""
+        if not self._active_slot_showing_column(win):
+            return False
+        if _focus_owns_text_selection(win.get_focus()):
+            return False
+        column_view.delete_permanently_focused_folder(self, win)
+        return True
 
     def _cut_column_focused_folder(self, win: Gtk.Window) -> bool:
         """Ctrl+X: put the selected Miller folder on the clipboard as a cut."""
@@ -1236,25 +1334,105 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         """Ctrl+C: copy the selected Miller item to the system clipboard."""
         if not self._active_slot_showing_column(win):
             return False
-        if isinstance(win.get_focus(), Gtk.Editable):
+        # Text selected in a preview that handles its own selection (the EPUB
+        # reader) belongs to that widget: returning False lets the keystroke
+        # reach it instead of copying the file out from under the user.
+        if _focus_owns_text_selection(win.get_focus()):
             return False
-        return column_view.copy_focused_folder_to_clipboard(self, win, cut=cut)
+        # The PDF preview selects text on a rendered page, so it owns no
+        # focusable text widget to recognise -- ask it directly. Only for
+        # copy: cutting text out of a preview means nothing.
+        if not cut and column_view.copy_preview_selection(self, win):
+            return True
+        column_view.copy_focused_folder_to_clipboard(self, win, cut=cut)
+        return True
 
     def _paste_into_column_focused_folder(self, win: Gtk.Window) -> bool:
         """Ctrl+V: paste the Miller clipboard into the selected folder."""
         if not self._active_slot_showing_column(win):
             return False
-        if isinstance(win.get_focus(), Gtk.Editable):
+        if _focus_owns_text_selection(win.get_focus()):
             return False
-        return column_view.paste_into_focused_folder(self, win)
+        column_view.paste_into_focused_folder(self, win)
+        return True
 
     def _new_folder_in_column_focused_folder(self, win: Gtk.Window) -> bool:
         """Shift+Ctrl+N: create a folder in the focused Miller column."""
         if not self._active_slot_showing_column(win):
             return False
-        if isinstance(win.get_focus(), Gtk.Editable):
+        if _focus_owns_text_selection(win.get_focus()):
             return False
-        return column_view.create_folder_in_focused_column(self, win)
+        column_view.create_folder_in_focused_column(self, win)
+        return True
+
+    def _column_shortcut(self, win: Gtk.Window, action: str) -> bool:
+        """Dispatch one selection-aware accelerator only while Miller is visible."""
+        if not self._active_slot_showing_column(win):
+            return False
+        manager_actions = {
+            "open_focused_selection",
+            "open_focused_selection_in_tab",
+            "open_focused_selection_in_window",
+            "show_focused_properties",
+            "reload_focused_view",
+        }
+        if action not in manager_actions and _focus_owns_text_selection(win.get_focus()):
+            return False
+        callback = getattr(column_view, action)
+        callback(self, win)
+        # Once Miller is visible, never let a selection-dependent shortcut
+        # continue into the covered/stopped native view merely because the
+        # action is currently unavailable (for example no selection).
+        return True
+
+    def _open_column_focused_selection(self, win: Gtk.Window) -> bool:
+        return self._column_shortcut(win, "open_focused_selection")
+
+    def _open_column_focused_selection_in_tab(self, win: Gtk.Window) -> bool:
+        return self._column_shortcut(win, "open_focused_selection_in_tab")
+
+    def _open_column_focused_selection_in_window(self, win: Gtk.Window) -> bool:
+        return self._column_shortcut(win, "open_focused_selection_in_window")
+
+    def _show_column_focused_properties(self, win: Gtk.Window) -> bool:
+        return self._column_shortcut(win, "show_focused_properties")
+
+    def _refresh_column_focused_view(self, win: Gtk.Window) -> bool:
+        return self._column_shortcut(win, "reload_focused_view")
+
+    def _invert_column_selection(self, win: Gtk.Window) -> bool:
+        return self._column_shortcut(win, "invert_focused_selection")
+
+    def _select_matching_column_items(self, win: Gtk.Window) -> bool:
+        return self._column_shortcut(win, "select_matching_items")
+
+    def _paste_links_in_column(self, win: Gtk.Window) -> bool:
+        return self._column_shortcut(win, "paste_links_in_focused_folder")
+
+    def _create_links_for_column_selection(self, win: Gtk.Window) -> bool:
+        return self._column_shortcut(win, "create_links_for_focused_selection")
+
+    def _undo_column_file_operation(self, win: Gtk.Window) -> bool:
+        return self._column_shortcut(win, "undo_file_operation")
+
+    def _redo_column_file_operation(self, win: Gtk.Window) -> bool:
+        return self._column_shortcut(win, "redo_file_operation")
+
+    def _show_column_context_menu(self, win: Gtk.Window) -> bool:
+        return self._column_shortcut(win, "show_focused_context_menu")
+
+    def _consume_column_native_selection_shortcut(self, win: Gtk.Window) -> bool:
+        """Keep native selection-only commands away from the covered view."""
+        return self._active_slot_showing_column(win)
+
+    def _zoom_column_in(self, win: Gtk.Window) -> bool:
+        return self._column_shortcut(win, "zoom_in")
+
+    def _zoom_column_out(self, win: Gtk.Window) -> bool:
+        return self._column_shortcut(win, "zoom_out")
+
+    def _reset_column_zoom(self, win: Gtk.Window) -> bool:
+        return self._column_shortcut(win, "reset_zoom")
 
     def _stop_hidden_native_slot(self, win: Gtk.Window, slot: Gtk.Widget) -> bool:
         """Cancel Nautilus's covered files-view load on `slot` without
@@ -1474,7 +1652,11 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         column_view.refresh_column_view_chrome(self, win)
 
     def _do_open_with(
-        self, nav_uri: str, win: Gtk.Window, *, content_type: str = "inode/directory"
+        self,
+        nav_uri: str | list[str],
+        win: Gtk.Window,
+        *,
+        content_type: str = "inode/directory",
     ) -> None:
         """Show an app chooser for nav_uri as an in-window sheet (Adw.Dialog),
         matching how native Nautilus presents its own "Open With…" - a custom
@@ -1485,7 +1667,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         "View All Apps…" / "Find New Apps…" extras plus collapsed search
         toggle are private template internals with no supported way to
         customize or remove. Used by local-file "Open With…" menu items."""
-        if not nav_uri.startswith("file://"):
+        uris = [nav_uri] if isinstance(nav_uri, str) else list(nav_uri)
+        if not uris or not all(uri.startswith("file://") for uri in uris):
             return
 
         recommended = list(Gio.AppInfo.get_recommended_for_type(content_type))
@@ -1498,7 +1681,9 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         recommended.sort(key=lambda i: i.get_display_name().lower())
         other.sort(key=lambda i: i.get_display_name().lower())
 
-        file_name = Gio.File.new_for_uri(nav_uri).get_basename() or nav_uri
+        file_name = Gio.File.new_for_uri(uris[0]).get_basename() or uris[0]
+        if len(uris) > 1:
+            file_name = _n("{n} selected item", "{n} selected items", len(uris)).format(n=len(uris))
 
         dialog = Adw.Dialog()
         dialog.set_title(
@@ -1634,7 +1819,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             dialog.close()
             if info:
                 try:
-                    info.launch_uris([nav_uri], None)
+                    info.launch_uris(uris, None)
                 except GLib.Error as e:
                     _log(f"Open With launch failed: {e}")
 
@@ -1748,8 +1933,10 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         before the 46/47 open-location action migration."""
         subprocess.Popen(["nautilus", "--new-window", mountpoint])
 
-    def _do_properties(self, nav_uri: str, win: Gtk.Window) -> None:
-        uri = nav_uri
+    def _do_properties(self, nav_uri: str | list[str], win: Gtk.Window) -> None:
+        uris = [nav_uri] if isinstance(nav_uri, str) else list(nav_uri)
+        if not uris:
+            return
 
         # The native properties window is created in-process by Nautilus via the
         # D-Bus ShowItemProperties call. It is NOT registered with the
@@ -1787,7 +1974,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                     DBUS_PATH_FILE_MANAGER,
                     DBUS_FILE_MANAGER,
                     "ShowItemProperties",
-                    GLib.Variant("(ass)", ([uri], "")),
+                    GLib.Variant("(ass)", (uris, "")),
                     None,
                     Gio.DBusCallFlags.NONE,
                     5000,

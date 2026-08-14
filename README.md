@@ -135,6 +135,30 @@ nix profile install "github:yannmasoch/nautilus-my-computer?dir=packaging/nix"
   ./install.sh
   ```
 
+  To add the optional, fully local PaddleOCR image-text backend:
+
+  ```bash
+  ./install.sh --with-paddleocr
+  ```
+
+  PaddleOCR is installed into a versioned virtual environment under
+  `~/.local/share/nautilus-my-computer/paddleocr`. The installer first finds a
+  compatible installed Python, resolves compatible wheels, and only then
+  creates the environment. It does not modify system Python or Nautilus's
+  Python. Models are downloaded during setup; previews never need network
+  access. Image OCR is enabled only when this validated PaddleOCR runtime is
+  available; no other OCR engine is used. The same backend handles scanned
+  PDF pages that do not contain a native text layer. A balanced local
+  `PP-DocLayout-M` model also identifies titles, sections, text blocks,
+  tables, captions, headers, footers, references, and other document regions.
+  Hovering recognized text shows its region; the selection context menu can
+  copy the entire identified section. Layout inference is loaded lazily and
+  ordinary photographs with little text skip it.
+
+  The standalone `./install-paddleocr.sh` command can update or repair only
+  this optional runtime. Set `MC_PADDLE_PYTHON=/path/to/python` to request a
+  particular compatible interpreter.
+
   Uninstall:
 
   ```bash

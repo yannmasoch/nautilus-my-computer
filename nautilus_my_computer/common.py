@@ -280,6 +280,28 @@ def _icon_name_renders(icon_name: str) -> bool:
     return theme.has_icon(icon_name)
 
 
+def _focus_owns_text_selection(widget) -> bool:
+    """True if `widget` (or an ancestor) maintains its own text selection and
+    must therefore keep the text shortcuts for itself.
+
+    The extension claims Ctrl+C/Ctrl+X at the window (see main.py's
+    _WINDOW_SHORTCUTS) and Ctrl+A on the Miller scroller (column_view.py's
+    _on_key_pressed), both in the CAPTURE phase -- so without this check they
+    fire *before* the widget under the cursor ever sees the key, and copying
+    selected text in a preview silently copied the file instead.
+
+    The WebView is matched by GType name rather than isinstance so this stays
+    usable where WebKit is not installed at all, and so common.py needs no
+    dependency on it."""
+    while widget is not None:
+        if isinstance(widget, (Gtk.Editable, Gtk.TextView)):
+            return True
+        if widget.__gtype__.name == "WebKitWebView":
+            return True
+        widget = widget.get_parent()
+    return False
+
+
 _ICONS_DIR = os.path.join(os.path.dirname(__file__), "icons")
 
 

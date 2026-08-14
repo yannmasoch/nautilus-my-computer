@@ -64,8 +64,6 @@ class NautilusPrefs:
         # self.click_policy to compute its return value before this first assignment exists.
         self.click_policy: str = self._prefs.get_string("click-policy")
 
-        self._sort_poll_id: int | None = None
-        self._sort_hover: bool = False
         self._resolve_sort_target = None
 
     # ── Global GSettings reads ───────────────────────────────────────────────
@@ -137,8 +135,8 @@ class NautilusPrefs:
         uniformly across the whole Miller chain -- per-column sort makes no
         UX sense when several folders are visible side by side. Folders-first
         grouping is a separate, orthogonal concern: it's read live from
-        sort_directories_first() and applied as its own pass in
-        MyComputerColumn._populate_rows (widgets.py), not baked into this
+        sort_directories_first() and applied by MyComputerColumn's live row
+        comparator (widgets.py), not baked into this
         (column, reverse) tuple."""
         folder = self.folder_sort(root_uri)
         if folder is not None:
@@ -228,8 +226,8 @@ class NautilusPrefs:
         """Watch the sort GtkMenuButton's active state -- arm poll when the sort
         popover opens, disarm (with one final read) when it closes. Call once
         per window (may be attempted from more than one call site -- the
-        header_motion slot below marks "already attached" so only the first
-        actually wires anything up).
+        prefs_sort_watch_button slot below marks "already attached" so only
+        the first actually wires anything up).
 
         `resolve_sort_target(ext, win) -> tuple[str, Callable[[], None]] | None`
         is re-invoked on every open and every poll tick, returning the URI to
@@ -240,7 +238,7 @@ class NautilusPrefs:
         hardcoding a single URI/view pairing at attach time."""
         self._resolve_sort_target = resolve_sort_target
         state = ext._windows.get(nautilus_win)
-        if not state or state.get("header_motion"):
+        if not state or state.get("prefs_sort_watch_button"):
             return
         # Once inject_column_view_entry has run, the view-options popover
         # lives on our own MenuButton (the native split button's popover was
@@ -250,7 +248,9 @@ class NautilusPrefs:
             _log("sort button not found in toolbar")
             return
         btn.connect("notify::active", self._on_sort_button_active, ext, nautilus_win)
-        state["header_motion"] = btn  # reuse slot -- just marks "already attached"
+        state["prefs_sort_watch_button"] = btn
+        state.setdefault("prefs_sort_poll_id", 0)
+        state.setdefault("prefs_sort_popover_active", False)
         _log(f"sort button watch attached ({type(btn).__name__})")
 
     def find_sort_button(self, nautilus_win: Gtk.Window):
@@ -295,32 +295,35 @@ class NautilusPrefs:
         if self._resolve_sort_target(ext, nautilus_win) is None:
             return  # none of our views is currently visible in this window
         if btn.get_active():
-            self._sort_hover = True
-            if self._sort_poll_id is None:
+            state["prefs_sort_popover_active"] = True
+            if not state.get("prefs_sort_poll_id"):
                 _log("sort menu opened → sort poll armed")
-                self._sort_poll_id = GLib.timeout_add(
+                state["prefs_sort_poll_id"] = GLib.timeout_add(
                     _SORT_POLL_MS, self._poll_sort, ext, nautilus_win
                 )
         else:
-            self._sort_hover = False
+            state["prefs_sort_popover_active"] = False
             _log("sort menu closed → sort poll disarming")
 
     def _poll_sort(self, ext, nautilus_win: Gtk.Window) -> bool:
+        state = ext._windows.get(nautilus_win)
+        if not state:
+            return GLib.SOURCE_REMOVE
         target = self._resolve_sort_target(ext, nautilus_win)
         if target is None:
             # The visible view changed away from any of ours while the poll
             # was armed (e.g. user navigated out mid-drag) -- nothing left to
             # track, disarm.
-            self._sort_poll_id = None
+            state["prefs_sort_poll_id"] = 0
             return GLib.SOURCE_REMOVE
         uri, on_changed = target
         if self.refresh_folder_sort(uri):
             _log(f"sort changed → col='{self.sort_column}' rev={self.sort_reverse}")
             on_changed()
             _log(f"sort applied → col='{self.sort_column}' rev={self.sort_reverse}")
-        if not self._sort_hover:
+        if not state.get("prefs_sort_popover_active"):
             # Menu closed -- one final read already done above, now disarm.
             _log("sort poll disarmed")
-            self._sort_poll_id = None
+            state["prefs_sort_poll_id"] = 0
             return GLib.SOURCE_REMOVE
         return GLib.SOURCE_CONTINUE

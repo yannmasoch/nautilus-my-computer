@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-13 23:28-0300\n"
+"POT-Creation-Date: 2026-08-13 23:40-0300\n"
 "PO-Revision-Date: 2026-08-06 05:01+0000\n"
 "Last-Translator: crian\n"
 "Language-Team: German\n"
@@ -29,8 +29,43 @@ msgid "Reset"
 msgstr "Zurücksetzen"
 
 #: nautilus_my_computer/column_view.py
+msgid "File operation failed"
+msgstr ""
+
+#: nautilus_my_computer/column_view.py
+msgid "Could not open file"
+msgstr ""
+
+#: nautilus_my_computer/column_view.py
 msgid "Select"
 msgstr "Auswählen"
+
+#: nautilus_my_computer/column_view.py
+#, fuzzy
+msgid "Create Archive"
+msgstr "Archiv"
+
+#: nautilus_my_computer/column_view.py
+msgid "Create"
+msgstr ""
+
+#: nautilus_my_computer/column_view.py
+msgid "Could not open the mail composer"
+msgstr ""
+
+#: nautilus_my_computer/column_view.py
+msgid "Pattern, for example *.jpg"
+msgstr ""
+
+#: nautilus_my_computer/column_view.py
+#, python-brace-format
+msgid "Link to {name}"
+msgstr ""
+
+#: nautilus_my_computer/column_view.py
+#, python-brace-format
+msgid "{name} ({number})"
+msgstr ""
 
 #: nautilus_my_computer/column_view.py
 msgid "Beta"
@@ -213,6 +248,10 @@ msgstr "Komprimieren …"
 msgid "Move to Trash"
 msgstr "In den Papierkorb verschieben"
 
+#: nautilus_my_computer/context_menu.py
+msgid "Delete Permanently…"
+msgstr ""
+
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
 msgstr "»Mein-Rechner«-Einstellungen"
@@ -220,6 +259,13 @@ msgstr "»Mein-Rechner«-Einstellungen"
 #: nautilus_my_computer/main.py
 msgid "Open My Computer"
 msgstr "»Mein Rechner« öffnen"
+
+#: nautilus_my_computer/main.py
+#, fuzzy, python-brace-format
+msgid "{n} selected item"
+msgid_plural "{n} selected items"
+msgstr[0] "{n} Objekt"
+msgstr[1] "{n} Objekte"
 
 #: nautilus_my_computer/main.py
 msgid "Recommended Apps"
@@ -439,6 +485,64 @@ msgid "Spreadsheet"
 msgstr "Rechenblatt"
 
 #: nautilus_my_computer/widgets.py
+msgid "Unable to Display Folder"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Loading…"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Fit image to preview"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Play or pause"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Mute or unmute"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Playback position"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Volume"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Parent folder in archive"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Name"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Size"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "This folder is empty"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Previous page"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+#, fuzzy
+msgid "Next page"
+msgstr "Nächste Woche"
+
+#: nautilus_my_computer/widgets.py
+#, fuzzy
+msgid "Reset zoom"
+msgstr "Zurücksetzen"
+
+#: nautilus_my_computer/widgets.py
 #, fuzzy, python-brace-format
 msgid "{n} item selected"
 msgid_plural "{n} items selected"
@@ -472,3 +576,34 @@ msgstr ""
 #, python-brace-format
 msgid "{summary} ({size})"
 msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Drag over detected text to select it"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Copy section"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Encrypted"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "Packed: {size}"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "{count} · listing truncated"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+msgid "Previous chapter"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+#, fuzzy
+msgid "Next chapter"
+msgstr "Nächstes Jahr"

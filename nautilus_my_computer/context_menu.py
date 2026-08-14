@@ -172,30 +172,41 @@ def clipboard_actions_section(
     cut_action=None,
     copy_action=None,
     paste_action=None,
+    paste_link_action=None,
     move_to_action=None,
     copy_to_action=None,
 ) -> ContextMenuSection:
     """Build the standard Cut/Copy/Move to/Copy to action group."""
-    return ContextMenuSection(
+    items = [
+        ContextMenuItem(
+            _native("Cut"),
+            action=cut_action,
+            shortcut="<Control>x",
+            enabled=callable(cut_action),
+        ),
+        ContextMenuItem(
+            _native("Copy"),
+            action=copy_action,
+            shortcut="<Control>c",
+            enabled=callable(copy_action),
+        ),
+        ContextMenuItem(
+            _native("Paste"),
+            action=paste_action,
+            shortcut="<Control>v",
+            enabled=callable(paste_action),
+        ),
+    ]
+    if paste_link_action is not None:
+        items.append(
+            ContextMenuItem(
+                _native("Paste as Link"),
+                action=paste_link_action,
+                shortcut="<Control>m",
+            )
+        )
+    items.extend(
         [
-            ContextMenuItem(
-                _native("Cut"),
-                action=cut_action,
-                shortcut="<Control>x",
-                enabled=callable(cut_action),
-            ),
-            ContextMenuItem(
-                _native("Copy"),
-                action=copy_action,
-                shortcut="<Control>c",
-                enabled=callable(copy_action),
-            ),
-            ContextMenuItem(
-                _native("Paste"),
-                action=paste_action,
-                shortcut="<Control>v",
-                enabled=callable(paste_action),
-            ),
             ContextMenuItem(
                 _native("Move to…"), action=move_to_action, enabled=callable(move_to_action)
             ),
@@ -204,6 +215,7 @@ def clipboard_actions_section(
             ),
         ]
     )
+    return ContextMenuSection(items)
 
 
 def background_creation_section(
@@ -230,18 +242,27 @@ def background_creation_section(
     return ContextMenuSection(items)
 
 
-def background_clipboard_section(*, paste_action=None) -> ContextMenuSection:
+def background_clipboard_section(
+    *, paste_action=None, paste_link_action=None
+) -> ContextMenuSection:
     """Build the folder-background clipboard section."""
-    return ContextMenuSection(
-        [
+    items = [
+        ContextMenuItem(
+            _native("Paste"),
+            action=paste_action,
+            shortcut="<Control>v",
+            enabled=callable(paste_action),
+        )
+    ]
+    if paste_link_action is not None:
+        items.append(
             ContextMenuItem(
-                _native("Paste"),
-                action=paste_action,
-                shortcut="<Control>v",
-                enabled=callable(paste_action),
+                _native("Paste as Link"),
+                action=paste_link_action,
+                shortcut="<Control>m",
             )
-        ]
-    )
+        )
+    return ContextMenuSection(items)
 
 
 def background_terminal_section(*, open_terminal_action=None) -> ContextMenuSection:
@@ -261,15 +282,18 @@ def file_actions_section(
     *,
     rename_action=None,
     rename_enabled: bool = True,
+    create_link_action=None,
+    extract_action=None,
+    extract_to_action=None,
+    set_as_background_action=None,
+    open_terminal_action=None,
+    run_as_program_action=None,
     move_to_trash_action=None,
-    show_compress: bool = False,
-    show_email: bool = False,
+    delete_permanently_action=None,
+    compress_action=None,
+    email_action=None,
 ) -> ContextMenuSection:
-    """Build the currently implemented subset of Nautilus's File Actions section.
-
-    In-progress actions can be displayed disabled to communicate planned
-    capability without exposing a nonfunctional activation.
-    """
+    """Build the standard file-actions section for Miller selections."""
     items = []
     if rename_action is not None:
         items.append(
@@ -280,16 +304,44 @@ def file_actions_section(
                 enabled=rename_enabled,
             )
         )
-    if show_compress:
-        items.append(ContextMenuItem(_("Compress…"), enabled=False))
-    if show_email:
-        items.append(ContextMenuItem(_native("Email…"), enabled=False))
+    if create_link_action is not None:
+        items.append(
+            ContextMenuItem(
+                _native("Create Link"),
+                action=create_link_action,
+                shortcut="<Shift><Control>m",
+            )
+        )
+    if extract_action is not None:
+        items.append(ContextMenuItem(_native("Extract Here"), action=extract_action))
+    if extract_to_action is not None:
+        items.append(ContextMenuItem(_native("Extract to…"), action=extract_to_action))
+    if compress_action is not None:
+        items.append(ContextMenuItem(_("Compress…"), action=compress_action))
+    if email_action is not None:
+        items.append(ContextMenuItem(_native("Email…"), action=email_action))
+    if set_as_background_action is not None:
+        items.append(
+            ContextMenuItem(_native("Set as Background…"), action=set_as_background_action)
+        )
+    if open_terminal_action is not None:
+        items.append(ContextMenuItem(_("Open in Terminal"), action=open_terminal_action))
+    if run_as_program_action is not None:
+        items.append(ContextMenuItem(_native("Run as a Program"), action=run_as_program_action))
     if move_to_trash_action is not None:
         items.append(
             ContextMenuItem(
                 _("Move to Trash"),
                 action=move_to_trash_action,
                 shortcut="Delete",
+            )
+        )
+    if delete_permanently_action is not None:
+        items.append(
+            ContextMenuItem(
+                _("Delete Permanently…"),
+                action=delete_permanently_action,
+                shortcut="Shift+Delete",
             )
         )
     return ContextMenuSection(items)
