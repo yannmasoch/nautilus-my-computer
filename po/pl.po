@@ -1,250 +1,255 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the My Computer for Nautilus package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
 msgid ""
 msgstr ""
-"Project-Id-Version: nautilus-my-computer\n"
+"Project-Id-Version: My Computer for Nautilus 0.13.1\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-08-13 23:28-0300\n"
-"PO-Revision-Date: 2026-08-06 17:34+0000\n"
-"Last-Translator: Taylan Tatlı\n"
-"Language-Team: Turkish\n"
-"Language: tr\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: none\n"
+"Language: pl\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Poedit 3.9\n"
+"Plural-Forms: nplurals=3; plural=n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
+"|| n%100>=20) ? 1 : 2;\n"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
-msgstr "Simge Değiştir"
+msgstr ""
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Search icons…"
-msgstr "Simge ara…"
+msgstr ""
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Reset"
-msgstr "Sıfırla"
+msgstr ""
 
 #: nautilus_my_computer/column_view.py
 msgid "Select"
-msgstr "Seç"
+msgstr ""
 
 #: nautilus_my_computer/column_view.py
 msgid "Beta"
-msgstr "Beta"
+msgstr ""
 
 #: nautilus_my_computer/column_view.py
 msgid "Early access feature. It may contain bugs or inconsistencies."
-msgstr "Erken erişim özelliği. Hatalar veya tutarsızlıklar içerebilir."
+msgstr ""
 
 #: nautilus_my_computer/column_view.py
 msgid "Column View"
-msgstr "Sütun Görünümü"
+msgstr ""
 
 #: nautilus_my_computer/common.py nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{n} item"
 msgid_plural "{n} items"
-msgstr[0] "{n} öge"
-msgstr[1] "{n} öge"
+msgstr[0] ""
+msgstr[1] ""
 
 #: nautilus_my_computer/common.py
 msgid "Today"
-msgstr "Bugün"
+msgstr ""
 
 #: nautilus_my_computer/common.py
 msgid "Yesterday"
-msgstr "Dün"
+msgstr ""
 
 #: nautilus_my_computer/common.py
 msgid "Tomorrow"
-msgstr "Yarın"
+msgstr ""
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} day ago"
 msgid_plural "{n} days ago"
-msgstr[0] "{n} gün önce"
-msgstr[1] "{n} gün önce"
+msgstr[0] ""
+msgstr[1] ""
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} day"
 msgid_plural "In {n} days"
-msgstr[0] "{n} gün sonra"
-msgstr[1] "{n} gün sonra"
+msgstr[0] ""
+msgstr[1] ""
 
 #: nautilus_my_computer/common.py
 msgid "This week"
-msgstr "Bu hafta"
+msgstr ""
 
 #: nautilus_my_computer/common.py
 msgid "Last week"
-msgstr "Geçen hafta"
+msgstr ""
 
 #: nautilus_my_computer/common.py
 msgid "Next week"
-msgstr "Gelecek hafta"
+msgstr ""
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} week ago"
 msgid_plural "{n} weeks ago"
-msgstr[0] "{n} hafta önce"
-msgstr[1] "{n} hafta önce"
+msgstr[0] ""
+msgstr[1] ""
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} week"
 msgid_plural "In {n} weeks"
-msgstr[0] "{n} hafta sonra"
-msgstr[1] "{n} hafta sonra"
+msgstr[0] ""
+msgstr[1] ""
 
 #: nautilus_my_computer/common.py
 msgid "This month"
-msgstr "Bu ay"
+msgstr ""
 
 #: nautilus_my_computer/common.py
 msgid "Last month"
-msgstr "Geçen ay"
+msgstr ""
 
 #: nautilus_my_computer/common.py
 msgid "Next month"
-msgstr "Gelecek ay"
+msgstr ""
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} month ago"
 msgid_plural "{n} months ago"
-msgstr[0] "{n} ay önce"
-msgstr[1] "{n} ay önce"
+msgstr[0] ""
+msgstr[1] ""
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} month"
 msgid_plural "In {n} months"
-msgstr[0] "{n} ay sonra"
-msgstr[1] "{n} ay sonra"
+msgstr[0] ""
+msgstr[1] ""
 
 #: nautilus_my_computer/common.py
 msgid "This year"
-msgstr "Bu yıl"
+msgstr ""
 
 #: nautilus_my_computer/common.py
 msgid "Last year"
-msgstr "Geçen yıl"
+msgstr ""
 
 #: nautilus_my_computer/common.py
 msgid "Next year"
-msgstr "Gelecek yıl"
+msgstr ""
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} year ago"
 msgid_plural "{n} years ago"
-msgstr[0] "{n} yıl önce"
-msgstr[1] "{n} yıl önce"
+msgstr[0] ""
+msgstr[1] ""
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} year"
 msgid_plural "In {n} years"
-msgstr[0] "{n} yıl sonra"
-msgstr[1] "{n} yıl sonra"
+msgstr[0] ""
+msgstr[1] ""
 
 #: nautilus_my_computer/components.py
 msgid "Rename"
-msgstr "Yeniden Adlandır"
+msgstr ""
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Tab"
-msgstr "Yeni Sekmede Aç"
+msgstr ""
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Window"
-msgstr "Yeni Pencerede Aç"
+msgstr ""
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open With…"
-msgstr "Birlikte Aç…"
+msgstr ""
 
 #: nautilus_my_computer/context_menu.py
 msgid "Remove from Bookmarks"
-msgstr "Yer İmlerinden Kaldır"
+msgstr ""
 
 #: nautilus_my_computer/context_menu.py
 msgid "Add to Bookmarks"
-msgstr "Yer İmlerine Ekle"
+msgstr ""
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Unpin from My Computer"
-msgstr "Bilgisayarımdan Sabitlemeyi Kaldır"
+msgstr ""
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Pin to My Computer"
-msgstr "Bilgisayarıma Sabitle"
+msgstr ""
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
-msgstr "Yeni Klasör…"
+msgstr ""
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Document"
-msgstr "Yeni Belge"
+msgstr ""
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in Terminal"
-msgstr "Uçbirimde Aç"
+msgstr ""
 
 #: nautilus_my_computer/context_menu.py
 msgid "Rename…"
-msgstr "Yeniden Adlandır…"
+msgstr ""
 
 #: nautilus_my_computer/context_menu.py
 msgid "Compress…"
-msgstr "Sıkıştır…"
+msgstr ""
 
 #: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
-msgstr "Çöp Kutusuna Taşı"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
-msgstr "Bilgisayarım Ayarları"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Open My Computer"
-msgstr "Bilgisayarımı Aç"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Recommended Apps"
-msgstr "Tavsiye Edilen Uygulamalar"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Other Apps"
-msgstr "Diğer Uygulamalar"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "General"
-msgstr "Genel"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Computer view"
-msgstr "Bilgisayar görünümü"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Start on the Computer view"
-msgstr "Bilgisayar görünümünde başlat"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Launch directly to the Computer view instead of Home"
-msgstr "Ev yerine doğrudan Bilgisayar görünümünü aç"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Panel visibility"
-msgstr "Panel görünürlüğü"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid ""
@@ -252,205 +257,203 @@ msgid ""
 "separated section. Merged: folds the group into the On this Computer group. "
 "Hidden: hides the group entirely."
 msgstr ""
-"Her grubun nasıl görüneceğini seçin. Görünür: grubu normal, ayrı bir bölüm "
-"olarak gösterir. Birleştirilmiş: grubu Bu Bilgisayarda grubunun içine "
-"toplar. Gizli: grubu tamamen gizler."
 
 #: nautilus_my_computer/main.py
 msgid "Visible"
-msgstr "Görünür"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Merged"
-msgstr "Birleştirilmiş"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Hidden"
-msgstr "Gizli"
+msgstr ""
 
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Preferred Folders"
-msgstr "Tercih Edilen Klasörler"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Show system partitions"
-msgstr "Sistem bölümlerini göster"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Include boot and EFI partitions in the System group"
-msgstr "Önyükleme ve EFI bölümlerini Sistem grubuna dahil et"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
-msgstr "Kenar çubuğu görünürlüğü"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Choose which locations appear on the sidebar."
-msgstr "Kenar çubuğunda hangi konumların görüneceğini seçin."
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Bar Color"
-msgstr "Çubuk Rengi"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Select or customize the bar color."
-msgstr "Çubuk rengini seçin veya özelleştirin."
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Color mode"
-msgstr "Renk modu"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "System accent"
-msgstr "Sistem vurgu rengi"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Custom color"
-msgstr "Özel renk"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Custom gradient"
-msgstr "Özel gradyan"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Color"
-msgstr "Renk"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Start color"
-msgstr "Başlangıç rengi"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "End color"
-msgstr "Bitiş rengi"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Show captions"
-msgstr "Açıklamaları göster"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Shows or hides the caption lines already configured in Nautilus"
 msgstr ""
-"Nautilus'ta zaten yapılandırılmış açıklama satırlarını gösterir veya gizler"
 
 #: nautilus_my_computer/main.py
 msgid "Extension"
-msgstr "Eklenti"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Version"
-msgstr "Sürüm"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Author"
-msgstr "Yazar"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Source code"
-msgstr "Kaynak kodu"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "GitHub"
-msgstr "GitHub"
+msgstr ""
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Mount"
-msgstr "Bağla"
+msgstr ""
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "System"
-msgstr "Sistem"
+msgstr ""
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "On this Computer"
-msgstr "Bu Bilgisayarda"
+msgstr ""
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Removable"
-msgstr "Çıkarılabilir"
+msgstr ""
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Disc"
-msgstr "Disk"
+msgstr ""
 
 #: nautilus_my_computer/widgets.py
 msgid "Not mounted"
-msgstr "Bağlanmamış"
+msgstr ""
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{free} free of {total}"
-msgstr "{total} alanda {free} boş"
+msgstr ""
 
 #: nautilus_my_computer/widgets.py
 msgid "Program"
-msgstr "Program"
+msgstr ""
 
 #: nautilus_my_computer/widgets.py
 msgid "Audio"
-msgstr "Ses"
+msgstr ""
 
 #: nautilus_my_computer/widgets.py
 msgid "Font"
-msgstr "Yazı tipi"
+msgstr ""
 
 #: nautilus_my_computer/widgets.py
 msgid "Image"
-msgstr "Resim"
+msgstr ""
 
 #: nautilus_my_computer/widgets.py
 msgid "Archive"
-msgstr "Arşiv"
+msgstr ""
 
 #: nautilus_my_computer/widgets.py
 msgid "Markup"
-msgstr "Biçimlendirme"
+msgstr ""
 
 #: nautilus_my_computer/widgets.py
 msgid "Text"
-msgstr "Metin"
+msgstr ""
 
 #: nautilus_my_computer/widgets.py
 msgid "Video"
-msgstr "Video"
+msgstr ""
 
 #: nautilus_my_computer/widgets.py
 msgid "Contacts"
-msgstr "Kişiler"
+msgstr ""
 
 #: nautilus_my_computer/widgets.py
 msgid "Calendar"
-msgstr "Takvim"
+msgstr ""
 
 #: nautilus_my_computer/widgets.py
 msgid "Document"
-msgstr "Belge"
+msgstr ""
 
 #: nautilus_my_computer/widgets.py
 msgid "Presentation"
-msgstr "Sunum"
+msgstr ""
 
 #: nautilus_my_computer/widgets.py
 msgid "Spreadsheet"
-msgstr "Hesap tablosu"
+msgstr ""
 
 #: nautilus_my_computer/widgets.py
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "{n} item selected"
 msgid_plural "{n} items selected"
-msgstr[0] "{n} öge"
-msgstr[1] "{n} öge"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
 
 #: nautilus_my_computer/widgets.py
 msgid "Dimensions"
-msgstr "Boyutlar"
+msgstr ""
 
 #: nautilus_my_computer/widgets.py
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "{n} file"
 msgid_plural "{n} files"
-msgstr[0] "{n} öge"
-msgstr[1] "{n} öge"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
@@ -458,6 +461,7 @@ msgid "{n} folder"
 msgid_plural "{n} folders"
 msgstr[0] ""
 msgstr[1] ""
+msgstr[2] ""
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format

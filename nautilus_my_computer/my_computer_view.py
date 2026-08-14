@@ -62,7 +62,7 @@ from nautilus_my_computer.context_menu import (
 )
 from nautilus_my_computer.preferred_folders import PreferredFolder
 from nautilus_my_computer.widgets import (
-    MyComputerCardSection,
+    MyComputerCardGroup,
     MyComputerDiskCard,
     MyComputerFolderCard,
 )
@@ -1463,7 +1463,7 @@ def _poll_sort(ext) -> bool:
 
 def apply_card_filter(ext, win: Gtk.Window, query: str) -> None:
     """Forward `query` to every section's own filter (see
-    MyComputerCardSection.set_query in widgets.py -- each group filters its
+    MyComputerCardGroup.set_query in widgets.py -- each group filters its
     own cards and self-hides when empty). Stored on state so _populate()
     re-applies it after a live refresh or a navigate-away-and-back."""
     state = ext._active_panel_state(win)
@@ -1947,7 +1947,7 @@ def _populate_slot(ext, slot) -> None:
             _refresh_folder_captions_async(ext, pf)
         _sync_folder_rename_watchers(ext, folders)
         if folders:
-            section = MyComputerCardSection(
+            section = MyComputerCardGroup(
                 ext,
                 win,
                 _("Preferred Folders"),
@@ -2006,7 +2006,7 @@ def _populate_slot(ext, slot) -> None:
         if not render_items:
             continue
 
-        section = MyComputerCardSection(
+        section = MyComputerCardGroup(
             ext,
             win,
             group.label,
@@ -2453,13 +2453,13 @@ def _on_preferred_folder_file_changed(
 
 
 def _on_card_activated(ext, _flow_box, child: Gtk.FlowBoxChild, win: Gtk.Window) -> None:
+    """Fired by FlowBox's own "activate" keybinding (Return on a focused
+    card) -- mouse activation is handled separately, see _on_card_pressed/
+    _on_card_released."""
     card = child.get_child()
     if card is None:
         return
-    if isinstance(card, MyComputerDiskCard) and not card.model.is_mounted:
-        _do_mount(ext, card.model, win)
-        return
-    GLib.idle_add(ext._navigate_to, card.nav_uri, win)
+    _activate_card(ext, card, win)
 
 
 def _on_flow_selection_changed(ext, flow_box: Gtk.FlowBox, win: Gtk.Window) -> None:
@@ -2530,12 +2530,38 @@ def _select_single_card(card: Gtk.Widget) -> None:
             flow.select_child(wrapper)
 
 
+def _activate_card(ext, card: Gtk.Box, win: Gtk.Window) -> None:
+    """Shared by mouse activation (_on_card_released/_on_card_pressed) and
+    keyboard activation (_on_card_activated, fired by FlowBox's own "activate"
+    keybinding on Return -- see _attach_flow_shortcuts)."""
+    if isinstance(card, MyComputerDiskCard) and not card.model.is_mounted:
+        _do_mount(ext, card.model, win)
+        return
+    GLib.idle_add(ext._navigate_to, card.nav_uri, win)
+
+
 def _on_card_pressed(
     ext, gesture, n_press: int, x: float, y: float, win: Gtk.Window, card: Gtk.Box
 ) -> None:
     """Button dispatch on "pressed", mirroring on_item_click_pressed
-    (nautilus-list-base.c:270-292). Primary is left unclaimed (activation
-    stays on FlowBox's own child-activated binding, _on_card_activated)."""
+    (nautilus-list-base.c:270-292).
+
+    Primary single-press is deliberately left UNCLAIMED here (#161), same as
+    before: folder cards carry a Gtk.DragSource (CAPTURE phase) that needs the
+    sequence to stay unclaimed through this press so it can still recognize a
+    drag once motion exceeds the threshold -- claiming here would immediately
+    deny it (GTK denies every other still-recognizing gesture the instant one
+    gesture claims), breaking drag-reorder. Selection+activation for a plain
+    single click is instead driven entirely from _on_card_released, which only
+    ever fires if no drag claimed the sequence first -- if a drag did happen,
+    this gesture was already denied by the DragSource's own claim, and
+    _on_card_released simply never runs for that sequence.
+
+    Double-click-policy activation is the one primary case handled here, on
+    the second press: mirrors GtkFlowBox's own click_gesture_pressed
+    (gtkflowbox.c), which also does not wait for release, and is safe to claim
+    immediately since reaching a second press already means the first
+    click-release cycle completed cleanly without becoming a drag."""
     button = gesture.get_current_button()
     if button == Gdk.BUTTON_SECONDARY and n_press == 1:
         _on_card_right_clicked(ext, gesture, n_press, x, y, win, card)
@@ -2555,6 +2581,35 @@ def _on_card_pressed(
             ext._do_open_window(card.nav_uri)
         else:
             ext._do_open_tab(card.nav_uri, win, make_active=False)
+    elif button == Gdk.BUTTON_PRIMARY and n_press == 2 and ext._click_policy != "single":
+        gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+        _select_single_card(card)
+        _activate_card(ext, card, win)
+
+
+def _on_card_released(
+    ext, gesture, n_press: int, x: float, y: float, win: Gtk.Window, card: Gtk.Box
+) -> None:
+    """Primary-click release counterpart to _on_card_pressed (#161). Commits
+    selection here (release, not press -- matching native's own timing), and
+    activates too under single-click policy. Double-click activation already
+    happened at press time in _on_card_pressed; n_press==2 here is that same
+    click's release and is a no-op.
+
+    Release must still be over the card that was pressed, mirroring the
+    equivalent re-check native list widgets do before committing (GtkListBox's
+    `box->active_row == gtk_list_box_get_row_at_y(box, y)`): pressing one card
+    and releasing over another, or off the panel entirely, is a cancelled
+    click and must not select. The controller is on the card itself, so the
+    test is a bounds check on the card's own allocation."""
+    if gesture.get_current_button() != Gdk.BUTTON_PRIMARY or n_press != 1:
+        return
+    if not (0 <= x < card.get_width() and 0 <= y < card.get_height()):
+        return
+    gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+    _select_single_card(card)
+    if ext._click_policy == "single":
+        _activate_card(ext, card, win)
 
 
 def _on_card_right_clicked(ext, gesture, _n, x, y, win: Gtk.Window, row: Gtk.Box) -> None:

@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-04 11:31-0700\n"
-"PO-Revision-Date: 2026-07-30 05:22+0000\n"
+"POT-Creation-Date: 2026-08-13 23:28-0300\n"
+"PO-Revision-Date: 2026-08-06 05:01+0000\n"
 "Last-Translator: Yann Masoch\n"
 "Language-Team: French\n"
 "Language: fr\n"
@@ -41,7 +41,7 @@ msgstr ""
 msgid "Column View"
 msgstr "Vue en colonne"
 
-#: nautilus_my_computer/common.py
+#: nautilus_my_computer/common.py nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{n} item"
 msgid_plural "{n} items"
@@ -384,57 +384,87 @@ msgstr "{free} disponible sur {total}"
 
 #: nautilus_my_computer/widgets.py
 msgid "Program"
-msgstr ""
+msgstr "Programme"
 
 #: nautilus_my_computer/widgets.py
 msgid "Audio"
-msgstr ""
+msgstr "Audio"
 
 #: nautilus_my_computer/widgets.py
 msgid "Font"
-msgstr ""
+msgstr "Police"
 
 #: nautilus_my_computer/widgets.py
 msgid "Image"
-msgstr ""
+msgstr "Image"
 
 #: nautilus_my_computer/widgets.py
 msgid "Archive"
-msgstr ""
+msgstr "Archive"
 
 #: nautilus_my_computer/widgets.py
 msgid "Markup"
-msgstr ""
+msgstr "Balisage"
 
 #: nautilus_my_computer/widgets.py
 msgid "Text"
-msgstr ""
+msgstr "Texte"
 
 #: nautilus_my_computer/widgets.py
 msgid "Video"
-msgstr ""
+msgstr "Vidéo"
 
 #: nautilus_my_computer/widgets.py
 msgid "Contacts"
-msgstr ""
+msgstr "Contacts"
 
 #: nautilus_my_computer/widgets.py
 msgid "Calendar"
-msgstr ""
+msgstr "Calendrier"
 
 #: nautilus_my_computer/widgets.py
-#, fuzzy
 msgid "Document"
-msgstr "Nouveau document"
+msgstr "Document"
 
 #: nautilus_my_computer/widgets.py
 msgid "Presentation"
-msgstr ""
+msgstr "Présentation"
 
 #: nautilus_my_computer/widgets.py
 msgid "Spreadsheet"
-msgstr ""
+msgstr "Tableur"
+
+#: nautilus_my_computer/widgets.py
+#, fuzzy, python-brace-format
+msgid "{n} item selected"
+msgid_plural "{n} items selected"
+msgstr[0] "{n} élément"
+msgstr[1] "{n} éléments"
 
 #: nautilus_my_computer/widgets.py
 msgid "Dimensions"
 msgstr "Dimensions"
+
+#: nautilus_my_computer/widgets.py
+#, fuzzy, python-brace-format
+msgid "{n} file"
+msgid_plural "{n} files"
+msgstr[0] "{n} élément"
+msgstr[1] "{n} éléments"
+
+#: nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "{n} folder"
+msgid_plural "{n} folders"
+msgstr[0] ""
+msgstr[1] ""
+
+#: nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "{files}, {folders}"
+msgstr ""
+
+#: nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "{summary} ({size})"
+msgstr ""

@@ -58,7 +58,11 @@ class NautilusPrefs:
         self.sort_column: str = "name"
         self.sort_reverse: bool = False
         self.view_mode: str = "icon-view"
-        self.click_policy: str = "double"  # Nautilus "click-policy": 'single' or 'double'
+        # Nautilus "click-policy": 'single' or 'double'. Read live at construction
+        # (main.py instantiates NautilusPrefs before any window/view exists) rather than
+        # hardcoding a default -- refresh_click_policy() can't be reused here since it reads
+        # self.click_policy to compute its return value before this first assignment exists.
+        self.click_policy: str = self._prefs.get_string("click-policy")
 
         self._sort_poll_id: int | None = None
         self._sort_hover: bool = False
@@ -159,13 +163,15 @@ class NautilusPrefs:
         when it changed since last read. Kept separate from
         refresh_view_mode(): click-policy only affects the disk-view grid's
         activate-on-single-click flag (widgets.py's
-        flow.set_activate_on_single_click) -- Column View's Miller columns are
-        always single-click regardless (drill-down UX, see MyComputerColumn)
-        and its preview column reads click_policy live at click time
-        (common.py's _is_activating_click()), so bundling this with
-        view-mode's full _repopulate_visible() would force a needless
-        re-enumeration/resort of every open Miller column on a setting that
-        doesn't affect their content at all."""
+        flow.set_activate_on_single_click) and Column View's Miller file rows
+        and preview column, both of which read click_policy live at click
+        time (widgets.py's MyComputerColumn._on_row_activated_internal and
+        MyComputerPreviewColumn._on_preview_area_pressed/_released) -- folder
+        rows stay single-click regardless (drill-down UX, see
+        MyComputerColumn). Bundling this with view-mode's full
+        _repopulate_visible() would force a needless re-enumeration/resort of
+        every open Miller column on a setting that doesn't affect their
+        content at all."""
         policy = self._prefs.get_string("click-policy")
         changed = policy != self.click_policy
         self.click_policy = policy

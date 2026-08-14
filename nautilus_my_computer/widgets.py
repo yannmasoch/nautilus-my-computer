@@ -95,7 +95,6 @@ from nautilus_my_computer.common import (
     _format_size,
     _gicon_renders,
     _icon_name_renders,
-    _is_activating_click,
     _log,
     _n,
     _native,
@@ -123,17 +122,23 @@ class MyComputerDiskCard(Gtk.Box):
         self.sub_label: Gtk.Label | None = None
 
         self.get_style_context().add_class("nautilus-view-cell")
-        self.set_focusable(True)
-        self.set_focus_on_click(True)
+        # Deliberately not set_focusable/set_focus_on_click (issue #161): a focusable inner
+        # widget lets gtk_flow_box_child_focus's backward-entry branch grab focus on this Box
+        # directly instead of the FlowBoxChild wrapper, so Shift+Tab landing fresh on this card
+        # would skip the wrapper's own selection/focus-visible state entirely
+        # (gtk_flow_box_child_set_focus never runs). Arrow-key nav is unaffected -- it goes
+        # through GtkFlowBox's own move-cursor handler, which always focuses the wrapper.
         self._build()
 
-        # One gesture on all buttons, dispatched from "pressed", mirroring
-        # nautilus-list-base.c:880-886 (on_item_click_pressed / button=0).
-        # Primary is left unclaimed -- activation stays on FlowBox's own
-        # child-activated binding (_on_card_activated).
+        # One gesture on all buttons, dispatched from "pressed"/"released",
+        # mirroring nautilus-list-base.c:880-886 (on_item_click_pressed /
+        # button=0). Primary is claimed and driven end to end by
+        # _on_card_pressed/_on_card_released (#161) rather than left to
+        # FlowBox's own competing click gesture.
         click = Gtk.GestureClick()
         click.set_button(0)
         click.connect("pressed", self._ext._on_card_pressed, self._win, self)
+        click.connect("released", self._ext._on_card_released, self._win, self)
         self.add_controller(click)
 
     @property
@@ -339,13 +344,15 @@ class MyComputerFolderCard(Gtk.Widget):
         # floats outside the FlowBox and is never a drop target. See
         # _build_drag_ghost / _build_reorder_placeholder.
         if interactive:
-            # One gesture on all buttons, dispatched from "pressed", mirroring
-            # nautilus-list-base.c:880-886 (on_item_click_pressed / button=0).
-            # Primary is left unclaimed -- activation stays on FlowBox's own
-            # child-activated binding (_on_card_activated).
+            # One gesture on all buttons, dispatched from "pressed"/"released",
+            # mirroring nautilus-list-base.c:880-886 (on_item_click_pressed /
+            # button=0). Primary is claimed and driven end to end by
+            # _on_card_pressed/_on_card_released (#161) rather than left to
+            # FlowBox's own competing click gesture.
             click = Gtk.GestureClick()
             click.set_button(0)
             click.connect("pressed", self._ext._on_card_pressed, self._win, self)
+            click.connect("released", self._ext._on_card_released, self._win, self)
             self.add_controller(click)
 
             self._wire_drag()
@@ -628,7 +635,7 @@ class MyComputerFolderCard(Gtk.Widget):
     def _build_list(self) -> None:
         """List-view compact cell: keep Preferred Folders multi-column (the
         section's FlowBox stays in grid layout -- see always_grid on its
-        MyComputerCardSection) while rendering each card as a compact
+        MyComputerCardGroup) while rendering each card as a compact
         horizontal icon+name row instead of the full icon-grid cell."""
         pf = self.model
         self.set_valign(Gtk.Align.FILL)
@@ -939,11 +946,11 @@ class MyComputerCappedGridFlowBox(Gtk.FlowBox):
         Gtk.FlowBox.do_size_allocate(self, width, height, baseline)
 
 
-class MyComputerCardSection(Gtk.Box):
+class MyComputerCardGroup(Gtk.Box):
     """A heading + FlowBox of cards. Dedups the section setup shared by the
     Preferred Folders block and each disk group in _populate()."""
 
-    __gtype_name__ = "MyComputerCardSection"
+    __gtype_name__ = "MyComputerCardGroup"
 
     def __init__(
         self,
@@ -1296,9 +1303,7 @@ class MyComputerColumnRow(Gtk.ListBoxRow):
         box.append(icon)
 
         label_text = (
-            _n("{n} item", "{n} items", count).format(n=count)
-            if count > 1
-            else self.display_name
+            _n("{n} item", "{n} items", count).format(n=count) if count > 1 else self.display_name
         )
         label = Gtk.Label(label=label_text)
         box.append(label)
@@ -1680,18 +1685,13 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         # Gtk.ListBox selection. It is rendered with GTK's :active state so
         # the selected path and the arrow-key target can coexist.
         self._keyboard_active_row: MyComputerColumnRow | None = None
-        # Manual double-click detection for opening file rows (see
-        # _on_row_activated_internal): a raw GestureClick on the row can't be
+        # Manual repeat-click detection for opening the already-previewed file row
+        # (see _on_row_activated_internal): a raw GestureClick on the row can't be
         # used for this because every activation rebuilds the paned chain
-        # (column_view.py's _rebuild_chain), which resets GTK's own
-        # press-count tracking on the row before a second click can land.
+        # (column_view.py's _rebuild_chain), which resets GTK's own press-count
+        # tracking on the row before a second click can land.
         self._last_activated_uri: str | None = None
         self._last_activated_time: int = 0
-        # Selection a modifier click already committed, held until Gtk.ListBox
-        # has had its own turn on the matching button release (see
-        # pin_selection/_on_row_activated_internal). None means no modifier
-        # click is in flight and row-activated is a genuine activation.
-        self._pinned_selection: list[MyComputerColumnRow] | None = None
         # Idle source still building the tail of a large folder's rows (see
         # _append_rows_in_chunks), or 0.
         self._fill_id = 0
@@ -1811,9 +1811,6 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         self._cancellable = Gio.Cancellable()
         self._stop_fill()
         self.clear_active_row()
-        # Every row object below is about to be dropped, so a pinned
-        # selection can only name dead rows from here on.
-        self.clear_pinned_selection()
         self.list_box.set_placeholder(None)
         child = self.list_box.get_first_child()
         while child is not None:
@@ -2200,37 +2197,6 @@ class MyComputerColumn(Gtk.ScrolledWindow):
     def selected_uris(self) -> list[str]:
         return [row.uri for row in self.selected_rows()]
 
-    def pin_selection(self) -> None:
-        """Hold the current selection against Gtk.ListBox's own click
-        handling. With activate-on-single-click, GtkListBox selects and
-        activates the pressed row from the button *release*, ignoring
-        modifiers -- so a ctrl+click that deselected a row would see it
-        selected again a moment later. column_view.py commits the intended
-        selection on press and pins it here; the release's activation is
-        recognized as that echo and undone (see
-        _on_row_activated_internal)."""
-        self._pinned_selection = self.selected_rows()
-
-    def clear_pinned_selection(self) -> None:
-        """Forget any pinned selection, so the next row-activated counts as a
-        real activation again."""
-        self._pinned_selection = None
-
-    def _restore_pinned_selection(self) -> bool:
-        """Re-apply a pinned selection and report whether one was pending.
-        Rows dropped by a reload in the meantime are skipped rather than
-        re-selected through a dead parent."""
-        pinned = self._pinned_selection
-        self._pinned_selection = None
-        if pinned is None:
-            return False
-        live = [row for row in self.rows() if row in pinned]
-        if self.selected_rows() != live:
-            self.list_box.unselect_all()
-            for row in live:
-                self.list_box.select_row(row)
-        return True
-
     def scroll_position(self) -> float:
         """This column's own vertical scroll offset, read live off the
         native Gtk.ScrolledWindow adjustment -- same pattern as
@@ -2250,31 +2216,29 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         if not isinstance(row, MyComputerColumnRow):
             return
 
-        # Gtk.ListBox's own release-driven select-and-activate, echoing a
-        # modifier click column_view.py already fully handled on press. Undo
-        # the selection it just forced and drop the activation -- it is not a
-        # new user action, and it must not count toward the double-click
-        # tracking below either.
-        if self._restore_pinned_selection():
-            return
-
+        # Miller browsing itself is always single-click, for every policy: one
+        # click drills into a folder or previews a file, exactly like the
+        # folder-column drill-down (set_activate_on_single_click above). Once a
+        # file is already the active preview (the "last" column), a further
+        # click on that same row is an *open* action rather than navigation,
+        # and Nautilus' click-policy governs it there -- same contract as the
+        # preview pane (_on_preview_area_pressed/_released), just re-derived by
+        # timing instead of n_press since the chain rebuild below destroys
+        # GTK's own press-count tracking on the row before a second click can
+        # land (see the field comment above).
         now = GLib.get_monotonic_time()
         double_click_us = Gtk.Settings.get_default().get_property("gtk-double-click-time") * 1000
-        is_repeat_click = (
-            not row.is_dir
-            and row.uri == self._last_activated_uri
-            and (now - self._last_activated_time) <= double_click_us
-        )
+        is_same_file = not row.is_dir and row.uri == self._last_activated_uri
+        is_repeat_click = is_same_file and (now - self._last_activated_time) <= double_click_us
         self._last_activated_uri = row.uri
         self._last_activated_time = now
 
-        if is_repeat_click:
-            # Second activation of the same file row within the double-click
-            # window: open it, unconditionally (regardless of Nautilus'
-            # click-policy setting) -- the single click already
-            # selected/previewed it (see set_activate_on_single_click above),
-            # so this is the symmetric "one more click" action. Same open
-            # helper the preview column's click uses.
+        single_click = self._ext._nautilus_prefs.click_policy == "single"
+        if is_same_file and (is_repeat_click or single_click):
+            # Single policy: every further click on the already-active file
+            # opens it, no timing needed -- it already selected/previewed on
+            # the click before this one. Double policy: only a genuine repeat
+            # click within the double-click window opens it.
             _open_file_with_default_app(row.uri, self._cancellable)
             return
 
@@ -2297,9 +2261,8 @@ def _format_datetime(unix_time: int) -> str:
 
 def _open_file_with_default_app(file_uri: str, cancellable: Gio.Cancellable) -> None:
     """Launch file_uri with its default app. Shared by the preview column's
-    click handler and file rows in the folder columns, so both surfaces open
-    a file the same way, honoring Nautilus' own single/double-click setting
-    via _is_activating_click()."""
+    click handlers and file rows in the folder columns, so both surfaces open
+    a file the same way."""
     Gio.AppInfo.launch_default_for_uri_async(
         file_uri, None, cancellable, _on_launch_default_app_done
     )
@@ -2353,6 +2316,10 @@ class MyComputerPreviewColumn(Gtk.Box):
         self.file_uri: str | None = file_uri if isinstance(file_uri, str) else None
         self._cancellable = Gio.Cancellable()
         self._discoverer = None
+        # Deferred single-click-policy activation, set on "pressed" and consumed on
+        # "released" -- see _on_preview_area_pressed/_released/_stopped. Initialized above
+        # the file_uri is None early-return below so it exists on empty-state instances too.
+        self._activate_on_release = False
 
         self.set_size_request(_COLUMN_PREVIEW_WIDTH, -1)
         self.set_vexpand(True)
@@ -2371,10 +2338,20 @@ class MyComputerPreviewColumn(Gtk.Box):
         preview_area.set_valign(Gtk.Align.FILL)
         preview_area.set_vexpand(True)
         preview_area.set_hexpand(True)
-
+        # Open the file with its default app on click, honoring Nautilus' own
+        # single-click/double-click setting -- unlike the folder columns to its
+        # left, which are always single-click (Miller drill-down, see
+        # MyComputerColumn). Mirrors the native item-cell press/release state
+        # machine (nautilus-list-base.c on_item_click_pressed/released/stopped):
+        # double-click policy activates on the second press; single-click policy
+        # defers to release so a press that turns into a drag doesn't activate.
+        # The gesture is left with GTK's default button (1, primary-only) --
+        # middle/secondary never reach these handlers.
         if self.file_uri:
             click = Gtk.GestureClick()
-            click.connect("pressed", self._on_preview_area_clicked)
+            click.connect("pressed", self._on_preview_area_pressed)
+            click.connect("released", self._on_preview_area_released)
+            click.connect("stopped", self._on_preview_area_stopped)
             preview_area.add_controller(click)
         self.append(preview_area)
 
@@ -2547,11 +2524,28 @@ class MyComputerPreviewColumn(Gtk.Box):
 
         self._detail_lbl.set_label(sub)
 
-    def _on_preview_area_clicked(
-        self, _gesture: Gtk.GestureClick, n_press: int, _x: float, _y: float
+    def _on_preview_area_pressed(
+        self, gesture: Gtk.GestureClick, n_press: int, _x: float, _y: float
     ) -> None:
-        if self.file_uri and _is_activating_click(self._ext, n_press):
+        modifiers = gesture.get_current_event_state() & Gtk.accelerator_get_default_mod_mask()
+        selection_mode = bool(
+            modifiers & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK)
+        )
+        single_click = self._ext._nautilus_prefs.click_policy == "single"
+        self._activate_on_release = single_click and n_press == 1 and not selection_mode
+        if not single_click and n_press == 2 and not selection_mode:
             _open_file_with_default_app(self.file_uri, self._cancellable)
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+
+    def _on_preview_area_released(
+        self, _gesture: Gtk.GestureClick, _n_press: int, _x: float, _y: float
+    ) -> None:
+        if self._activate_on_release:
+            _open_file_with_default_app(self.file_uri, self._cancellable)
+        self._activate_on_release = False
+
+    def _on_preview_area_stopped(self, _gesture: Gtk.GestureClick) -> None:
+        self._activate_on_release = False
 
     def _load(self) -> None:
         gfile = Gio.File.new_for_uri(self.file_uri)

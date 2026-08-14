@@ -572,6 +572,7 @@ class _ColumnViewHost:
                 continue
             click = Gtk.GestureClick(button=0)
             click.connect("pressed", self._on_row_pressed, _column, row)
+            click.connect("released", self._on_row_released, _column, row)
             row.add_controller(click)
             row._mc_click_wired = True
         self._set_cut_rows()
@@ -749,31 +750,14 @@ class _ColumnViewHost:
             self._on_row_right_clicked(gesture, n_press, x, y, column, row)
             return
 
-        if button == Gdk.BUTTON_PRIMARY and n_press == 1:
-            state = gesture.get_current_event_state()
-            ctrl = bool(state & Gdk.ModifierType.CONTROL_MASK)
-            shift = bool(state & Gdk.ModifierType.SHIFT_MASK)
-            if shift:
-                self._select_range(column, row)
-                column._cursor_row = row
-                self._activate_selection(column, row)
-            elif ctrl:
-                if row in column.selected_rows():
-                    column.list_box.unselect_row(row)
-                else:
-                    column.list_box.select_row(row)
-                column._anchor_row = row
-                column._cursor_row = row
-                self._activate_selection(column, row)
-            else:
-                column.list_box.unselect_all()
-                column.list_box.select_row(row)
-                column._anchor_row = row
-                column._cursor_row = row
-                # A plain click hands activation back to Gtk.ListBox's own
-                # gesture (see below), so nothing is pinned for it to undo.
-                column.clear_pinned_selection()
+        if button == Gdk.BUTTON_PRIMARY:
+            # #161: leave primary unclaimed until release so a press that
+            # turns into touch/kinetic scrolling never commits selection.
+            # _on_row_released owns both plain and modifier selection.
+            return
 
+        # Reset the all-buttons gesture for any unsupported button instead
+        # of letting its sequence linger into the next press.
         gesture.set_state(Gtk.EventSequenceState.DENIED)
 
     def _activate_selection(self, column: Gtk.Widget, clicked_row: Gtk.Widget) -> None:
@@ -787,10 +771,8 @@ class _ColumnViewHost:
         rows selected the clicked row is only a tie-break -- the multi
         branch of _on_real_row_activated reads the whole selection itself.
 
-        The resulting selection is then pinned (see
-        MyComputerColumn.pin_selection): Gtk.ListBox drives its own
-        select-and-activate from the button *release*, which ignores
-        modifiers and would re-select a row this click just deselected."""
+        The row controller owns primary release end to end, so GtkListBox
+        never gets a second chance to replace this modifier selection."""
         selected = column.selected_rows()
         if not selected:
             self._collapse_below(column)
@@ -798,7 +780,6 @@ class _ColumnViewHost:
             self._on_real_row_activated(column, selected[0])
         else:
             self._on_real_row_activated(column, clicked_row)
-        column.pin_selection()
 
     def _open_selection(self, column: Gtk.Widget) -> bool:
         """Open what is selected in `column` -- the Return/Enter target.
@@ -917,6 +898,71 @@ class _ColumnViewHost:
         for i in range(start, end + 1):
             column.list_box.select_row(rows[i])
         column._cursor_row = target_row
+
+    def _on_row_released(
+        self,
+        gesture: Gtk.GestureClick,
+        _n_press: int,
+        x: float,
+        y: float,
+        column: Gtk.Widget,
+        row: Gtk.Widget,
+    ) -> None:
+        """Primary-click release counterpart to _on_row_pressed (#161).
+
+        Press leaves the sequence unclaimed so the enclosing ScrolledWindow
+        can still scroll. Claiming a valid click here cancels GtkListBox's own
+        release handler before it can replace Miller's multi-selection.
+        Plain clicks still run MyComputerColumn's activation state machine;
+        Ctrl/Shift clicks commit the resulting selection as a group.
+
+        Two details mirror GtkListBox's own released handler rather than
+        simplifying past it:
+        - **Release must still be over the pressed row.** Native explicitly
+          re-checks (`box->active_row == gtk_list_box_get_row_at_y(box, y)`)
+          before selecting or activating, so pressing one row and releasing
+          over another (or off the list) does nothing. Our controller is on
+          the row itself, so the equivalent test is a bounds check on the
+          row's own allocation.
+        - **Every press count dispatches, not just the first.**
+          `_on_row_activated_internal` detects repeat clicks by *timing*, not
+          `n_press`, precisely because a chain rebuild resets GTK's press-count
+          tracking mid-double-click (see MyComputerColumn's own
+          `_last_activated_uri` comment). A second release can therefore arrive
+          as either n_press 1 or 2 depending on whether the row survived, so
+          filtering on n_press would silently swallow the open-already-previewed-file
+          click in the cases where it does survive.
+        """
+        if gesture.get_current_button() != Gdk.BUTTON_PRIMARY:
+            return
+        if not (0 <= x < row.get_width() and 0 <= y < row.get_height()):
+            # Released off the row it was pressed on: not a click. Deny rather
+            # than just return, so the sequence ends now instead of lingering
+            # into the next press (see _on_row_pressed's DENIED branch).
+            gesture.set_state(Gtk.EventSequenceState.DENIED)
+            return
+        gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+        state = gesture.get_current_event_state()
+        ctrl = bool(state & Gdk.ModifierType.CONTROL_MASK)
+        shift = bool(state & Gdk.ModifierType.SHIFT_MASK)
+        if shift:
+            self._select_range(column, row)
+            column._cursor_row = row
+            self._activate_selection(column, row)
+        elif ctrl:
+            if row in column.selected_rows():
+                column.list_box.unselect_row(row)
+            else:
+                column.list_box.select_row(row)
+            column._anchor_row = row
+            column._cursor_row = row
+            self._activate_selection(column, row)
+        else:
+            column.list_box.unselect_all()
+            column.list_box.select_row(row)
+            column._anchor_row = row
+            column._cursor_row = row
+            column._on_row_activated_internal(column.list_box, row)
 
     def _on_row_right_clicked(
         self,
