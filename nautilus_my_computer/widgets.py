@@ -1644,15 +1644,6 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         self._on_row_pressed = on_row_pressed
         self._on_row_released = on_row_released
         self._cancellable = Gio.Cancellable()
-        # Keyboard navigation is a cursor, not a change to the committed
-        # selection. It is rendered with GTK's :active state so the selected
-        # path and the arrow-key target can coexist. Currently unreachable:
-        # arrow-key nav is gated off entirely by column_view.py's
-        # _COLUMN_KEYBOARD_NAV = False, so set_active_index() has no callers
-        # and this never actually gets set -- kept only so clear_active_row()
-        # (still called unconditionally from _sync_column_selections) stays a
-        # correct no-op rather than needing special-casing there.
-        self._keyboard_active_row: MyComputerColumnRow | None = None
         # Manual repeat-click detection for opening the already-previewed file row
         # (see _on_row_activated_internal): a raw GestureClick on the row can't be
         # used for this because every activation rebuilds the paned chain
@@ -1683,10 +1674,17 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         # the former Gtk.ListBox -- see issue #139: native Nautilus's own
         # "lazy load based on what's visible" is an emergent property of this
         # exact recycling mechanism, not an explicit visibility check). Rows
-        # no longer exist 1:1 with folder entries; only entries currently
-        # scrolled into view have a live MyComputerColumnRow widget at all
-        # (see _row_widgets, populated/depopulated from the factory's
-        # bind/unbind, GTK's documented GtkSignalListItemFactory lifecycle).
+        # no longer exist 1:1 with folder entries: live MyComputerColumnRow
+        # widgets are a BOUNDED, RECYCLED POOL (see _row_widgets, populated/
+        # depopulated from the factory's bind/unbind, GTK's documented
+        # GtkSignalListItemFactory lifecycle) -- bounded, but well beyond the
+        # rows actually on screen, since GTK keeps a substantial overscan.
+        # #139 measured ~205 bound rows for a 240-item AND a 1001-item
+        # folder, i.e. O(1) in folder size but large in absolute terms, so
+        # any folder smaller than that pool has every one of its rows bound
+        # at once. Do not read _row_widgets as "what is currently visible";
+        # it is not (see page_step, which derives the visible count from the
+        # adjustment instead).
         self._store: Gio.ListStore = Gio.ListStore(item_type=_ColumnRowItem)
         self._selection = Gtk.SingleSelection(
             model=self._store, autoselect=False, can_unselect=True
@@ -1843,7 +1841,6 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         collapsing the Miller chain."""
         self._cancellable.cancel()
         self._cancellable = Gio.Cancellable()
-        self.clear_active_row()
         self._show_empty_page(False)
         self._store.remove_all()
         self._load()
@@ -2072,22 +2069,101 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         column/preview stays highlighted, never an earlier column too."""
         self._selection.unselect_all()
 
-    def clear_active_row(self) -> None:
-        """Clear this column's temporary arrow-key cursor. A no-op today:
-        arrow-key nav is gated off entirely by column_view.py's
-        _COLUMN_KEYBOARD_NAV = False, so self._keyboard_active_row is never
-        actually set -- kept only so _sync_column_selections's unconditional
-        call stays valid."""
-        self._keyboard_active_row = None
+    def select_index(self, index: int) -> "_ColumnRowItem | None":
+        """Select this column's entry at index (clamped into range) and
+        return its model item, or None if the folder is empty (or hasn't
+        finished enumerating yet).
+
+        Drives every keyboard-originated selection change (see
+        column_view.py's _focus_child_column and _move_column_selection).
+        Returning the item is the whole contract: nothing here notifies
+        anyone that the selection moved, so the caller arms the Miller
+        commit explicitly off what it gets back."""
+        n = self._store.get_n_items()
+        if n == 0:
+            return None
+        index = max(0, min(index, n - 1))
+        self._selection.select_item(index, True)
+        return self._store.get_item(index)
+
+    def select_first(self) -> "_ColumnRowItem | None":
+        """Select this column's first entry -- used when keyboard navigation
+        moves into a column that has no selection of its own yet (see
+        column_view.py's _focus_child_column)."""
+        return self.select_index(0)
+
+    def has_selection(self) -> bool:
+        return self._selection.get_selected_item() is not None
+
+    def selected_index(self) -> int | None:
+        pos = self._selection.get_selected()
+        return None if pos == Gtk.INVALID_LIST_POSITION else pos
+
+    def item_count(self) -> int:
+        return self._store.get_n_items()
+
+    def contains_item(self, item) -> bool:
+        """Whether item is still one of this column's live model entries -- a
+        reload replaces every item, so anything holding one across an async
+        gap (the debounced keyboard commit) has to re-check before acting."""
+        found, _position = self._store.find(item)
+        return found
+
+    def page_step(self) -> int | None:
+        """Rows to jump for Page Up/Page Down (see column_view.py's
+        _move_column_selection): the number of rows currently visible in
+        the viewport, minus one -- the same "leave one row of overlap for
+        context" convention most list/text widgets use for paging, rather
+        than jumping a full page with nothing carried over.
+
+        GtkListView exposes no live "how many rows are visible" query of
+        its own (checked: nothing on the public Gtk.ListView API surface
+        reports rendered/visible item count), so this is derived from two
+        values that are: the real viewport height (Gtk.Adjustment's own
+        get_page_size(), the same value GTK's own native page-up/down
+        reads internally) divided by a row's real SIZE (get_allocated_height(),
+        sampled off any currently realized row). Deliberately never a row's
+        on-screen POSITION: reading each realized row's rectangle via
+        compute_bounds() was tried and reverted during #91, because rows
+        GTK has realized but not yet positioned against the current scroll
+        offset report bounds near y=0 regardless of where they really are,
+        making every realized row look "visible" and turning Page Up/Down
+        into Home/End. Recomputed fresh on every call rather than cached,
+        so a window resize is automatically reflected on the very next
+        keypress with no separate resize handler needed.
+
+        None if nothing is realized yet to measure a row height from -- the
+        caller then jumps straight to the near edge (row 0 / the last row)
+        instead of guessing a made-up row count. A column with fewer rows
+        than fit in one page lands on that same edge too, but via the
+        ordinary min/max clamp on a real step in the caller -- this None
+        case is only for when no step can be computed at all."""
+        page_size = self.get_vadjustment().get_page_size()
+        if page_size <= 0:
+            return None
+        # Scan until a row reports a real height rather than trusting only
+        # the first entry in _row_widgets: that dict is insertion-ordered,
+        # not viewport-ordered, and whichever row happens to be first can
+        # transiently read 0 (mid-relayout, e.g. right after a fast
+        # scroll_to) even while plenty of others in the same dict are
+        # already settled -- bailing out on that single candidate meant a
+        # rapid run of Page Down presses could suddenly see page_step()
+        # return None and jump to the true last row instead of stepping.
+        for row in self._row_widgets.values():
+            row_height = row.get_allocated_height()
+            if row_height > 0:
+                visible_rows = int(page_size // row_height)
+                return max(1, visible_rows - 1)
+        return None
 
     def set_current_column(self, is_current: bool) -> None:
         """Mark whether this column is the one whose selected row should read
         as *the* accent-highlighted selection (see the
         .mc-column-view-highlighted-row CSS rule in my_computer_view.py).
         Driven by column_view.py's own tracked focused_index -- i.e.
-        whichever column was last clicked (or, when arrow-key nav is
-        enabled, last focused) -- rather than by actual GTK keyboard focus,
-        so it works independent of any real focus-grabbing. The class is
+        whichever column was last clicked or last moved into with Left/
+        Right -- rather than by actual GTK keyboard focus, so it works
+        independent of any real focus-grabbing. The class is
         toggled on this column's own Gtk.ListView (there's no cheaper way to
         scope the CSS to "whichever row is selected in this column," since
         the selected row's widget can be recycled away under Gtk.ListView),

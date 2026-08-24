@@ -99,10 +99,6 @@ def row_nav_direction(from_index: int, to_index: int) -> str:
         return NAV_UP
 
 
-# Retained for the existing focus/selection bookkeeping, but keyboard
-# navigation itself is currently disabled by the Column View's key controller.
-_COLUMN_KEYBOARD_NAV = False
-
 # Master switch for user drag-to-resize on folder columns. On: dragging a
 # column's handle updates that column's width, clamped to _COLUMN_MAX_WIDTH
 # (see _on_paned_position_changed) -- no manual floor clamp needed, GTK's own
@@ -164,6 +160,44 @@ PREVIEW_FADE_DURATION_MS = 100
 # outlast Nautilus's own async re-focus of its real, hidden GtkGridView for
 # the newly navigated slot.
 _FOCUS_RETRY_FRAMES = 30
+# Arrow-key row changes (_move_column_selection) move a column's own
+# selection immediately, but the expensive Miller half -- rebuild the chain,
+# replace the preview, push Nautilus's real slot location -- is deferred by
+# this long, restarting the clock on each further selection change (see
+# _arm_row_commit).
+# Held arrow keys repeat roughly every 30ms once X's repeat delay elapses, so
+# without this every intermediate row on the way to the target one would pay
+# for a full _rebuild_chain plus its own slot.open-location navigation. Short
+# enough that a single deliberate press still feels immediate. Ported from
+# @hericlesbitencourt's #146 (see issue #91's credit section).
+ROW_COMMIT_DEBOUNCE_MS = 100
+# Modifiers that mean "this is someone else's accelerator, not ours" -- Alt+
+# Left/Right is Nautilus's own back/forward, Ctrl+L opens the address bar,
+# etc. Checked before every custom Left/Right/Return handling in
+# _on_key_pressed so those combinations keep working. Shift is deliberately
+# excluded: Shift+Left/Right/Return has no meaning of its own yet (range
+# selection is out of scope for #91, see PR #146's multi-selection work) and
+# should keep falling through to the same swallow every other unclaimed key
+# gets, not be treated as an accelerator.
+_KEY_ACCEL_MODIFIER_MASK = int(
+    Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.ALT_MASK | Gdk.ModifierType.SUPER_MASK
+)
+_COLUMN_NAV_KEYVALS = frozenset(
+    {
+        Gdk.KEY_Up,
+        Gdk.KEY_KP_Up,
+        Gdk.KEY_Down,
+        Gdk.KEY_KP_Down,
+        Gdk.KEY_Home,
+        Gdk.KEY_KP_Home,
+        Gdk.KEY_End,
+        Gdk.KEY_KP_End,
+        Gdk.KEY_Page_Up,
+        Gdk.KEY_KP_Page_Up,
+        Gdk.KEY_Page_Down,
+        Gdk.KEY_KP_Page_Down,
+    }
+)
 
 
 def default_root_uri() -> str:
@@ -386,11 +420,19 @@ class _ColumnViewHost:
         # its own reference.
         self._scroll_animation = None
         self._last_viewport_size = (0, 0)
-        # Which column currently owns the accent-coloured selection. This is
-        # updated from mouse navigation and deliberately independent of GTK's
-        # keyboard focus.
+        # Which column currently owns the accent-coloured selection. Updated
+        # both by mouse navigation (_on_real_row_activated) and by keyboard
+        # navigation (_focus_parent_column/_focus_child_column) -- Left/Right
+        # move it directly, and every other custom shortcut (F2, Delete,
+        # Ctrl+Shift+N) targets whichever column this points at.
         self.focused_index = 0
         self._apply_focused_column_style()
+        # Keyboard row change waiting to be committed (see _arm_row_commit) --
+        # a (column, item) pair, item being a _ColumnRowItem model entry, not
+        # a row widget (a selection made off-screen has no live widget under
+        # Gtk.ListView's recycling).
+        self._pending_row_commit: tuple[Gtk.Widget, object] | None = None
+        self._row_commit_id = 0
 
         scroller = Gtk.ScrolledWindow()
         # Vertical NEVER makes this scroller's height follow the canvas's
@@ -469,6 +511,9 @@ class _ColumnViewHost:
 
     def reset(self, root_uri: str) -> None:
         self._detach_root()
+        # Nothing from the old chain may commit into, or echo into, the new
+        # one -- reset() re-roots to a genuinely different location.
+        self._cancel_row_commit()
 
         self._root_uri = root_uri
         self._sort = self._ext._nautilus_prefs.resolve_column_sort(root_uri)
@@ -697,6 +742,9 @@ class _ColumnViewHost:
         elsewhere; there is also no popover to anchor to, unlike the
         right-click case below.
         """
+        # The pointer takes over from here: a keyboard commit still waiting
+        # out its debounce would otherwise land on top of this click.
+        self._cancel_row_commit()
         button = gesture.get_current_button()
         if button == Gdk.BUTTON_MIDDLE and n_press == 1:
             gesture.set_state(Gtk.EventSequenceState.CLAIMED)
@@ -1438,18 +1486,21 @@ class _ColumnViewHost:
             return
 
         _log("sync_to_uri: truncating to already-open ancestor")
+        # A genuinely external navigation (pathbar chip, sidebar, back/
+        # forward) -- any keyboard commit still waiting out its debounce
+        # targets a column this is about to collapse or replace.
+        self._cancel_row_commit()
         for stale in self.columns[idx + 1 :]:
             stale.destroy_enumeration()
         del self.columns[idx + 1 :]
 
         self._set_preview(None)
-        if _COLUMN_KEYBOARD_NAV:
-            self.focused_index = len(self.columns) - 1
-        else:
-            # See the equivalent branch in _on_real_row_activated: the
-            # column whose row selection leads into the deepest/current
-            # column is "current" here.
-            self.focused_index = max(0, len(self.columns) - 2)
+        # Keyboard nav treats the deepest remaining column as "current"
+        # rather than its parent -- Left/Right walk columns directly, so the
+        # accent highlight should land where the arrows would next act, not
+        # one column short of it (same convention _drill_into_open_chain
+        # below uses for its own newly appended column).
+        self.focused_index = len(self.columns) - 1
         self._sync_column_selections()
         self._apply_focused_column_style()
         # Truncating to an ancestor is the same kind of collapse as NAV_UP
@@ -1472,6 +1523,10 @@ class _ColumnViewHost:
         fresh column exactly like a click on that row would
         (_on_real_row_activated's NAV_DOWN branch), just triggered by an
         external navigation instead of a click."""
+        # Same reasoning as the truncate branch above: this is an external
+        # navigation, and any keyboard commit still pending targets a column
+        # that's about to be collapsed or replaced.
+        self._cancel_row_commit()
         for stale in self.columns[parent_idx + 1 :]:
             stale.destroy_enumeration()
         del self.columns[parent_idx + 1 :]
@@ -1484,10 +1539,9 @@ class _ColumnViewHost:
         self.columns.append(new_column)
         self._set_preview(None)
 
-        if _COLUMN_KEYBOARD_NAV:
-            self.focused_index = len(self.columns) - 1
-        else:
-            self.focused_index = max(0, len(self.columns) - 2)
+        # See the truncate branch above: the newly appended column is
+        # "current" for keyboard nav's purposes, same as any other drill.
+        self.focused_index = len(self.columns) - 1
         self._sync_column_selections()
         self._apply_focused_column_style()
         self._rebuild_chain()
@@ -1507,7 +1561,6 @@ class _ColumnViewHost:
         including ones the click didn't touch, means a stale selection from
         a since-abandoned branch can never linger."""
         for i, col in enumerate(self.columns):
-            col.clear_active_row()
             if i + 1 < len(self.columns):
                 col.select_child_for_uri(self.columns[i + 1].folder_uri)
             elif self.preview_column.file_uri:
@@ -1527,15 +1580,245 @@ class _ColumnViewHost:
         for i, col in enumerate(self.columns):
             col.set_current_column(i == self.focused_index)
 
-    def _on_key_pressed(self, _ctrl, keyval, _keycode, _gtk_state) -> bool:
-        """Block keys only while the Column View itself owns focus.
+    def _arm_row_commit(self, column: Gtk.Widget, item) -> None:
+        """Schedule the Miller commit for a keyboard row change, replacing
+        any commit still pending.
+
+        The selection itself has already moved by the time this is called --
+        this only defers the expensive half (see ROW_COMMIT_DEBOUNCE_MS), so
+        walking through a folder with the arrow keys stays a pure cursor
+        movement until the user settles on a row."""
+        self._pending_row_commit = (column, item)
+        if self._row_commit_id != 0:
+            GLib.source_remove(self._row_commit_id)
+        self._row_commit_id = GLib.timeout_add(ROW_COMMIT_DEBOUNCE_MS, self._apply_row_commit)
+
+    def _apply_row_commit(self) -> bool:
+        self._row_commit_id = 0
+        pending = self._pending_row_commit
+        self._pending_row_commit = None
+        if pending is None:
+            return GLib.SOURCE_REMOVE
+        column, item = pending
+        # The chain can have moved on while this was waiting (an external
+        # navigation, a reload replacing every item) -- commit only what is
+        # still really there.
+        if column not in self.columns or not column.contains_item(item):
+            return GLib.SOURCE_REMOVE
+        self._on_real_row_activated(column, item)
+        # _on_real_row_activated -> _rebuild_chain reparents every column,
+        # which drops GTK focus. Re-assert it onto the column the commit
+        # just landed in.
+        self._arm_focus_retry(self._focused_column())
+        return GLib.SOURCE_REMOVE
+
+    def _flush_row_commit(self) -> None:
+        """Run a pending commit immediately instead of waiting out its
+        debounce, then clear it -- used by Left/Right/Return so no stale
+        delayed commit can fire behind an action that already acted on the
+        current selection."""
+        if self._row_commit_id != 0:
+            GLib.source_remove(self._row_commit_id)
+            self._row_commit_id = 0
+        pending = self._pending_row_commit
+        self._pending_row_commit = None
+        if pending is None:
+            return
+        column, item = pending
+        if column not in self.columns or not column.contains_item(item):
+            return
+        self._on_real_row_activated(column, item)
+        self._arm_focus_retry(self._focused_column())
+
+    def _cancel_row_commit(self) -> None:
+        """Drop a pending keyboard commit, for when something else takes
+        over navigation (a click, a re-root, an external location change)."""
+        if self._row_commit_id != 0:
+            GLib.source_remove(self._row_commit_id)
+            self._row_commit_id = 0
+        self._pending_row_commit = None
+
+    def _on_key_pressed(self, _ctrl, keyval, _keycode, gtk_state) -> bool:
+        """Drive Column View's own keyboard navigation.
 
         This controller is attached to the view scroller, not the Nautilus
         window, so header-bar controls and location-entry widgets retain
-        their normal keyboard handling. ``~`` and ``/`` pass through for
-        Nautilus's URI-entry shortcuts.
+        their normal keyboard handling.
+
+        Up/Down/Home/End/Page Up/Page Down were originally meant to be left
+        to Gtk.ListView's own native move-cursor bindings on the focused
+        column's list_view (that was the plan issue #91 shipped with). Live
+        testing after that landed showed they don't actually fire: with
+        list_item.set_focusable(False) in effect (#139's premature-focus-ring
+        fix, which every row widget carries), no GtkListItemWidget is ever
+        eligible to hold real keyboard focus, so GtkListBase's internal
+        cursor tracking has nothing to move relative to -- grab_focus() lands
+        on the bare Gtk.ListView container instead (confirmed offline: a
+        from-scratch reproduction of the same setup shows GTK's own
+        get_focus() returning the ListView itself, not an item widget), and
+        the native binding silently no-ops. Left/Right worked immediately
+        because they're entirely our own code, independent of that. Up/Down/
+        Home/End/Page Up/Page Down are handled explicitly below instead
+        (_move_column_selection), driving the column's Gtk.SingleSelection
+        directly -- this was the plan's stated fallback for exactly this
+        case, not a new approach.
+
+        Left/Right still have no native behaviour of their own in a vertical
+        list (bound, but a no-op: gtk_list_base_move_cursor() returns TRUE
+        unconditionally, so leaving them unclaimed would silently swallow
+        them rather than pass them anywhere useful) -- they move focus
+        between columns. Return opens the selection explicitly rather than
+        relying on Gtk.ListView's "activate", which only reaches
+        _on_row_activated_internal's mouse click-policy/repeat-click timing,
+        not a plain "open now".
         """
-        return keyval not in (Gdk.KEY_asciitilde, Gdk.KEY_slash)
+        if keyval in (Gdk.KEY_asciitilde, Gdk.KEY_slash):
+            # Handing off to Nautilus's own address-bar shortcuts -- nothing
+            # queued for this chain should land after the user has moved on.
+            self._cancel_row_commit()
+            return False
+        if int(gtk_state) & _KEY_ACCEL_MODIFIER_MASK:
+            # Someone else's accelerator (Alt+Left/Right history, Ctrl+L,
+            # Super+...) -- let it through unclaimed.
+            return False
+
+        column = self._focused_column()
+        if column is None:
+            return False
+
+        # Shift has no meaning of its own yet for Left/Right/Return --
+        # range selection is out of scope for #91 (see PR #146's
+        # multi-selection work) -- so those combinations fall straight
+        # through to the same swallow every other unclaimed key gets below,
+        # rather than running the plain-key action.
+        shift = bool(int(gtk_state) & Gdk.ModifierType.SHIFT_MASK)
+        if not shift:
+            if keyval in (Gdk.KEY_Left, Gdk.KEY_KP_Left):
+                return self._focus_parent_column()
+            if keyval in (Gdk.KEY_Right, Gdk.KEY_KP_Right):
+                return self._focus_child_column()
+            if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter, Gdk.KEY_ISO_Enter):
+                return self._open_selection(column)
+        if keyval in _COLUMN_NAV_KEYVALS:
+            return self._move_column_selection(column, keyval)
+
+        return True
+
+    def _move_column_selection(self, column: Gtk.Widget, keyval: int) -> bool:
+        """Up/Down/Home/End/Page Up/Page Down: move column's own selection
+        directly against its Gtk.SingleSelection (see _on_key_pressed's
+        docstring for why this isn't left to Gtk.ListView's native
+        bindings). With nothing selected yet, Up/Down/Home/Page Up all land
+        on the first row and End/Page Down on the last -- the same "start
+        from the near edge" convention native list widgets use.
+
+        current stays None through that unselected case rather than being
+        pre-seeded to an edge index and then having a key's own delta
+        applied on top of it -- Down from unselected must land on row 0
+        itself, not row 1, which pre-seeding to 0 and then adding one for
+        Down got wrong. A key that can't move any further (Up already at 0,
+        Down already at the last row, ...) computes target == current and
+        returns without reselecting or re-scrolling -- that would otherwise
+        arm a real commit (rebuild the chain, re-push the slot location) for
+        a press that didn't actually move anything."""
+        count = column.item_count()
+        if count == 0:
+            return True
+        current = column.selected_index()
+
+        if current is None:
+            target = (
+                count - 1
+                if keyval in (Gdk.KEY_End, Gdk.KEY_KP_End, Gdk.KEY_Page_Down, Gdk.KEY_KP_Page_Down)
+                else 0
+            )
+        elif keyval in (Gdk.KEY_Up, Gdk.KEY_KP_Up):
+            target = max(0, current - 1)
+        elif keyval in (Gdk.KEY_Down, Gdk.KEY_KP_Down):
+            target = min(count - 1, current + 1)
+        elif keyval in (Gdk.KEY_Home, Gdk.KEY_KP_Home):
+            target = 0
+        elif keyval in (Gdk.KEY_End, Gdk.KEY_KP_End):
+            target = count - 1
+        elif keyval in (Gdk.KEY_Page_Up, Gdk.KEY_KP_Page_Up):
+            step = column.page_step()
+            # No row realized to measure a step from at all (rare -- see
+            # page_step()) means straight to the edge, not a guessed count.
+            # A column with fewer rows than the step still lands on that
+            # same edge, just via the ordinary clamp on a real step below.
+            target = 0 if step is None else max(0, current - step)
+        else:
+            step = column.page_step()
+            target = count - 1 if step is None else min(count - 1, current + step)
+
+        if target == current:
+            return True
+
+        item = column.select_index(target)
+        column.list_view.scroll_to(target, Gtk.ListScrollFlags.NONE, None)
+        if item is not None:
+            self._arm_row_commit(column, item)
+        return True
+
+    def _focus_parent_column(self) -> bool:
+        # A Down immediately followed by Left must not leave the Down commit
+        # armed: 100ms later it would fire and drag focused_index back into
+        # the column being left right now.
+        self._flush_row_commit()
+        if self.focused_index <= 0:
+            return True
+        self.focused_index -= 1
+        self._apply_focused_column_style()
+        col = self._focused_column()
+        if col is not None:
+            if not self._column_fully_visible(self.focused_index):
+                self._align_to_viewport_start(col)
+            # _flush_row_commit above may just have kicked off an async
+            # slot navigation (_sync_slot_location) -- Nautilus's own
+            # eventual re-focus of its hidden view can steal a plain
+            # one-shot grab, so hold this one the same bounded-retry way a
+            # drill-down commit does (see _arm_focus_retry).
+            self._arm_focus_retry(col)
+        return True
+
+    def _focus_child_column(self) -> bool:
+        # The child column this is about to move into may only exist
+        # because of a commit still waiting out its debounce.
+        self._flush_row_commit()
+        if self.focused_index + 1 >= len(self.columns):
+            return True
+        self.focused_index += 1
+        self._apply_focused_column_style()
+        col = self._focused_column()
+        if col is None:
+            return True
+        if not self._column_fully_visible(self.focused_index):
+            self._align_to_viewport_end(col)
+        self._arm_focus_retry(col)
+        if not col.has_selection():
+            item = col.select_first()
+            if item is not None:
+                self._arm_row_commit(col, item)
+        return True
+
+    def _open_selection(self, column: Gtk.Widget) -> bool:
+        """Open what column has selected -- the Return/Enter target.
+
+        Folders drill into a new column, matching what clicking them does --
+        that's what "open" means in a Miller view. Files go straight to
+        their default application, unconditionally: unlike a click, Return
+        is never a mid-flight preview, so neither click-policy nor the
+        repeat-click timing _on_row_activated_internal applies."""
+        self._cancel_row_commit()
+        item = column.selected_item()
+        if item is None:
+            return True
+        if item.is_dir:
+            self._on_real_row_activated(column, item)
+            self._focus_child_column()
+        else:
+            self._open_file(item.uri)
+        return True
 
     def _focused_column(self) -> Gtk.Widget | None:
         if 0 <= self.focused_index < len(self.columns):
@@ -1555,6 +1838,8 @@ class _ColumnViewHost:
         elsewhere in this file: re-assert our grab every frame for a bounded
         window so ours is the one still standing once Nautilus's async
         update actually settles."""
+        if col is None:
+            return
         state = {"ticks_left": _FOCUS_RETRY_FRAMES}
 
         def _retry_on_tick(_widget, _frame_clock) -> bool:
@@ -1565,6 +1850,38 @@ class _ColumnViewHost:
             return GLib.SOURCE_CONTINUE if state["ticks_left"] > 0 else GLib.SOURCE_REMOVE
 
         col.list_view.add_tick_callback(_retry_on_tick)
+
+    def _focus_column_when_mapped(self, col) -> None:
+        """Grab keyboard focus onto `col` as soon as it is actually mapped --
+        used only for entering Column View (populate_column_view), where the
+        widget may not be mapped yet the instant this runs (right after
+        enter_column_view's stack.set_visible_child(view)).
+
+        Unlike _arm_focus_retry, this stops the moment a grab is attempted
+        rather than continuing to re-assert for the rest of a fixed window.
+        There is no async native navigation racing to steal focus back here
+        the way there is after a keyboard commit (_sync_slot_location's own
+        async echo) -- reusing that blind re-grab loop for plain entry meant
+        it kept yanking focus back onto the column for up to
+        _FOCUS_RETRY_FRAMES more frames even after a user's own immediate
+        click elsewhere (e.g. the toolbar) had already moved it."""
+        if col is None:
+            return
+        if col.list_view.get_mapped():
+            col.grab_list_focus()
+            return
+        state = {"ticks_left": _FOCUS_RETRY_FRAMES}
+
+        def _grab_once_mapped(_widget, _frame_clock) -> bool:
+            if col is not self._focused_column():
+                return GLib.SOURCE_REMOVE
+            if col.list_view.get_mapped():
+                col.grab_list_focus()
+                return GLib.SOURCE_REMOVE
+            state["ticks_left"] -= 1
+            return GLib.SOURCE_CONTINUE if state["ticks_left"] > 0 else GLib.SOURCE_REMOVE
+
+        col.list_view.add_tick_callback(_grab_once_mapped)
 
     def _make_preview_column(self) -> Gtk.Widget:
         # Starts empty (nothing selected yet); a fresh preview is built each
@@ -2303,21 +2620,21 @@ def populate_column_view(ext, win: Gtk.Window) -> None:
     if view is None:
         return
 
-    if not _COLUMN_KEYBOARD_NAV:
-        # Focus the view itself so its local capture controller owns regular
-        # Column View keys. This does not intercept keyboard input elsewhere
-        # in the window once the user focuses a toolbar or location widget.
-        view.grab_focus()
-        return
-
     # Arm arrow-key nav without requiring a preliminary click: focus the
-    # column at host.focused_index (0 on a fresh reset()) as soon as the view
-    # is actually visible/mapped.
+    # column at host.focused_index (0 on a fresh reset()). A bare one-shot
+    # grab_focus() here is unreliable -- this runs synchronously right after
+    # enter_column_view's stack.set_visible_child(view), before GTK has
+    # actually mapped the newly shown child, and grab_focus() on an
+    # unmapped widget can silently fail. _focus_column_when_mapped waits for
+    # that mapping and grabs once -- not the blind multi-frame re-grab
+    # _arm_focus_retry uses after a commit, which would otherwise keep
+    # yanking focus back here even after the user clicks elsewhere (e.g. the
+    # toolbar) right after entering the view.
     host = getattr(view, "_mc_column_host", None)
     if host is not None:
         col = host._focused_column()
         if col is not None:
-            col.grab_list_focus()
+            host._focus_column_when_mapped(col)
 
 
 def _iter_injected_slots(win: Gtk.Window):
