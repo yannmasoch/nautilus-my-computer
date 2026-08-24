@@ -1044,6 +1044,27 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             column_view.refresh_all_column_views(self, win)
         return GLib.SOURCE_REMOVE
 
+    def _restore_column_focus_after_sort(self, win: Gtk.Window, sort_button: Gtk.Widget) -> bool:
+        """Return focus from a closed sort popover to the active Miller column.
+
+        This is deliberately guarded: a click elsewhere while the popover was
+        open must keep its new focus rather than being overwritten by the
+        deferred close handler.
+        """
+        focus = win.get_focus()
+        widget = focus
+        while widget is not None and widget is not sort_button:
+            widget = widget.get_parent()
+        if widget is not sort_button:
+            return GLib.SOURCE_REMOVE
+
+        slot = self._active_slot_widget(win)
+        view = getattr(slot, "_mc_column_view", None) if slot is not None else None
+        host = getattr(view, "_mc_column_host", None) if view is not None else None
+        if host is not None:
+            host._focus_column_when_mapped(host._focused_column())
+        return GLib.SOURCE_REMOVE
+
     def _reapply_folder_captions(self) -> None:
         """Preferred Folders "captions" GSettings key changed (NautilusPrefs).
         Instantly re-render every rendered card from whatever caption data is

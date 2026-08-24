@@ -361,6 +361,14 @@ class NautilusPrefs:
         else:
             self._sort_hover = False
             _log("sort menu closed → sort poll disarming")
+            # Closing a GtkMenuButton's popover leaves GTK focus on the
+            # toolbar button.  Column View's controller lives below that
+            # focus branch, so its arrow handling is bypassed until GTK's
+            # directional focus machinery happens to enter the view again.
+            # Defer until the popover has completed its own focus handoff;
+            # the extension verifies that this very button still owns focus
+            # before returning it to the active Miller column.
+            GLib.idle_add(ext._restore_column_focus_after_sort, nautilus_win, btn)
 
     def _poll_sort(self, ext, nautilus_win: Gtk.Window) -> bool:
         target = self._resolve_sort_target(ext, nautilus_win)
