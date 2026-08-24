@@ -617,22 +617,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         self._watched_folder_keys: dict[str, str] = {}
         self._last_selected_folder_uri: str | None = None  # see get_file_items()
 
-        self._sort_column: str = "name"
-        self._sort_reverse: bool = False
         self._view_mode: str = "icon-view"
         self._click_policy: str = "double"  # Nautilus "click-policy": 'single' or 'double'
-        # Sort is read from per-folder GVfs metadata. There is no usable event
-        # for it (the metadata daemon writes via mmap so file monitors never
-        # fire, and the GTK4 Python bindings don't expose get_action_group, so
-        # we can't subscribe to Nautilus's "view.sort" GAction). We therefore
-        # poll — but only while the pointer is over the header bar (where the
-        # sort menu lives) and the Computer panel is visible.
-        # _sort_hover tracks whether the pointer is currently inside the navbar.
-        # The poll arms on enter and disarms on leave, with a short grace period
-        # to cover the gap when the pointer moves from the navbar into the sort
-        # popover (which is a separate native surface and triggers a leave event).
-        self._sort_poll_id = None  # GLib source id while polling, else None
-        self._sort_hover = False  # True while pointer is inside the navbar
         self._view_mode_gsettings = None  # Gio.Settings for org.gnome.nautilus.preferences
         # Column View's own settings adapter (view mode/click policy/sort/zoom/hidden
         # files), independent of the disk view's ad hoc fields above. See
@@ -678,12 +664,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
     def _apply_bar_color(self) -> None:
         my_computer_view._apply_bar_color(self)
-
-    def _read_sort_metadata(self) -> bool:
-        return my_computer_view._read_sort_metadata(self)
-
-    def _attach_sort_button_watch(self, nautilus_win: Gtk.Window) -> None:
-        my_computer_view._attach_sort_button_watch(self, nautilus_win)
 
     def _apply_card_filter(self, nautilus_win: Gtk.Window, query: str) -> None:
         my_computer_view.apply_card_filter(self, nautilus_win, query)
@@ -739,7 +719,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             app = Gtk.Application.get_default()
             if app:
                 app.connect("window-added", self._on_window_added)
-            self._read_sort_metadata()
             self._read_view_mode()
             self._watch_view_mode()
             self._nautilus_prefs.refresh_folder_sort(DISKS_URI)
@@ -1126,10 +1105,15 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         The disk panel always watches DISKS_URI. Column View watches the real
         Nautilus slot's current location -- the native sort popover writes
         GVfs metadata for wherever Nautilus itself is actually navigated to,
-        which is exactly Column View's root (see _show_column_view /
-        column_view.enter_column_view: entering always reseeds the Miller
-        chain from the real current location, and internal drill-down never
-        moves the real Nautilus slot)."""
+        which is the deepest open column, NOT Column View's root: every
+        drill-down commits a real slot.open-location (_sync_slot_location),
+        it's only Column View's own internal chain bookkeeping
+        (host._root_uri) that stays fixed at the entry point. on_changed is
+        column_view.on_sort_detected rather than a direct repopulate for
+        exactly this reason -- it mirrors whatever was just detected here
+        onto host._root_uri before repopulating, so a change made several
+        levels deep still ends up somewhere _refresh_slot_sort will find it
+        (that function always reads root_uri, never this deep location)."""
         state = self._active_panel_state(win)
         if state and state.get("visible_view") == VIEW_DISKINFO:
             return (DISKS_URI, self._repopulate_visible)
@@ -1137,7 +1121,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             loc = _active_slot_location(win)
             if loc is None:
                 return None
-            return (loc.get_uri(), self._repopulate_visible)
+            return (loc.get_uri(), lambda w=win: column_view.on_sort_detected(self, w))
         return None
 
     def _arm_sort_watch(self, win: Gtk.Window) -> None:
@@ -1433,8 +1417,12 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             # the active tab arrives at the computer view.
             if DEBUG_PATHBAR_ACTIVE:
                 GLib.idle_add(lambda w=win: self._fix_pathbar_icon(w) or False)
-            if DEBUG_SORT_WATCH_ACTIVE:
-                GLib.idle_add(lambda w=win: self._attach_sort_button_watch(w) or False)
+            # _arm_sort_watch checks DEBUG_SORT_WATCH_ACTIVE itself and is a
+            # no-op if Column View already attached the watch first for this
+            # window (see watch_sort_button's own "attach once" guard) -- one
+            # shared watcher now serves both views, so call-site order here
+            # no longer matters the way it did with two separate watchers.
+            self._arm_sort_watch(win)
             if DEBUG_LOCATION_FILTER_ACTIVE:
                 GLib.idle_add(lambda w=win: self._attach_location_filter_watch(w) or False)
         elif state.get("_chrome_in_view"):

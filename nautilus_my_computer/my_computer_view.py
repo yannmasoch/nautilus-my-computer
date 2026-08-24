@@ -25,12 +25,11 @@ import time
 
 import gi
 
-gi.require_version("Adw", "1")
 gi.require_version("Gdk", "4.0")
 gi.require_version("Gio", "2.0")
 gi.require_version("GLib", "2.0")
 gi.require_version("Gtk", "4.0")
-from gi.repository import Adw, Gdk, Gio, GLib, Gtk
+from gi.repository import Gdk, Gio, GLib, Gtk
 
 from nautilus_my_computer import common, preferred_folders
 from nautilus_my_computer.common import (
@@ -44,7 +43,6 @@ from nautilus_my_computer.common import (
     N_,
     _,
     _all_widgets,
-    _find_widget,
     _format_item_count,
     _format_permissions,
     _log,
@@ -69,8 +67,6 @@ from nautilus_my_computer.widgets import (
 
 DISKS_URI = "computer:///"
 _DISKS_FILE = Gio.File.new_for_uri(DISKS_URI)
-METADATA_SORT_BY = "metadata::nautilus-icon-view-sort-by"
-METADATA_SORT_REVERSED = "metadata::nautilus-icon-view-sort-reversed"
 _REFRESH_DEBOUNCE_MS = 300  # coalesce rapid mount/unmount/plug events
 _USAGE_GATE_MS = 1000  # idle cadence: try a statvfs sweep this often, skip while disk is busy
 _USAGE_POLL_FAST_MS = 250  # fast cadence while writes are buffered (Dirty+Writeback elevated)
@@ -82,7 +78,6 @@ _DIRTY_ACTIVE_THRESHOLD = (
     4 * 1000 * 1000
 )  # /proc/meminfo Dirty+Writeback ≥ this → poll fast (above resting journal noise ~1–2 MB)
 _USAGE_POLL_NETWORK_MS = 5000  # async D-Bus usage poll interval for GVfs/network mounts
-_SORT_POLL_MS = 250  # gvfs sort-metadata poll cadence (only while header is hovered)
 _STALE_RELEASE_FRAMES = 2  # keep detached panel generations alive across this many frame ticks
 REAL_FSTYPES = {
     "ext4",
@@ -1368,104 +1363,6 @@ def _apply_bar_color(ext) -> None:
     )
 
 
-def _read_sort_metadata(ext) -> bool:
-    """Read sort order from GVfs metadata on computer:///.
-    Returns True when the column or direction changed since last read."""
-    try:
-        f = Gio.File.new_for_uri(DISKS_URI)
-        info = f.query_info(
-            f"{METADATA_SORT_BY},{METADATA_SORT_REVERSED}",
-            Gio.FileQueryInfoFlags.NONE,
-            None,
-        )
-        col = info.get_attribute_string(METADATA_SORT_BY) or "name"
-        rev_str = info.get_attribute_string(METADATA_SORT_REVERSED) or "false"
-        rev = rev_str == "true"
-        if col != ext._sort_column or rev != ext._sort_reverse:
-            ext._sort_column = col
-            ext._sort_reverse = rev
-            return True
-    except Exception:
-        pass
-    return False
-
-
-def _attach_sort_button_watch(ext, nautilus_win: Gtk.Window) -> None:
-    """Watch the sort GtkMenuButton's active state — arm poll when the sort
-    popover opens, disarm (with one final read) when it closes."""
-    state = ext._windows.get(nautilus_win)
-    if not state or state.get("header_motion"):
-        return
-    btn = _find_sort_button(ext, nautilus_win)
-    if btn is None:
-        _log("sort button not found in toolbar")
-        return
-    btn.connect("notify::active", functools.partial(_on_sort_button_active, ext), nautilus_win)
-    state["header_motion"] = btn  # reuse slot — just marks "already attached"
-    _log(f"sort button watch attached ({type(btn).__name__})")
-
-
-def _find_sort_button(ext, nautilus_win: Gtk.Window):
-    """Find the GtkMenuButton inside NautilusViewControls (the sort/view popover button)."""
-    # NautilusViewControls has no real buildable_id (auto-generated) and no css class.
-    # Tier 2 (class name) is the primary match; tier 4 structural is the fallback.
-    view_controls = _find_widget(
-        nautilus_win,
-        class_name="NautilusViewControls",
-        site="_find_sort_button",
-    )
-    if view_controls:
-        for child in _all_widgets(view_controls):
-            if isinstance(child, Gtk.MenuButton):
-                return child
-
-    # Structural fallback: navigate via typed Adwaita getters to the content
-    # toolbar and find the first MenuButton that isn't the hamburger.
-    split_view = next(
-        (w for w in _all_widgets(nautilus_win) if isinstance(w, Adw.OverlaySplitView)), None
-    )
-    if split_view:
-        content = split_view.get_content()
-        toolbar_view = (
-            next((w for w in _all_widgets(content) if isinstance(w, Adw.ToolbarView)), None)
-            if content
-            else None
-        )
-        if toolbar_view:
-            for w in _all_widgets(toolbar_view):
-                if isinstance(w, Gtk.MenuButton) and w.get_icon_name() != "open-menu-symbolic":
-                    _log("_find_sort_button: matched via structural nav (NautilusViewControls)")
-                    return w
-    return None
-
-
-def _on_sort_button_active(ext, btn: Gtk.MenuButton, _param, nautilus_win: Gtk.Window) -> None:
-    state = ext._active_panel_state(nautilus_win)
-    if not state or state.get("visible_view") != VIEW_DISKINFO:
-        return
-    if btn.get_active():
-        ext._sort_hover = True
-        if ext._sort_poll_id is None:
-            _log("sort menu opened → sort poll armed")
-            ext._sort_poll_id = GLib.timeout_add(_SORT_POLL_MS, functools.partial(_poll_sort, ext))
-    else:
-        ext._sort_hover = False
-        _log("sort menu closed → sort poll disarming")
-
-
-def _poll_sort(ext) -> bool:
-    if ext._read_sort_metadata():
-        _log(f"sort changed → col='{ext._sort_column}' rev={ext._sort_reverse}")
-        ext._repopulate_visible()
-        _log(f"sort applied → col='{ext._sort_column}' rev={ext._sort_reverse}")
-    if not ext._sort_hover:
-        # Menu closed — one final read already done above, now disarm.
-        _log("sort poll disarmed")
-        ext._sort_poll_id = None
-        return GLib.SOURCE_REMOVE
-    return GLib.SOURCE_CONTINUE
-
-
 def apply_card_filter(ext, win: Gtk.Window, query: str) -> None:
     """Forward `query` to every section's own filter (see
     MyComputerCardGroup.set_query in widgets.py -- each group filters its
@@ -1856,8 +1753,11 @@ def _populate_slot(ext, slot) -> None:
     card_widgets = {}
     folder_card_widgets = {}
 
-    col = ext._sort_column
-    rev = ext._sort_reverse
+    # Fresh per-URI read on every populate, same as Column View's own
+    # _ColumnViewHost -- never the sort-watch poll's cache (NautilusPrefs.
+    # sort_column/sort_reverse), which holds whichever URI's popover was
+    # last open and would silently apply the wrong view's sort otherwise.
+    col, rev = ext._nautilus_prefs.resolve_column_sort(DISKS_URI)
 
     def _sort_key(m: MountInfo):
         if col == "size":

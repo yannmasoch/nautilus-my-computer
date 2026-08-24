@@ -2574,19 +2574,41 @@ def leave_column_view(slot: Gtk.Widget) -> None:
 
 
 def _refresh_slot_sort(ext, slot: Gtk.Widget) -> None:
+    """One sort for the whole Miller chain, always sourced from the root
+    folder -- not whichever column the user has drilled into (several
+    columns showing different folders side by side has no single "current
+    location" that would make sense to read sort from instead). See
+    on_sort_detected below for how a change made while drilled deep still
+    reaches this."""
     view = getattr(slot, "_mc_column_view", None)
     host = getattr(view, "_mc_column_host", None) if view is not None else None
     if host is None:
         return
-    # Re-resolve from the slot's real current location rather than trusting
-    # host._root_uri: drill-downs commit slot.open-location (see
-    # _sync_slot_location), so while Column View is showing, the slot is
-    # normally at the deepest open column, not host._root_uri.
-    loc = slot.get_property("location")
-    root_uri = loc.get_uri() if loc is not None else host._root_uri
-    host._sort = ext._nautilus_prefs.resolve_column_sort(root_uri)
+    host._sort = ext._nautilus_prefs.resolve_column_sort(host._root_uri)
     for column in host.columns:
         column.set_sort(host._sort)
+
+
+def on_sort_detected(ext, win: Gtk.Window) -> None:
+    """Called from main.py's _resolve_sort_target when NautilusPrefs's sort
+    watch detects a real change -- at the active slot's actual current
+    location, which is wherever Nautilus's native sort popover is really
+    bound to (the deepest open column, not necessarily host._root_uri).
+
+    Mirror that onto the chain's own root folder so it becomes the
+    persistent source of truth for the whole chain (_refresh_slot_sort
+    always reads root_uri, never the deep location) -- otherwise a sort
+    changed while several levels deep would silently do nothing, since
+    nothing reads that deep folder's own metadata once this repopulates.
+    A no-op when the active location already *is* root_uri (root_uri gets
+    rewritten with the same value it already has)."""
+    slot = ext._active_slot_widget(win)
+    view = getattr(slot, "_mc_column_view", None) if slot is not None else None
+    host = getattr(view, "_mc_column_host", None) if view is not None else None
+    if host is not None:
+        prefs = ext._nautilus_prefs
+        prefs.write_folder_sort(host._root_uri, prefs.sort_column, prefs.sort_reverse)
+    ext._repopulate_visible()
 
 
 def refresh_column_view(ext, win: Gtk.Window) -> None:

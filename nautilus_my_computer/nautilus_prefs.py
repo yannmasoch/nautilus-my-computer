@@ -55,8 +55,20 @@ class NautilusPrefs:
         # the view-options toggle both go through this key instead.
         self._filechooser = Gio.Settings.new("org.gtk.gtk4.Settings.FileChooser")
 
+        # Sort is read from per-folder GVfs metadata. There is no usable event
+        # for it (the metadata daemon writes via mmap so file monitors never
+        # fire, and the GTK4 Python bindings don't expose get_action_group, so
+        # we can't subscribe to Nautilus's "view.sort" GAction) -- see
+        # CLAUDE.md's fragility table. We therefore poll, but only while the
+        # sort popover is actually open (armed/disarmed by watch_sort_button's
+        # notify::active). sort_column/sort_reverse/_sort_uri below are that
+        # poll's own change-detection cache (see refresh_folder_sort), shared
+        # by every view watch_sort_button serves -- not a per-view resolved
+        # sort. Column View and the Computer panel each read their own fresh
+        # value via resolve_column_sort(uri) instead of these fields.
         self.sort_column: str = "name"
         self.sort_reverse: bool = False
+        self._sort_uri: str | None = None
         self.view_mode: str = "icon-view"
         # Nautilus "click-policy": 'single' or 'double'. Read live at construction
         # (main.py instantiates NautilusPrefs before any window/view exists) rather than
@@ -121,25 +133,70 @@ class NautilusPrefs:
         rev = (info.get_attribute_string(METADATA_SORT_REVERSED) or "false") == "true"
         return (col, rev)
 
+    def write_folder_sort(self, uri: str, col: str, rev: bool) -> None:
+        """Write col/rev as uri's per-folder sort override -- the raw GVfs
+        vocabulary (e.g. "date_modified"), never the canonicalized nick
+        resolve_column_sort() returns, since col/rev here are always read
+        straight from folder_sort()/self.sort_column, which never applies
+        that translation.
+
+        Used to mirror a sort change onto Column View's root folder when
+        Nautilus's native popover actually wrote it somewhere else in the
+        Miller chain -- the real Nautilus slot the popover is bound to is
+        wherever the user has drilled to, not necessarily host._root_uri
+        (see column_view._refresh_slot_sort / on_sort_detected). Sync, like
+        every other GVfs metadata call in this file (folder_sort included):
+        this is local mmap-backed I/O, not the DBus-freeze concern
+        CLAUDE.md's async-only rule targets, and a sync write here also
+        avoids a write/read race against the repopulate that follows it
+        immediately."""
+        # Gio.File.set_attributes_from_info(a plain Gio.FileInfo built up with
+        # set_attribute_string) reliably raises "Unable to set metadata key"
+        # for this metadata:: namespace (confirmed offline) -- the per-file
+        # set_attribute_string() below is the form that actually works.
+        f = Gio.File.new_for_uri(uri)
+        try:
+            f.set_attribute_string(METADATA_SORT_BY, col, Gio.FileQueryInfoFlags.NONE, None)
+            f.set_attribute_string(
+                METADATA_SORT_REVERSED,
+                "true" if rev else "false",
+                Gio.FileQueryInfoFlags.NONE,
+                None,
+            )
+        except Exception as e:
+            _log(f"write_folder_sort: failed for {uri!r}: {e!r}")
+
     def refresh_folder_sort(self, uri: str) -> bool:
         """Read `uri`'s sort override into self.sort_column/sort_reverse.
-        Returns True when the column or direction changed since last read."""
+        Returns True when the column, direction, or target URI itself
+        changed since last read -- the URI check matters because this same
+        cache is shared across every view watch_sort_button serves (the
+        Computer panel and Column View): without it, polling a new URI whose
+        sort happens to coincidentally match the previous URI's last-read
+        value would report "no change" and skip on_changed(), even though
+        the poll has never actually read *this* URI's value before."""
         col, rev = self.folder_sort(uri) or ("name", False)
-        if col != self.sort_column or rev != self.sort_reverse:
+        if col != self.sort_column or rev != self.sort_reverse or uri != self._sort_uri:
             self.sort_column = col
             self.sort_reverse = rev
+            self._sort_uri = uri
             return True
         return False
 
     def resolve_column_sort(self, root_uri: str) -> tuple[str, bool]:
-        """Single source of truth for Column View's sort: read root_uri's
-        per-folder override (falling back to the global default), applied
-        uniformly across the whole Miller chain -- per-column sort makes no
-        UX sense when several folders are visible side by side. Folders-first
-        grouping is a separate, orthogonal concern: it's read live from
-        sort_directories_first() and applied as its own pass in
-        MyComputerColumn._populate_rows (widgets.py), not baked into this
-        (column, reverse) tuple."""
+        """Single source of truth for a view's sort at root_uri: read its
+        per-folder override (falling back to the global default). Despite
+        the name, used by both Column View -- applied uniformly across the
+        whole Miller chain, since per-column sort makes no UX sense when
+        several folders are visible side by side -- and the Computer panel
+        (my_computer_view.py's _populate_slot, called with DISKS_URI).
+        Always a fresh read, never the sort-watch poll's own cache
+        (sort_column/sort_reverse above): those exist purely for that poll's
+        own change-detection, not as a resolved value for any view to read.
+        Folders-first grouping is a separate, orthogonal concern for Column
+        View: it's read live from sort_directories_first() and applied as
+        its own pass in MyComputerColumn._populate_rows (widgets.py), not
+        baked into this (column, reverse) tuple."""
         folder = self.folder_sort(root_uri)
         if folder is not None:
             col, rev = folder
@@ -315,9 +372,9 @@ class NautilusPrefs:
             return GLib.SOURCE_REMOVE
         uri, on_changed = target
         if self.refresh_folder_sort(uri):
-            _log(f"sort changed → col='{self.sort_column}' rev={self.sort_reverse}")
+            _log(f"sort changed → uri={uri!r} col='{self.sort_column}' rev={self.sort_reverse}")
             on_changed()
-            _log(f"sort applied → col='{self.sort_column}' rev={self.sort_reverse}")
+            _log(f"sort applied → uri={uri!r} col='{self.sort_column}' rev={self.sort_reverse}")
         if not self._sort_hover:
             # Menu closed -- one final read already done above, now disarm.
             _log("sort poll disarmed")
