@@ -285,8 +285,8 @@ class NautilusPrefs:
         """Watch the sort GtkMenuButton's active state -- arm poll when the sort
         popover opens, disarm (with one final read) when it closes. Call once
         per window (may be attempted from more than one call site -- the
-        header_motion slot below marks "already attached" so only the first
-        actually wires anything up).
+        dedicated sort_watch_button slot below marks "already attached" so
+        only the first actually wires anything up).
 
         `resolve_sort_target(ext, win) -> tuple[str, Callable[[], None]] | None`
         is re-invoked on every open and every poll tick, returning the URI to
@@ -297,7 +297,7 @@ class NautilusPrefs:
         hardcoding a single URI/view pairing at attach time."""
         self._resolve_sort_target = resolve_sort_target
         state = ext._windows.get(nautilus_win)
-        if not state or state.get("header_motion"):
+        if not state or state.get("sort_watch_button"):
             return
         # Once inject_column_view_entry has run, the view-options popover
         # lives on our own MenuButton (the native split button's popover was
@@ -307,7 +307,7 @@ class NautilusPrefs:
             _log("sort button not found in toolbar")
             return
         btn.connect("notify::active", self._on_sort_button_active, ext, nautilus_win)
-        state["header_motion"] = btn  # reuse slot -- just marks "already attached"
+        state["sort_watch_button"] = btn
         _log(f"sort button watch attached ({type(btn).__name__})")
 
     def find_sort_button(self, nautilus_win: Gtk.Window):

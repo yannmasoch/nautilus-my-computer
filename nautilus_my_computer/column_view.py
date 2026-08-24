@@ -433,6 +433,14 @@ class _ColumnViewHost:
         # Gtk.ListView's recycling).
         self._pending_row_commit: tuple[Gtk.Widget, object] | None = None
         self._row_commit_id = 0
+        # Right/Enter may target a child whose async enumeration has not
+        # completed. Keep keyboard focus on the populated parent until that
+        # child proves it has a selectable row (see _on_column_loaded).
+        self._pending_child_focus: Gtk.Widget | None = None
+        # A keyboard drill also navigates Nautilus's hidden native slot. Its
+        # late location-change echo can steal GTK focus after the bounded
+        # frame retry has ended, so remember which echo should restore it.
+        self._pending_focus_uri: str | None = None
 
         scroller = Gtk.ScrolledWindow()
         # Vertical NEVER makes this scroller's height follow the canvas's
@@ -532,6 +540,8 @@ class _ColumnViewHost:
         self._reset_viewport_width()
         self._last_viewport_size = (0, 0)
         self.focused_index = 0
+        self._pending_child_focus = None
+        self._pending_focus_uri = None
         self._apply_focused_column_style()
         self._rebuild_chain()
 
@@ -563,7 +573,7 @@ class _ColumnViewHost:
         column.add_controller(right_click)
         return column
 
-    def _on_column_loaded(self, _column) -> None:
+    def _on_column_loaded(self, column) -> None:
         """A freshly created column's enumerate_children_async just finished
         populating its rows. _sync_column_selections runs synchronously right
         after a column is created (in _on_real_row_activated / sync_to_uri),
@@ -588,6 +598,23 @@ class _ColumnViewHost:
         self._sync_column_selections()
         self._apply_focused_column_style()
         self._set_cut_rows()
+
+        if self._pending_child_focus is not column:
+            return
+        self._pending_child_focus = None
+        if column not in self.columns:
+            return
+
+        # Enter/Right requested this column while it was still loading. Only
+        # enter it if enumeration found something selectable. An empty child
+        # replaces its ListView with an Adw.StatusPage; focusing the ListView
+        # before that swap both strands focused_index on an empty column and
+        # unmaps the real GTK focus owner, which is the intermittent lost-key
+        # symptom reported after #91.
+        if column.item_count() == 0:
+            self._arm_focus_retry(self._focused_column())
+            return
+        self._focus_child_column()
 
     def _on_column_background_right_clicked(
         self,
@@ -1279,7 +1306,9 @@ class _ColumnViewHost:
             return False
         return column.with_selected_row(lambda row: self._show_rename_popover(column, row))
 
-    def _on_real_row_activated(self, column: Gtk.Widget, row: Gtk.Widget) -> None:
+    def _on_real_row_activated(
+        self, column: Gtk.Widget, row: Gtk.Widget, *, restore_keyboard_focus: bool = False
+    ) -> None:
         # Single-click navigation. Activating a row always replaces the entire
         # deeper chain to the right of its column: cancel and drop every column
         # past the activated one, each carrying its own .width away with it.
@@ -1310,12 +1339,18 @@ class _ColumnViewHost:
         new_column: Gtk.Widget | None = None
         preview_replaced = False
         preview_added = False
+        chain_update = "rebuild"
         if already_open:
             fits = self._new_content_fits(self.columns[index + 1].width)
             for stale_column in stale[1:]:
                 stale_column.destroy_enumeration()
             del self.columns[index + 2 :]
-            self._sync_slot_location(row.uri)
+            # Reusing the immediate child without anything beyond it leaves
+            # the widget hierarchy intact. Rebuilding it here used to unmap
+            # every ListView just for a selection change.
+            if len(stale) == 1:
+                chain_update = "none"
+            self._sync_slot_location(row.uri, restore_keyboard_focus=restore_keyboard_focus)
         else:
             # The slot right after the clicked column is getting new content
             # either way (a fresh folder's rows replace whatever was there)
@@ -1345,13 +1380,15 @@ class _ColumnViewHost:
                 self.columns.append(new_column)
                 self._set_preview(None)
                 preview_replaced = True
+                if not stale:
+                    chain_update = "append"
                 # Push the real Nautilus location to match (title/pathbar/
                 # back-forward follow the Miller chain). Also covers
                 # navigating back UP the chain (clicking a folder row in an
                 # earlier column) -- same is_dir branch, same call.
                 # File-preview clicks below don't navigate -- selecting a
                 # file for preview isn't "browsing" it.
-                self._sync_slot_location(row.uri)
+                self._sync_slot_location(row.uri, restore_keyboard_focus=restore_keyboard_focus)
             else:
                 # File -> update the preview only, no new column. Same
                 # already-visible check, against the preview's own width.
@@ -1359,6 +1396,8 @@ class _ColumnViewHost:
                 self._set_preview(row.uri)
                 preview_replaced = True
                 preview_added = True
+                if not stale:
+                    chain_update = "replace_preview"
 
         self._sync_column_selections()
         self._apply_focused_column_style()
@@ -1370,7 +1409,12 @@ class _ColumnViewHost:
             # stale, still-far-scrolled value left over from the columns
             # that just went away (see _reset_viewport_width).
             self._reset_viewport_width()
-        self._rebuild_chain()
+        if chain_update == "append":
+            self._append_column_to_chain(new_column)
+        elif chain_update == "replace_preview":
+            self._replace_preview_in_chain()
+        elif chain_update == "rebuild":
+            self._rebuild_chain()
         if new_column is not None:
             self._fade_in(new_column)
         if preview_replaced:
@@ -1398,7 +1442,7 @@ class _ColumnViewHost:
             if not self._column_fully_visible(index):
                 self._align_to_viewport_start(column)
 
-    def _sync_slot_location(self, uri: str) -> None:
+    def _sync_slot_location(self, uri: str, *, restore_keyboard_focus: bool = False) -> None:
         """Push the Miller chain's new deepest folder to Nautilus's real slot
         location (see _on_slot_location_changed below for the reverse
         direction, sync_to_uri below). The "slot." prefix is required or the
@@ -1415,9 +1459,13 @@ class _ColumnViewHost:
         activates slot.stop to cancel the hidden native view's remaining
         metadata, model, monitor, and thumbnail work. Ctrl+1/Ctrl+2 reloads
         that model before exposing the native view again."""
+        if restore_keyboard_focus:
+            self._pending_focus_uri = uri
         try:
             self._win.activate_action("slot.open-location", GLib.Variant("s", uri))
         except Exception as e:
+            if restore_keyboard_focus:
+                self._pending_focus_uri = None
             _log(f"_sync_slot_location failed for {uri!r}: {e}")
 
     def _detach_root(self) -> None:
@@ -1465,6 +1513,16 @@ class _ColumnViewHost:
         every case (the raw filesystem root "file:///" is a corner case:
         rstrip strips all three slashes down to "file:", not one)."""
         target = Gio.File.new_for_uri(new_uri)
+        restore_keyboard_focus = False
+        if self._pending_focus_uri is not None:
+            pending_target = Gio.File.new_for_uri(self._pending_focus_uri)
+            if pending_target.equal(target):
+                restore_keyboard_focus = True
+                self._pending_focus_uri = None
+            else:
+                # A different external navigation superseded the keyboard
+                # drill before its echo arrived.
+                self._pending_focus_uri = None
         existing = [Gio.File.new_for_uri(c.folder_uri) for c in self.columns]
 
         idx = next((i for i, f in enumerate(existing) if f.equal(target)), None)
@@ -1483,6 +1541,8 @@ class _ColumnViewHost:
 
         if idx == len(existing) - 1:
             # Already exactly the deepest open column.
+            if restore_keyboard_focus:
+                self._restore_focus_after_slot_echo()
             return
 
         _log("sync_to_uri: truncating to already-open ancestor")
@@ -1588,6 +1648,7 @@ class _ColumnViewHost:
         this only defers the expensive half (see ROW_COMMIT_DEBOUNCE_MS), so
         walking through a folder with the arrow keys stays a pure cursor
         movement until the user settles on a row."""
+        self._pending_child_focus = None
         self._pending_row_commit = (column, item)
         if self._row_commit_id != 0:
             GLib.source_remove(self._row_commit_id)
@@ -1605,7 +1666,7 @@ class _ColumnViewHost:
         # still really there.
         if column not in self.columns or not column.contains_item(item):
             return GLib.SOURCE_REMOVE
-        self._on_real_row_activated(column, item)
+        self._on_real_row_activated(column, item, restore_keyboard_focus=True)
         # _on_real_row_activated -> _rebuild_chain reparents every column,
         # which drops GTK focus. Re-assert it onto the column the commit
         # just landed in.
@@ -1627,7 +1688,7 @@ class _ColumnViewHost:
         column, item = pending
         if column not in self.columns or not column.contains_item(item):
             return
-        self._on_real_row_activated(column, item)
+        self._on_real_row_activated(column, item, restore_keyboard_focus=True)
         self._arm_focus_retry(self._focused_column())
 
     def _cancel_row_commit(self) -> None:
@@ -1637,6 +1698,8 @@ class _ColumnViewHost:
             GLib.source_remove(self._row_commit_id)
             self._row_commit_id = 0
         self._pending_row_commit = None
+        self._pending_child_focus = None
+        self._pending_focus_uri = None
 
     def _on_key_pressed(self, _ctrl, keyval, _keycode, gtk_state) -> bool:
         """Drive Column View's own keyboard navigation.
@@ -1764,6 +1827,7 @@ class _ColumnViewHost:
         # A Down immediately followed by Left must not leave the Down commit
         # armed: 100ms later it would fire and drag focused_index back into
         # the column being left right now.
+        self._pending_child_focus = None
         self._flush_row_commit()
         if self.focused_index <= 0:
             return True
@@ -1787,11 +1851,18 @@ class _ColumnViewHost:
         self._flush_row_commit()
         if self.focused_index + 1 >= len(self.columns):
             return True
+        col = self.columns[self.focused_index + 1]
+        if not col.is_loaded():
+            self._pending_child_focus = col
+            return True
+        self._pending_child_focus = None
+        if col.item_count() == 0:
+            # There is no keyboard cursor target in an empty child. Keep the
+            # parent row that opened it as the focused selection.
+            self._arm_focus_retry(self._focused_column())
+            return True
         self.focused_index += 1
         self._apply_focused_column_style()
-        col = self._focused_column()
-        if col is None:
-            return True
         if not self._column_fully_visible(self.focused_index):
             self._align_to_viewport_end(col)
         self._arm_focus_retry(col)
@@ -1814,7 +1885,7 @@ class _ColumnViewHost:
         if item is None:
             return True
         if item.is_dir:
-            self._on_real_row_activated(column, item)
+            self._on_real_row_activated(column, item, restore_keyboard_focus=True)
             self._focus_child_column()
         else:
             self._open_file(item.uri)
@@ -1850,6 +1921,25 @@ class _ColumnViewHost:
             return GLib.SOURCE_CONTINUE if state["ticks_left"] > 0 else GLib.SOURCE_REMOVE
 
         col.list_view.add_tick_callback(_retry_on_tick)
+
+    def _restore_focus_after_slot_echo(self) -> None:
+        """Recover from the hidden native view's late focus grab.
+
+        Only restore while focus is still in the active slot's content. A
+        deliberate click into the toolbar/location entry lives outside the
+        slot and must win over an old keyboard-navigation echo.
+        """
+        focus = self._win.get_focus()
+        slot = self._ext._active_slot_widget(self._win)
+        if focus is not None:
+            if slot is None:
+                return
+            widget = focus
+            while widget is not None and widget is not slot:
+                widget = widget.get_parent()
+            if widget is None:
+                return
+        self._arm_focus_retry(self._focused_column())
 
     def _focus_column_when_mapped(self, col) -> None:
         """Grab keyboard focus onto `col` as soon as it is actually mapped --
@@ -1909,6 +1999,43 @@ class _ColumnViewHost:
         self.aligner.set_content(self.root)
         self._sync_root_width()
 
+    def _rightmost_paned(self) -> Gtk.Paned | None:
+        """The paned whose end child is the trailing preview column."""
+        paned = getattr(self, "root", None)
+        while isinstance(paned, Gtk.Paned):
+            child = paned.get_end_child()
+            if not isinstance(child, Gtk.Paned):
+                return paned
+            paned = child
+        return None
+
+    def _append_column_to_chain(self, column: Gtk.Widget | None) -> None:
+        """Append one new folder column without detaching earlier columns.
+
+        A normal forward drill only replaces the final preview with
+        ``column + preview``. Rebuilding the complete nested paned tree for
+        that operation unmaps and rebinds every existing ListView, which
+        presents as all columns refreshing on every selection.
+        """
+        tail = self._rightmost_paned()
+        if column is None or tail is None:
+            self._rebuild_chain()
+            return
+        tail.set_end_child(None)
+        paned = self._make_paned(column, self.preview_column, len(self.columns) - 1)
+        tail.set_end_child(paned)
+        self.paneds.insert(0, paned)
+        self._sync_root_width()
+
+    def _replace_preview_in_chain(self) -> None:
+        """Swap only the trailing preview, preserving every folder column."""
+        tail = self._rightmost_paned()
+        if tail is None:
+            self._rebuild_chain()
+            return
+        tail.set_end_child(self.preview_column)
+        self._sync_root_width()
+
     def _detach_paned_children(self, widget: Gtk.Widget) -> None:
         if not isinstance(widget, Gtk.Paned):
             return
@@ -1924,52 +2051,36 @@ class _ColumnViewHost:
     def _make_paned_chain(self, columns: list[Gtk.Widget]) -> Gtk.Widget:
         tail = columns[-1]
         for index, column in reversed(list(enumerate(columns[:-1]))):
-            paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
-            paned.set_vexpand(True)
-            paned.set_valign(Gtk.Align.FILL)
-            paned.set_start_child(column)
-            paned.set_end_child(tail)
-            # The start child is always a fixed-width folder column -- it
-            # must never auto-grow when the paned itself is reallocated
-            # bigger. All slack cascades rightward toward the trailing
-            # preview column, which is the only thing meant to absorb it
-            # (see _sync_root_width). Making index 0 a special case here
-            # (resize_start_child=True) created a feedback loop: growing
-            # the container to fit a wider column 0 made GTK auto-grow
-            # column 0 further to fill that same new space, runaway growth
-            # with nothing to stop it.
-            paned.set_resize_start_child(False)
-            paned.set_resize_end_child(True)
-            paned.set_shrink_start_child(False)
-            paned.set_shrink_end_child(False)
-            paned.set_wide_handle(False)
-            paned.set_position(COLUMN_WIDTH if not _COLUMN_RESIZE_ENABLED else column.width)
-            if _COLUMN_RESIZE_ENABLED:
-                paned.connect("notify::position", self._on_paned_position_changed, index)
-                # Watches for a genuine press on this handle (see
-                # _on_paned_handle_pressed) so _on_paned_position_changed can
-                # tell an actual user drag apart from GTK repositioning the
-                # handle on its own. Must be CAPTURE phase: the handle itself
-                # is a private child widget with its own internal drag
-                # gesture, which claims the press before a default BUBBLE
-                # probe on the paned would ever see it (confirmed -- with
-                # BUBBLE, "pressed" never fired for a real handle grab, so
-                # _active_drag_index stayed unset and every real drag got
-                # reverted, blocking manual resize entirely). CAPTURE runs on
-                # the way down, before that claim happens. Fires for any
-                # descendant click too, so the pressed handler re-checks the
-                # x coordinate against the handle's own position rather than
-                # trusting that it fired.
-                handle_probe = Gtk.GestureClick(button=0)
-                handle_probe.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
-                handle_probe.connect("pressed", self._on_paned_handle_pressed, index)
-                handle_probe.connect("released", self._on_paned_handle_released, index)
-                paned.add_controller(handle_probe)
-            else:
-                paned.connect("notify::position", self._on_paned_position_fixed, index)
+            paned = self._make_paned(column, tail, index)
             self.paneds.append(paned)
             tail = paned
         return tail
+
+    def _make_paned(self, column: Gtk.Widget, tail: Gtk.Widget, index: int) -> Gtk.Paned:
+        paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
+        paned.set_vexpand(True)
+        paned.set_valign(Gtk.Align.FILL)
+        paned.set_start_child(column)
+        paned.set_end_child(tail)
+        # The start child is always a fixed-width folder column -- it must
+        # never auto-grow when the paned itself is reallocated bigger. All
+        # slack cascades rightward toward the trailing preview column.
+        paned.set_resize_start_child(False)
+        paned.set_resize_end_child(True)
+        paned.set_shrink_start_child(False)
+        paned.set_shrink_end_child(False)
+        paned.set_wide_handle(False)
+        paned.set_position(COLUMN_WIDTH if not _COLUMN_RESIZE_ENABLED else column.width)
+        if _COLUMN_RESIZE_ENABLED:
+            paned.connect("notify::position", self._on_paned_position_changed, index)
+            handle_probe = Gtk.GestureClick(button=0)
+            handle_probe.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+            handle_probe.connect("pressed", self._on_paned_handle_pressed, index)
+            handle_probe.connect("released", self._on_paned_handle_released, index)
+            paned.add_controller(handle_probe)
+        else:
+            paned.connect("notify::position", self._on_paned_position_fixed, index)
+        return paned
 
     def _on_paned_handle_pressed(
         self, gesture: Gtk.GestureClick, _n_press: int, x: float, _y: float, index: int
@@ -2546,6 +2657,12 @@ def enter_column_view(ext, win: Gtk.Window, root_uri: str) -> None:
     stack.set_visible_child(view)
     host.set_native_cut_observer_active(True)
     populate_column_view(ext, win)
+    # This shared entry path is also used by _maybe_auto_elect_column_view.
+    # That persisted-default route bypasses main._show_column_view(), which
+    # is otherwise where the sort watch is armed. Defer one turn so the
+    # caller's refresh_column_view_chrome() has installed the replacement
+    # view-options button before NautilusPrefs looks for it.
+    GLib.idle_add(lambda: (ext._arm_sort_watch(win), GLib.SOURCE_REMOVE)[1])
 
 
 def leave_column_view(slot: Gtk.Widget) -> None:

@@ -803,6 +803,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             "view_switcher": None,
             "view_options_menu_button": None,
             "header_motion": None,  # Gtk.EventControllerMotion on the header bar
+            "sort_watch_button": None,  # Gtk.MenuButton with the shared sort metadata watch
             "location_filter_watch_attached": False,
             # A file-picker dialog should never auto-navigate itself to
             # computer:/// on open - that heuristic is normal-window-only.

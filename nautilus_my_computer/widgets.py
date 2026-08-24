@@ -8,6 +8,7 @@ extension (right-click menus, file-op D-Bus calls, navigation) is reached
 through the injected `ext` instance.
 """
 
+import collections
 import dataclasses
 import math
 import threading
@@ -46,6 +47,38 @@ except (ValueError, ImportError):
 # hundreds of un-cached files would otherwise launch that many subprocesses
 # at once.
 _ROW_THUMBNAIL_SEMAPHORE = threading.Semaphore(4)
+
+# Reparenting a column's ListView can make GTK unbind and immediately bind all
+# of its recycled rows again. GNOME's disk thumbnail cache avoids re-running a
+# thumbnailer in that case, but decoding every thumbnail again still makes the
+# row visibly fall back to its generic icon. Keep the final small Gdk.Texture
+# objects in process too, keyed by the source version. This is deliberately
+# bounded: the textures are only 24px row thumbnails, and old folders should
+# not retain a process-lifetime cache.
+_ROW_THUMBNAIL_TEXTURE_CACHE_MAX_ENTRIES = 512
+_row_thumbnail_texture_cache: collections.OrderedDict[tuple[str, int], Gdk.Texture] = (
+    collections.OrderedDict()
+)
+_row_thumbnail_texture_cache_lock = threading.Lock()
+
+
+def _get_row_thumbnail_texture(uri: str, mtime: int) -> Gdk.Texture | None:
+    key = (uri, mtime)
+    with _row_thumbnail_texture_cache_lock:
+        texture = _row_thumbnail_texture_cache.get(key)
+        if texture is not None:
+            _row_thumbnail_texture_cache.move_to_end(key)
+        return texture
+
+
+def _cache_row_thumbnail_texture(uri: str, mtime: int, texture: Gdk.Texture) -> None:
+    key = (uri, mtime)
+    with _row_thumbnail_texture_cache_lock:
+        _row_thumbnail_texture_cache[key] = texture
+        _row_thumbnail_texture_cache.move_to_end(key)
+        while len(_row_thumbnail_texture_cache) > _ROW_THUMBNAIL_TEXTURE_CACHE_MAX_ENTRIES:
+            _row_thumbnail_texture_cache.popitem(last=False)
+
 
 # Frames MyComputerColumn.with_selected_row waits for a scrolled-to row to
 # actually bind before giving up. Generous: the realize lands within a frame
@@ -1287,6 +1320,10 @@ class MyComputerColumnRow(Gtk.Box):
         # thread and swapped in once ready, never on the main loop. Folders
         # never go through this: their icon is already the real folder icon.
         if not item.is_dir and item.content_type and _thumb_factory is not None:
+            cached_texture = _get_row_thumbnail_texture(item.uri, item.mtime)
+            if cached_texture is not None:
+                self.set_thumbnail(cached_texture)
+                return
             self._thumb_cancellable = Gio.Cancellable()
             self._load_row_thumbnail(
                 item.uri, item.content_type, item.mtime, self._thumb_cancellable
@@ -1438,6 +1475,7 @@ class MyComputerColumnRow(Gtk.Box):
             texture = self._load_thumbnail_texture(cached)
             if texture is None:
                 return
+            _cache_row_thumbnail_texture(uri, mtime, texture)
             if cancellable.is_cancelled():
                 return
             GLib.idle_add(self._set_row_thumbnail_texture, texture, cancellable)
@@ -1475,6 +1513,7 @@ class MyComputerColumnRow(Gtk.Box):
         texture = self._load_thumbnail_texture(cached)
         if texture is None:
             return
+        _cache_row_thumbnail_texture(uri, mtime, texture)
         GLib.idle_add(self._set_row_thumbnail_texture, texture, cancellable)
 
     def _set_row_thumbnail_texture(self, texture: Gdk.Texture, cancellable: Gio.Cancellable) -> int:
@@ -1644,6 +1683,11 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         self._on_row_pressed = on_row_pressed
         self._on_row_released = on_row_released
         self._cancellable = Gio.Cancellable()
+        # Distinguish a genuinely empty folder from one whose asynchronous
+        # enumeration has not produced its model yet. Column View's keyboard
+        # Right/Enter handling uses this to defer moving focus into a new
+        # child until it knows there is a row that can actually own selection.
+        self._loaded = False
         # Manual repeat-click detection for opening the already-previewed file row
         # (see _on_row_activated_internal): a raw GestureClick on the row can't be
         # used for this because every activation rebuilds the paned chain
@@ -1841,6 +1885,7 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         collapsing the Miller chain."""
         self._cancellable.cancel()
         self._cancellable = Gio.Cancellable()
+        self._loaded = False
         self._show_empty_page(False)
         self._store.remove_all()
         self._load()
@@ -2045,6 +2090,7 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         if items:
             self._store.splice(0, 0, items)
 
+        self._loaded = True
         if callable(self._on_loaded):
             self._on_loaded(self)
 
@@ -2101,6 +2147,9 @@ class MyComputerColumn(Gtk.ScrolledWindow):
 
     def item_count(self) -> int:
         return self._store.get_n_items()
+
+    def is_loaded(self) -> bool:
+        return self._loaded
 
     def contains_item(self, item) -> bool:
         """Whether item is still one of this column's live model entries -- a
