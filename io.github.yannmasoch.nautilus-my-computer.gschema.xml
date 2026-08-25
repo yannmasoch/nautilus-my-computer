@@ -145,11 +145,5 @@
       <description>Ordered list of quick-access folders shown in the Preferred Folders group. Entries are either logical tokens (home, recent, starred, network, trash, documents, downloads, music, videos, pictures) or folder URIs added by the user. A file://~/ prefix resolves relative to the current user's home directory. Intended for distro-level customization via .gschema.override.</description>
     </key>
 
-    <key name="show-preferred-folder-captions" type="b">
-      <default>false</default>
-      <summary>Show captions on Preferred Folder cards</summary>
-      <description>Show extra detail lines (Nautilus icon-view captions) below each Preferred Folder card</description>
-    </key>
-
   </schema>
 </schemalist>

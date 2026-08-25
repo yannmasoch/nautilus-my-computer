@@ -2146,8 +2146,11 @@ def _refresh_folder_captions_async(ext, pf: "PreferredFolder") -> None:
     """Resolve whichever caption attributes the 3 active tokens need, then
     patch any rendered card in place via _show_folder_captions. Virtual
     places (recent:///, starred:///, x-network-view:///) have no real file to
-    query -- Nautilus itself shows no captions for them either."""
-    if pf.is_special_place or not ext._gsettings.get_boolean("show-preferred-folder-captions"):
+    query -- Nautilus itself shows no captions for them either. Captions
+    themselves are Nautilus's own global icon-view setting, not ours to
+    gate -- all tokens set to "none" already means nothing renders, same
+    as everywhere else in Nautilus."""
+    if pf.is_special_place:
         return
     tokens = ext._nautilus_prefs.captions()
     attrs = {_CAPTION_TOKEN_ATTRS[t] for t in tokens if t in _CAPTION_TOKEN_ATTRS}
@@ -2286,12 +2289,11 @@ def _show_folder_captions(ext, folder_key: str) -> None:
     pf = _folder_data.get(folder_key)
     if pf is None:
         return
-    show_captions = ext._gsettings.get_boolean("show-preferred-folder-captions")
     tokens = ext._nautilus_prefs.captions()
     data = _folder_caption_data.get(folder_key, {})
     lines = (
         [None, None, None]
-        if pf.is_special_place or not show_captions
+        if pf.is_special_place
         else [_resolve_caption_line(tok, pf, data) for tok in tokens]
     )
     for state in ext._iter_panel_states():
