@@ -235,6 +235,13 @@ class MountInfo:
     is_network_place: bool = False
     is_hidden: bool = False  # standard::is-hidden on the mount root, local mounts only
 
+    # monotonic() timestamp of when this key first appeared in _disk_data
+    # (see _refresh) -- disks have no real "modified" date, so "Last/First
+    # Modified" in the Computer view's sort menu uses this as the closest
+    # available proxy for "when was this plugged in", set once per key and
+    # carried forward by _refresh on every later scan.
+    first_seen: float = 0.0
+
     # Right-click menu factory menu(ext, win, m) -> ContextMenu (built at show-time).
     menu: object = _disk_context_menu
 
@@ -940,6 +947,8 @@ def _refresh_network_places(on_done=None) -> None:
 
     def _worker():
         global _network_places
+        previous_seen = {p.key: p.first_seen for p in _network_places}
+        now = time.time()
         results: list[MountInfo] = []
         try:
             gfile = Gio.File.new_for_uri("network:///")
@@ -959,9 +968,10 @@ def _refresh_network_places(on_done=None) -> None:
                 if not nav_uri or nav_uri.startswith("network:///"):
                     if not target:
                         continue
+                key = f"netplace:{nav_uri}"
                 results.append(
                     MountInfo(
-                        key=f"netplace:{nav_uri}",
+                        key=key,
                         uuid=None,
                         device=nav_uri,
                         mountpoint=nav_uri,
@@ -973,6 +983,7 @@ def _refresh_network_places(on_done=None) -> None:
                         nav_uri=nav_uri,
                         gio_icon=icon,
                         is_network_place=True,
+                        first_seen=previous_seen.get(key, now),
                     )
                 )
             enumerator.close(None)
@@ -987,7 +998,12 @@ def _refresh_network_places(on_done=None) -> None:
 
 def _refresh(mounts: list[MountInfo]) -> bool:
     global _disk_data
-    new_data = {m.key: m for m in mounts}
+    now = time.time()
+    new_data = {}
+    for m in mounts:
+        previous = _disk_data.get(m.key)
+        first_seen = previous.first_seen if previous is not None else now
+        new_data[m.key] = dataclasses.replace(m, first_seen=first_seen)
     changed = new_data != _disk_data
     _disk_data = new_data
     return changed
@@ -1761,6 +1777,11 @@ def _populate_slot(ext, slot, sort: tuple[str, bool] | None = None) -> None:
     def _sort_key(m: MountInfo):
         if col == "size":
             return m.total
+        if col == "mtime":
+            # Disks have no real "modified" date -- Last/First Modified sorts
+            # by when this key was first seen by the extension instead, i.e.
+            # plug-in order for the current session (see MountInfo.first_seen).
+            return m.first_seen
         # Hidden bucket mirrors Column View's confirmed-against-Nautilus name
         # sort (widgets.py's _SORT_KEY_BUILDERS["name"]): normal items sorted
         # alpha-num first, then hidden items sorted alpha-num, as one flat
