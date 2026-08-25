@@ -2,7 +2,7 @@
 icon zoom, hidden files. Consolidates reads that used to be scattered ad hoc
 GSettings/GVfs-metadata calls across main.py into one cached object, so a
 second view module (Column View) can read the same values without duplicating
-the GSettings handles or the per-folder sort-metadata polling hack.
+the GSettings handles.
 
 `NautilusPrefs` takes `ext` as an explicit parameter on its watcher methods,
 same as every other target module -- it does not import main.py.
@@ -10,7 +10,7 @@ same as every other target module -- it does not import main.py.
 
 from __future__ import annotations
 
-from gi.repository import Adw, Gio, GLib, Gtk
+from gi.repository import Adw, Gio, Gtk
 
 from nautilus_my_computer.common import (
     _GRID_ZOOM_PX,
@@ -20,13 +20,9 @@ from nautilus_my_computer.common import (
     _log,
 )
 
-# Per-folder sort override, stored as GVfs metadata (not GSettings -- there is
-# no signal for this; the metadata daemon writes via mmap so file monitors
-# never fire). Read by polling, gated to while the sort popover is open.
+# Per-folder sort override, stored as GVfs metadata rather than GSettings.
 METADATA_SORT_BY = "metadata::nautilus-icon-view-sort-by"
 METADATA_SORT_REVERSED = "metadata::nautilus-icon-view-sort-reversed"
-
-_SORT_POLL_MS = 250  # gvfs sort-metadata poll cadence (only while the sort popover is open)
 
 # The per-folder GVfs metadata (METADATA_SORT_BY) and the global GSettings
 # "default-sort-order" enum use two different vocabularies for the same
@@ -55,14 +51,12 @@ class NautilusPrefs:
         # the view-options toggle both go through this key instead.
         self._filechooser = Gio.Settings.new("org.gtk.gtk4.Settings.FileChooser")
 
-        self.sort_column: str = "name"
-        self.sort_reverse: bool = False
         self.view_mode: str = "icon-view"
-        self.click_policy: str = "double"  # Nautilus "click-policy": 'single' or 'double'
-
-        self._sort_poll_id: int | None = None
-        self._sort_hover: bool = False
-        self._resolve_sort_target = None
+        # Nautilus "click-policy": 'single' or 'double'. Read live at construction
+        # (main.py instantiates NautilusPrefs before any window/view exists) rather than
+        # hardcoding a default -- refresh_click_policy() can't be reused here since it reads
+        # self.click_policy to compute its return value before this first assignment exists.
+        self.click_policy: str = self._prefs.get_string("click-policy")
 
     # ── Global GSettings reads ───────────────────────────────────────────────
 
@@ -117,26 +111,17 @@ class NautilusPrefs:
         rev = (info.get_attribute_string(METADATA_SORT_REVERSED) or "false") == "true"
         return (col, rev)
 
-    def refresh_folder_sort(self, uri: str) -> bool:
-        """Read `uri`'s sort override into self.sort_column/sort_reverse.
-        Returns True when the column or direction changed since last read."""
-        col, rev = self.folder_sort(uri) or ("name", False)
-        if col != self.sort_column or rev != self.sort_reverse:
-            self.sort_column = col
-            self.sort_reverse = rev
-            return True
-        return False
+    def get_effective_folder_sort(self, uri: str) -> tuple[str, bool]:
+        """Return one URI's effective sort without subscribing or changing it.
 
-    def resolve_column_sort(self, root_uri: str) -> tuple[str, bool]:
-        """Single source of truth for Column View's sort: read root_uri's
-        per-folder override (falling back to the global default), applied
-        uniformly across the whole Miller chain -- per-column sort makes no
-        UX sense when several folders are visible side by side. Folders-first
-        grouping is a separate, orthogonal concern: it's read live from
-        sort_directories_first() and applied as its own pass in
-        MyComputerColumn._populate_rows (widgets.py), not baked into this
-        (column, reverse) tuple."""
-        folder = self.folder_sort(root_uri)
+        A saved per-folder GVfs sort override wins. When no override exists,
+        return Nautilus's global GSettings default. This is used by the
+        Computer panel; Column View has its own global extension settings.
+        """
+        return self._effective_sort_from_override(self.folder_sort(uri))
+
+    def _effective_sort_from_override(self, folder: tuple[str, bool] | None) -> tuple[str, bool]:
+        """Resolve an already-read folder override without another GIO query."""
         if folder is not None:
             col, rev = folder
             col = _METADATA_SORT_TO_CANONICAL.get(col, col)
@@ -159,13 +144,15 @@ class NautilusPrefs:
         when it changed since last read. Kept separate from
         refresh_view_mode(): click-policy only affects the disk-view grid's
         activate-on-single-click flag (widgets.py's
-        flow.set_activate_on_single_click) -- Column View's Miller columns are
-        always single-click regardless (drill-down UX, see MyComputerColumn)
-        and its preview column reads click_policy live at click time
-        (common.py's _is_activating_click()), so bundling this with
-        view-mode's full _repopulate_visible() would force a needless
-        re-enumeration/resort of every open Miller column on a setting that
-        doesn't affect their content at all."""
+        flow.set_activate_on_single_click) and Column View's Miller file rows
+        and preview column, both of which read click_policy live at click
+        time (widgets.py's MyComputerColumn._on_row_activated_internal and
+        MyComputerPreviewColumn._on_preview_area_pressed/_released) -- folder
+        rows stay single-click regardless (drill-down UX, see
+        MyComputerColumn). Bundling this with view-mode's full
+        _repopulate_visible() would force a needless re-enumeration/resort of
+        every open Miller column on a setting that doesn't affect their
+        content at all."""
         policy = self._prefs.get_string("click-policy")
         changed = policy != self.click_policy
         self.click_policy = policy
@@ -174,8 +161,8 @@ class NautilusPrefs:
     # ── Watcher wiring ───────────────────────────────────────────────────────
 
     def watch_global(self, ext) -> None:
-        """Subscribe to GSettings so view-mode/click-policy/hidden-files changes
-        are instant. Call once (not per-window)."""
+        """Subscribe to GSettings so global preference changes are instant.
+        Call once, not per window."""
         self._prefs.connect("changed::default-folder-viewer", self._on_view_mode_changed, ext)
         self._prefs.connect("changed::click-policy", self._on_click_policy_changed, ext)
         self._filechooser.connect("changed::show-hidden", self._on_hidden_files_changed, ext)
@@ -218,35 +205,6 @@ class NautilusPrefs:
         _log(f"zoom changed → {settings.get_string('default-zoom-level')}")
         ext._repopulate_visible()
 
-    def watch_sort_button(self, ext, nautilus_win: Gtk.Window, *, resolve_sort_target) -> None:
-        """Watch the sort GtkMenuButton's active state -- arm poll when the sort
-        popover opens, disarm (with one final read) when it closes. Call once
-        per window (may be attempted from more than one call site -- the
-        header_motion slot below marks "already attached" so only the first
-        actually wires anything up).
-
-        `resolve_sort_target(ext, win) -> tuple[str, Callable[[], None]] | None`
-        is re-invoked on every open and every poll tick, returning the URI to
-        read sort metadata from and the callback to run when it changes, for
-        whichever of our views is currently visible -- or None while none of
-        ours is showing. This lets one watch serve every view that has its
-        own notion of "current sort" (the disk panel, Column View) without
-        hardcoding a single URI/view pairing at attach time."""
-        self._resolve_sort_target = resolve_sort_target
-        state = ext._windows.get(nautilus_win)
-        if not state or state.get("header_motion"):
-            return
-        # Once inject_column_view_entry has run, the view-options popover
-        # lives on our own MenuButton (the native split button's popover was
-        # moved there), not on the native MenuButton find_sort_button locates.
-        btn = state.get("view_options_menu_button") or self.find_sort_button(nautilus_win)
-        if btn is None:
-            _log("sort button not found in toolbar")
-            return
-        btn.connect("notify::active", self._on_sort_button_active, ext, nautilus_win)
-        state["header_motion"] = btn  # reuse slot -- just marks "already attached"
-        _log(f"sort button watch attached ({type(btn).__name__})")
-
     def find_sort_button(self, nautilus_win: Gtk.Window):
         """Find the GtkMenuButton inside NautilusViewControls (the sort/view popover button)."""
         # NautilusViewControls has no real buildable_id (auto-generated) and no css class.
@@ -279,42 +237,3 @@ class NautilusPrefs:
                         _log("find_sort_button: matched via structural nav (NautilusViewControls)")
                         return w
         return None
-
-    def _on_sort_button_active(
-        self, btn: Gtk.MenuButton, _param, ext, nautilus_win: Gtk.Window
-    ) -> None:
-        state = ext._windows.get(nautilus_win)
-        if not state:
-            return
-        if self._resolve_sort_target(ext, nautilus_win) is None:
-            return  # none of our views is currently visible in this window
-        if btn.get_active():
-            self._sort_hover = True
-            if self._sort_poll_id is None:
-                _log("sort menu opened → sort poll armed")
-                self._sort_poll_id = GLib.timeout_add(
-                    _SORT_POLL_MS, self._poll_sort, ext, nautilus_win
-                )
-        else:
-            self._sort_hover = False
-            _log("sort menu closed → sort poll disarming")
-
-    def _poll_sort(self, ext, nautilus_win: Gtk.Window) -> bool:
-        target = self._resolve_sort_target(ext, nautilus_win)
-        if target is None:
-            # The visible view changed away from any of ours while the poll
-            # was armed (e.g. user navigated out mid-drag) -- nothing left to
-            # track, disarm.
-            self._sort_poll_id = None
-            return GLib.SOURCE_REMOVE
-        uri, on_changed = target
-        if self.refresh_folder_sort(uri):
-            _log(f"sort changed → col='{self.sort_column}' rev={self.sort_reverse}")
-            on_changed()
-            _log(f"sort applied → col='{self.sort_column}' rev={self.sort_reverse}")
-        if not self._sort_hover:
-            # Menu closed -- one final read already done above, now disarm.
-            _log("sort poll disarmed")
-            self._sort_poll_id = None
-            return GLib.SOURCE_REMOVE
-        return GLib.SOURCE_CONTINUE

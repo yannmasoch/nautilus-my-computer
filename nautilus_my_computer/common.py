@@ -258,19 +258,6 @@ def _mc_date_to_str(unix_time: int) -> str:
     return relative
 
 
-def _is_activating_click(ext, n_press: int) -> bool:
-    """True if a Gtk.GestureClick "pressed" event (n_press) should activate,
-    given Nautilus' own click-policy setting (ext._nautilus_prefs.click_policy,
-    'single' or 'double').
-
-    Only needed for raw GestureClick wiring on plain widgets that have no
-    built-in "activate-on-single-click" (Gtk.FlowBox/Gtk.ListBox already expose
-    that as a widget property -- see widgets.py's flow.set_activate_on_single_click
-    calls, which don't need this helper)."""
-    single_click = ext._nautilus_prefs.click_policy == "single"
-    return (single_click and n_press == 1) or (not single_click and n_press == 2)
-
-
 def _gicon_renders(gicon) -> bool:
     """True if gicon is non-None and resolves in the current icon theme."""
     if gicon is None:
@@ -463,21 +450,37 @@ def schedule_slot_init(
 
 
 _NAUTILUS_VERSION_CACHE = None
-_NAUTILUS_VERSION_READ = False
 
 
-def _nautilus_version() -> tuple[int, ...] | None:
-    """Parse Nautilus's own compiled-in AppStream metadata to get its running app
-    version (e.g. (50, 2, 2)), reading the same GResource its own About dialog uses
+def _detect_nautilus_version() -> None:
+    """Detect the running Nautilus version once and cache it in
+    _NAUTILUS_VERSION_CACHE for every later _nautilus_version() read. Called
+    exactly once, from MyComputerExtension.__init__ at extension startup,
+    before any window exists -- nothing else calls this, and _nautilus_version()
+    never triggers detection itself, so the version is checked the usual way
+    a single time per process, not re-checked or polled from navigation code.
+
+    Reads Nautilus's own compiled-in AppStream metadata (e.g. (50, 2, 2)), the
+    same GResource its own About dialog uses
     (nautilus-window.c: adw_about_dialog_new_from_appdata("/org/gnome/nautilus/appdata")).
-    Works in-process with no subprocess, filesystem guessing, or Flatpak concerns --
-    the resource is compiled into the binary and registered process-globally, and we
-    run inside that same process. Returns None if the resource or a <release> tag is
-    unexpectedly missing (e.g. a future Nautilus restructures its appdata)."""
-    global _NAUTILUS_VERSION_CACHE, _NAUTILUS_VERSION_READ
-    if _NAUTILUS_VERSION_READ:
-        return _NAUTILUS_VERSION_CACHE
-    _NAUTILUS_VERSION_READ = True
+    Works in-process, no subprocess: spawning `nautilus --version` as a
+    fallback was tried and reverted -- our extension loads into every
+    Nautilus process, and on a build where a primary instance is already
+    running (i.e. always, since we only ever run inside one), a *second*
+    `nautilus --version` invocation routes through GApplication's
+    single-instance D-Bus activation and hangs indefinitely on Zorin OS
+    18.1/Nautilus 46.4, confirmed even from a script wholly unrelated to this
+    extension. Sync or async made no difference -- the child process itself
+    never returns, so there was nothing to wait on asynchronously either.
+
+    Some distro builds strip the GResource entirely -- confirmed on that same
+    Zorin package, where Gio.resources_lookup_data raises "does not exist".
+    When that happens this returns without setting the cache, and
+    _NAUTILUS_VERSION_CACHE stays None: _action_names_for_version already
+    treats that as "unknown version" and handles it safely (tries both
+    qualified action names, with the legacy one deferred to the settled
+    startup retry tick) -- verified on the same Zorin build this targets."""
+    global _NAUTILUS_VERSION_CACHE
     try:
         data = Gio.resources_lookup_data(
             "/org/gnome/nautilus/appdata", Gio.ResourceLookupFlags.NONE
@@ -486,8 +489,44 @@ def _nautilus_version() -> tuple[int, ...] | None:
         version = root.find("releases/release").get("version")
         _NAUTILUS_VERSION_CACHE = tuple(int(p) for p in version.split("."))
     except Exception as e:
-        _log(f"_nautilus_version: could not read Nautilus appdata version ({e})")
+        _log(f"_detect_nautilus_version: could not read Nautilus appdata version ({e})")
+
+
+def _nautilus_version() -> tuple[int, ...] | None:
+    """Read-only accessor for the version _detect_nautilus_version() found at
+    startup. Never triggers detection itself -- if called before
+    MyComputerExtension.__init__ has run _detect_nautilus_version(), or if
+    detection genuinely could not determine a version, returns None, which
+    _action_names_for_version already treats as "unknown version" and handles
+    safely (tries both qualified action names)."""
     return _NAUTILUS_VERSION_CACHE
+
+
+# Nautilus 47.0 moved a family of actions (open-location, back, forward, up, down,
+# reload, stop) off the window and onto the per-tab slot:
+#   <= 46 : "win.<action>"   -- win_entries[],  nautilus-window.c
+#   >= 47 : "slot.<action>"  -- slot_entries[], nautilus-window-slot.c
+# Both are reached through GTK's widget action muxer, which only ever resolves a
+# fully qualified "prefix.action"; a bare action name matches nothing on any version.
+_SLOT_PREFIX = "slot"
+_WIN_PREFIX = "win"
+
+ACTION_OPEN_LOCATION = "open-location"
+
+
+def _slot_action(action: str) -> str:
+    """The Nautilus >= 47 qualified form, for callers that deliberately want only
+    the modern name (see main._navigate_to_disks' non-final ticks)."""
+    return f"{_SLOT_PREFIX}.{action}"
+
+
+def _action_names_for_version(action: str, version: tuple[int, ...] | None) -> tuple[str, ...]:
+    """Qualified names to try for `action`, best first, on the running Nautilus.
+    The other prefix is always kept as a fallback so an unreadable version (None),
+    a backported action layout, or a future move degrades to trying both."""
+    if version is not None and version[0] <= 46:
+        return (f"{_WIN_PREFIX}.{action}", f"{_SLOT_PREFIX}.{action}")
+    return (f"{_SLOT_PREFIX}.{action}", f"{_WIN_PREFIX}.{action}")
 
 
 def _resolve_gtype(*names: str) -> int | None:

@@ -1,5 +1,5 @@
 Name:           nautilus-my-computer
-Version:        0.13.1
+Version:        0.13.2
 Release:        0
 Summary:        My Computer for Nautilus, what GNOME Files should have always been
 
@@ -42,6 +42,19 @@ make build
 %{_datadir}/glib-2.0/schemas/io.github.yannmasoch.nautilus-my-computer.gschema.xml
 
 %changelog
+* Tue Aug 25 2026 Yann Masoch <231734284+yannmasoch@users.noreply.github.com> - 0.13.2-0
+- Own the View Options popover, fixing Grid/List/Column/Computer sort menu inconsistencies
+- Preferred Folders captions now follow Nautilus's native "Captions" setting
+- Match native Nautilus hover, pressed, and selected states in Computer and Column views
+- Add Column View keyboard navigation (arrows, Home/End, Page Up/Down, Return)
+- Fix Column View needing three clicks to open a file on non-GNOME single-click setups (e.g. KDE)
+- Fix Column View CPU spike and slow loading in large folders
+- Fix Column View sort menu not applying the chosen sort
+- Fix Nautilus opening many windows on startup on some versions
+- Fix a developer-only debug helper that never actually navigated (no effect on normal use)
+- Add Polish, Romanian, and Chinese (Simplified) translations
+- Update German, Turkish, Estonian, Catalan, Spanish, and Hungarian translations
+
 * Tue Aug 04 2026 Yann Masoch <231734284+yannmasoch@users.noreply.github.com> - 0.13.1-0
 - Fix a critical bug where navigating to or away from Column View could pin a CPU core and freeze Nautilus
 - Column View now respects the "Sort folders before files" preference

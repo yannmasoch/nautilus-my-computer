@@ -1,259 +1,245 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the My Computer for Nautilus package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
 msgid ""
 msgstr ""
-"Project-Id-Version: nautilus-my-computer\n"
+"Project-Id-Version: My Computer for Nautilus 0.13.1\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-08-25 15:20-0700\n"
-"PO-Revision-Date: 2026-07-30 05:22+0000\n"
-"Last-Translator: Kirill Fish\n"
-"Language-Team: Russian\n"
-"Language: ru\n"
+"PO-Revision-Date: 2026-08-21 15:51+0000\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: none\n"
+"Language: zh_Hans\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
-"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
-msgstr ""
+msgstr "更改图标"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Search icons…"
-msgstr ""
+msgstr "搜索图标…"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Reset"
-msgstr ""
+msgstr "重置"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select"
-msgstr ""
+msgstr "选择"
 
 #: nautilus_my_computer/column_view.py
 msgid "Beta"
-msgstr ""
+msgstr "测试版"
 
 #: nautilus_my_computer/column_view.py
 msgid "Early access feature. It may contain bugs or inconsistencies."
-msgstr ""
+msgstr "抢先体验功能，可能存在缺陷或异常。"
 
 #: nautilus_my_computer/column_view.py
 msgid "Column View"
-msgstr ""
+msgstr "列视图"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} item"
 msgid_plural "{n} items"
-msgstr[0] "{n} объект"
-msgstr[1] "{n} объекта"
-msgstr[2] "{n} объектов"
+msgstr[0] "{n} 个项目"
 
 #: nautilus_my_computer/common.py
 msgid "Today"
-msgstr "Сегодня"
+msgstr "今天"
 
 #: nautilus_my_computer/common.py
 msgid "Yesterday"
-msgstr "Вчера"
+msgstr "昨天"
 
 #: nautilus_my_computer/common.py
 msgid "Tomorrow"
-msgstr "Завтра"
+msgstr "明天"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} day ago"
 msgid_plural "{n} days ago"
-msgstr[0] "{n} день назад"
-msgstr[1] "{n} дня назад"
-msgstr[2] "{n} дней назад"
+msgstr[0] "{n} 天前"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} day"
 msgid_plural "In {n} days"
-msgstr[0] "через {n} день"
-msgstr[1] "через {n} дня"
-msgstr[2] "через {n} дней"
+msgstr[0] "{n} 天后"
 
 #: nautilus_my_computer/common.py
 msgid "This week"
-msgstr "На этой неделе"
+msgstr "本周"
 
 #: nautilus_my_computer/common.py
 msgid "Last week"
-msgstr "На прошлой неделе"
+msgstr "上周"
 
 #: nautilus_my_computer/common.py
 msgid "Next week"
-msgstr "На следующей неделе"
+msgstr "下周"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} week ago"
 msgid_plural "{n} weeks ago"
-msgstr[0] "{n} неделю назад"
-msgstr[1] "{n} недели назад"
-msgstr[2] "{n} недель назад"
+msgstr[0] "{n} 周前"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} week"
 msgid_plural "In {n} weeks"
-msgstr[0] "через {n} неделю"
-msgstr[1] "через {n} недели"
-msgstr[2] "через {n} недель"
+msgstr[0] "{n} 周后"
 
 #: nautilus_my_computer/common.py
 msgid "This month"
-msgstr "В этом месяце"
+msgstr "本月"
 
 #: nautilus_my_computer/common.py
 msgid "Last month"
-msgstr "В прошлом месяце"
+msgstr "上个月"
 
 #: nautilus_my_computer/common.py
 msgid "Next month"
-msgstr "В следующем месяце"
+msgstr "下个月"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} month ago"
 msgid_plural "{n} months ago"
-msgstr[0] "{n} месяц назад"
-msgstr[1] "{n} месяца назад"
-msgstr[2] "{n} месяцев назад"
+msgstr[0] "{n} 个月前"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} month"
 msgid_plural "In {n} months"
-msgstr[0] "через {n} месяц"
-msgstr[1] "через {n} месяца"
-msgstr[2] "через {n} месяцев"
+msgstr[0] "{n} 个月后"
 
 #: nautilus_my_computer/common.py
 msgid "This year"
-msgstr "В этом году"
+msgstr "今年"
 
 #: nautilus_my_computer/common.py
 msgid "Last year"
-msgstr "В прошлом году"
+msgstr "去年"
 
 #: nautilus_my_computer/common.py
 msgid "Next year"
-msgstr "В следующем году"
+msgstr "明年"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} year ago"
 msgid_plural "{n} years ago"
-msgstr[0] "{n} год назад"
-msgstr[1] "{n} года назад"
-msgstr[2] "{n} лет назад"
+msgstr[0] "{n} 年前"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} year"
 msgid_plural "In {n} years"
-msgstr[0] "через {n} год"
-msgstr[1] "через {n} года"
-msgstr[2] "через {n} лет"
+msgstr[0] "{n} 年后"
 
 #: nautilus_my_computer/components.py
 msgid "Rename"
-msgstr ""
+msgstr "重命名"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Tab"
-msgstr "Открыть в новой вкладке"
+msgstr "在新标签页打开"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Window"
-msgstr "Открыть в новом окне"
+msgstr "在新窗口打开"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open With…"
-msgstr "Открыть с помощью…"
+msgstr "打开方式…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Remove from Bookmarks"
-msgstr ""
+msgstr "从书签移除"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Add to Bookmarks"
-msgstr ""
+msgstr "添加到书签"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Unpin from My Computer"
-msgstr ""
+msgstr "从我的电脑取消固定"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Pin to My Computer"
-msgstr ""
+msgstr "固定到我的电脑"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
-msgstr ""
+msgstr "新建文件夹…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Document"
-msgstr ""
+msgstr "新建文档"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in Terminal"
-msgstr ""
+msgstr "在终端中打开"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Rename…"
-msgstr ""
+msgstr "重命名…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Compress…"
-msgstr ""
+msgstr "压缩…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
-msgstr ""
+msgstr "移到回收站"
 
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
-msgstr "Настройки моего компьютера"
+msgstr "我的电脑设置"
 
 #: nautilus_my_computer/main.py
 msgid "Open My Computer"
-msgstr "Открыть Мой компьютер"
+msgstr "打开我的电脑"
 
 #: nautilus_my_computer/main.py
 msgid "Recommended Apps"
-msgstr ""
+msgstr "推荐应用"
 
 #: nautilus_my_computer/main.py
 msgid "Other Apps"
-msgstr ""
+msgstr "其他应用"
 
 #: nautilus_my_computer/main.py
 msgid "General"
-msgstr "Общие"
+msgstr "通用"
 
 #: nautilus_my_computer/main.py
 msgid "Computer view"
-msgstr "Вид компьютера"
+msgstr "计算机视图"
 
 #: nautilus_my_computer/main.py
 msgid "Start on the Computer view"
-msgstr "Начинать на экране Мой компьютер"
+msgstr "启动时进入计算机视图"
 
 #: nautilus_my_computer/main.py
 msgid "Launch directly to the Computer view instead of Home"
-msgstr "Запускать прямо с экрана Мой компьютер вместо Домашней папки"
+msgstr "直接启动到计算机视图，而不是主目录"
 
 #: nautilus_my_computer/main.py
 msgid "Panel visibility"
-msgstr "Видимость панелей"
+msgstr "面板可见性"
 
 #: nautilus_my_computer/main.py
 msgid ""
@@ -261,93 +247,92 @@ msgid ""
 "separated section. Merged: folds the group into the On this Computer group. "
 "Hidden: hides the group entirely."
 msgstr ""
-"Выберите, как будет отображаться каждая группа. Показать: показывает группу "
-"как обычную отдельную секцию. Объединить: Объединяет группу вместе с группой "
-"на этом компьютере. Спрятать: прячет группу полностью."
+"设置各组的显示方式。可见：作为独立分区显示；合并：并入此计算机分组；隐藏：完"
+"全隐藏该分组。"
 
 #: nautilus_my_computer/main.py
 msgid "Visible"
-msgstr "Показать"
+msgstr "可见"
 
 #: nautilus_my_computer/main.py
 msgid "Merged"
-msgstr "Объединить"
+msgstr "合并"
 
 #: nautilus_my_computer/main.py
 msgid "Hidden"
-msgstr "Спрятать"
+msgstr "隐藏"
 
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Preferred Folders"
-msgstr "Избранные папки"
+msgstr "常用文件夹"
 
 #: nautilus_my_computer/main.py
 msgid "Show system partitions"
-msgstr "Показывать системные разделы"
+msgstr "显示系统分区"
 
 #: nautilus_my_computer/main.py
 msgid "Include boot and EFI partitions in the System group"
-msgstr "Включать загрузочные и EFI разделы в группу системных"
+msgstr "在系统分组中包含 boot 和 EFI 分区"
 
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
-msgstr "Видимость элементов боковой панели"
+msgstr "侧边栏可见性"
 
 #: nautilus_my_computer/main.py
 msgid "Choose which locations appear on the sidebar."
-msgstr "Выберите, какие места будут отображаться на боковой панели."
+msgstr "选择要在侧边栏显示的位置。"
 
 #: nautilus_my_computer/main.py
 msgid "Bar Color"
-msgstr "Цвет полоски"
+msgstr "栏颜色"
 
 #: nautilus_my_computer/main.py
 msgid "Select or customize the bar color."
-msgstr "Выберите или установите свой цвет полоски."
+msgstr "选择或自定义栏的颜色。"
 
 #: nautilus_my_computer/main.py
 msgid "Color mode"
-msgstr "Режим цвета"
+msgstr "颜色模式"
 
 #: nautilus_my_computer/main.py
 msgid "System accent"
-msgstr "Системный акцентный цвет"
+msgstr "系统强调色"
 
 #: nautilus_my_computer/main.py
 msgid "Custom color"
-msgstr "Свой цвет"
+msgstr "自定义颜色"
 
 #: nautilus_my_computer/main.py
 msgid "Custom gradient"
-msgstr "Свой градиент"
+msgstr "自定义渐变"
 
 #: nautilus_my_computer/main.py
 msgid "Color"
-msgstr "Цвет"
+msgstr "颜色"
 
 #: nautilus_my_computer/main.py
 msgid "Start color"
-msgstr "Начальный цвет"
+msgstr "起始颜色"
 
 #: nautilus_my_computer/main.py
 msgid "End color"
-msgstr "Конечный цвет"
+msgstr "结束颜色"
 
 #: nautilus_my_computer/main.py
 msgid "Extension"
-msgstr "Расширение"
+msgstr "扩展"
 
 #: nautilus_my_computer/main.py
 msgid "Version"
-msgstr "Версия"
+msgstr "版本"
 
 #: nautilus_my_computer/main.py
 msgid "Author"
-msgstr "Автор"
+msgstr "作者"
 
 #: nautilus_my_computer/main.py
 msgid "Source code"
-msgstr "Исходный код"
+msgstr "源代码"
 
 #: nautilus_my_computer/main.py
 msgid "GitHub"
@@ -355,85 +340,85 @@ msgstr "GitHub"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Mount"
-msgstr "Присоединить"
+msgstr "挂载"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "System"
-msgstr "Системные"
+msgstr "系统"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "On this Computer"
-msgstr "На этом компьютере"
+msgstr "此计算机"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Removable"
-msgstr "Внешние"
+msgstr "可移动设备"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Disc"
-msgstr "Диски"
+msgstr "磁盘"
 
 #: nautilus_my_computer/widgets.py
 msgid "Not mounted"
-msgstr "Не присоединён"
+msgstr "未挂载"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{free} free of {total}"
-msgstr "{free} свободно из {total}"
+msgstr "共 {total}，可用 {free}"
 
 #: nautilus_my_computer/widgets.py
 msgid "Program"
-msgstr ""
+msgstr "程序"
 
 #: nautilus_my_computer/widgets.py
 msgid "Audio"
-msgstr ""
+msgstr "音频"
 
 #: nautilus_my_computer/widgets.py
 msgid "Font"
-msgstr ""
+msgstr "字体"
 
 #: nautilus_my_computer/widgets.py
 msgid "Image"
-msgstr ""
+msgstr "图像"
 
 #: nautilus_my_computer/widgets.py
 msgid "Archive"
-msgstr ""
+msgstr "压缩包"
 
 #: nautilus_my_computer/widgets.py
 msgid "Markup"
-msgstr ""
+msgstr "标记文档"
 
 #: nautilus_my_computer/widgets.py
 msgid "Text"
-msgstr ""
+msgstr "文本"
 
 #: nautilus_my_computer/widgets.py
 msgid "Video"
-msgstr ""
+msgstr "视频"
 
 #: nautilus_my_computer/widgets.py
 msgid "Contacts"
-msgstr ""
+msgstr "联系人"
 
 #: nautilus_my_computer/widgets.py
 msgid "Calendar"
-msgstr ""
+msgstr "日历"
 
 #: nautilus_my_computer/widgets.py
 msgid "Document"
-msgstr ""
+msgstr "文档"
 
 #: nautilus_my_computer/widgets.py
 msgid "Presentation"
-msgstr ""
+msgstr "演示文稿"
 
 #: nautilus_my_computer/widgets.py
 msgid "Spreadsheet"
-msgstr ""
+msgstr "电子表格"
 
 #: nautilus_my_computer/widgets.py
 msgid "Dimensions"
-msgstr ""
+msgstr "尺寸"

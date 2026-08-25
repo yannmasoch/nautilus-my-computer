@@ -25,12 +25,11 @@ import time
 
 import gi
 
-gi.require_version("Adw", "1")
 gi.require_version("Gdk", "4.0")
 gi.require_version("Gio", "2.0")
 gi.require_version("GLib", "2.0")
 gi.require_version("Gtk", "4.0")
-from gi.repository import Adw, Gdk, Gio, GLib, Gtk
+from gi.repository import Gdk, Gio, GLib, Gtk
 
 from nautilus_my_computer import common, preferred_folders
 from nautilus_my_computer.common import (
@@ -44,7 +43,6 @@ from nautilus_my_computer.common import (
     N_,
     _,
     _all_widgets,
-    _find_widget,
     _format_item_count,
     _format_permissions,
     _log,
@@ -62,15 +60,13 @@ from nautilus_my_computer.context_menu import (
 )
 from nautilus_my_computer.preferred_folders import PreferredFolder
 from nautilus_my_computer.widgets import (
-    MyComputerCardSection,
+    MyComputerCardGroup,
     MyComputerDiskCard,
     MyComputerFolderCard,
 )
 
 DISKS_URI = "computer:///"
 _DISKS_FILE = Gio.File.new_for_uri(DISKS_URI)
-METADATA_SORT_BY = "metadata::nautilus-icon-view-sort-by"
-METADATA_SORT_REVERSED = "metadata::nautilus-icon-view-sort-reversed"
 _REFRESH_DEBOUNCE_MS = 300  # coalesce rapid mount/unmount/plug events
 _USAGE_GATE_MS = 1000  # idle cadence: try a statvfs sweep this often, skip while disk is busy
 _USAGE_POLL_FAST_MS = 250  # fast cadence while writes are buffered (Dirty+Writeback elevated)
@@ -82,7 +78,6 @@ _DIRTY_ACTIVE_THRESHOLD = (
     4 * 1000 * 1000
 )  # /proc/meminfo Dirty+Writeback ≥ this → poll fast (above resting journal noise ~1–2 MB)
 _USAGE_POLL_NETWORK_MS = 5000  # async D-Bus usage poll interval for GVfs/network mounts
-_SORT_POLL_MS = 250  # gvfs sort-metadata poll cadence (only while header is hovered)
 _STALE_RELEASE_FRAMES = 2  # keep detached panel generations alive across this many frame ticks
 REAL_FSTYPES = {
     "ext4",
@@ -239,6 +234,13 @@ class MountInfo:
     can_unmount: bool = False
     is_network_place: bool = False
     is_hidden: bool = False  # standard::is-hidden on the mount root, local mounts only
+
+    # monotonic() timestamp of when this key first appeared in _disk_data
+    # (see _refresh) -- disks have no real "modified" date, so "Last/First
+    # Modified" in the Computer view's sort menu uses this as the closest
+    # available proxy for "when was this plugged in", set once per key and
+    # carried forward by _refresh on every later scan.
+    first_seen: float = 0.0
 
     # Right-click menu factory menu(ext, win, m) -> ContextMenu (built at show-time).
     menu: object = _disk_context_menu
@@ -552,18 +554,21 @@ _CSS = b"""
 .mc-row-thumbnail {
     border-radius: 3px;
 }
-/* GtkListBoxRow normally applies the sidebar's horizontal padding around its
-   child. Move that inset into the Miller child box so it fills the outer row
-   allocation exactly, while its contents retain the native 8px inset. */
-.mc-column-list > row.mc-column-row {
+/* GtkListView's per-item "row" node (GtkListItemWidget) normally applies the
+   sidebar's horizontal padding around its child, same as GtkListBoxRow did
+   pre-#139-refactor. Move that inset into the Miller child box
+   (.mc-column-row-content, see widgets.MyComputerColumnRow) so it fills the
+   outer row allocation exactly, while its contents retain the native 8px
+   inset. */
+.mc-column-list > row {
     padding-left: 0;
     padding-right: 0;
 }
-.mc-column-list > row.mc-column-row > .mc-column-row-content {
+.mc-column-list > row > .mc-column-row-content {
     padding-left: 8px;
     padding-right: 8px;
 }
-.mc-column-list > row.mc-column-row.mc-row-cut {
+.mc-column-list > row > .mc-column-row-content.mc-row-cut {
     opacity: 0.50;
 }
 /* Miller columns reuse .navigation-sidebar for its rounded-corner selection
@@ -574,15 +579,17 @@ _CSS = b"""
    selected state to the native accent tokens, keep everything else
    (hover, shape, spacing) untouched.
 
-   Scoped to .mc-current-column, not plain :selected: only the column that
-   was last clicked (column_view.py's tracked focused_index, applied via
-   MyComputerColumn.set_current_column) reads as accent -- an ancestor
-   column still further back on the committed path keeps its row selected
-   internally (so navigating still works) but falls back to the plain
-   native :selected grey instead of competing for attention with accent
-   color. This is plain Python-tracked state, not GTK keyboard focus -- no
-   dependency on any focus-grabbing. */
-.mc-column-list.navigation-sidebar.mc-current-column row:selected {
+   Scoped to .mc-column-view-highlighted-row, not plain :selected: only the
+   column that was last clicked (column_view.py's tracked focused_index,
+   applied via MyComputerColumn.set_current_column) reads as accent -- an
+   ancestor column still further back on the committed path keeps its row
+   selected internally (so navigating still works) but falls back to the
+   plain native :selected grey instead of competing for attention with
+   accent color. This is plain Python-tracked state, not GTK keyboard focus
+   -- no dependency on any focus-grabbing. The class itself is toggled on
+   the column's Gtk.ListView (see set_current_column), not the row -- it
+   names the effect this rule produces, not the widget it's attached to. */
+.mc-column-list.navigation-sidebar.mc-column-view-highlighted-row row:selected {
     background-color: @accent_bg_color;
     color: @accent_fg_color;
 }
@@ -940,6 +947,8 @@ def _refresh_network_places(on_done=None) -> None:
 
     def _worker():
         global _network_places
+        previous_seen = {p.key: p.first_seen for p in _network_places}
+        now = time.time()
         results: list[MountInfo] = []
         try:
             gfile = Gio.File.new_for_uri("network:///")
@@ -959,9 +968,10 @@ def _refresh_network_places(on_done=None) -> None:
                 if not nav_uri or nav_uri.startswith("network:///"):
                     if not target:
                         continue
+                key = f"netplace:{nav_uri}"
                 results.append(
                     MountInfo(
-                        key=f"netplace:{nav_uri}",
+                        key=key,
                         uuid=None,
                         device=nav_uri,
                         mountpoint=nav_uri,
@@ -973,6 +983,7 @@ def _refresh_network_places(on_done=None) -> None:
                         nav_uri=nav_uri,
                         gio_icon=icon,
                         is_network_place=True,
+                        first_seen=previous_seen.get(key, now),
                     )
                 )
             enumerator.close(None)
@@ -987,7 +998,12 @@ def _refresh_network_places(on_done=None) -> None:
 
 def _refresh(mounts: list[MountInfo]) -> bool:
     global _disk_data
-    new_data = {m.key: m for m in mounts}
+    now = time.time()
+    new_data = {}
+    for m in mounts:
+        previous = _disk_data.get(m.key)
+        first_seen = previous.first_seen if previous is not None else now
+        new_data[m.key] = dataclasses.replace(m, first_seen=first_seen)
     changed = new_data != _disk_data
     _disk_data = new_data
     return changed
@@ -1363,107 +1379,9 @@ def _apply_bar_color(ext) -> None:
     )
 
 
-def _read_sort_metadata(ext) -> bool:
-    """Read sort order from GVfs metadata on computer:///.
-    Returns True when the column or direction changed since last read."""
-    try:
-        f = Gio.File.new_for_uri(DISKS_URI)
-        info = f.query_info(
-            f"{METADATA_SORT_BY},{METADATA_SORT_REVERSED}",
-            Gio.FileQueryInfoFlags.NONE,
-            None,
-        )
-        col = info.get_attribute_string(METADATA_SORT_BY) or "name"
-        rev_str = info.get_attribute_string(METADATA_SORT_REVERSED) or "false"
-        rev = rev_str == "true"
-        if col != ext._sort_column or rev != ext._sort_reverse:
-            ext._sort_column = col
-            ext._sort_reverse = rev
-            return True
-    except Exception:
-        pass
-    return False
-
-
-def _attach_sort_button_watch(ext, nautilus_win: Gtk.Window) -> None:
-    """Watch the sort GtkMenuButton's active state — arm poll when the sort
-    popover opens, disarm (with one final read) when it closes."""
-    state = ext._windows.get(nautilus_win)
-    if not state or state.get("header_motion"):
-        return
-    btn = _find_sort_button(ext, nautilus_win)
-    if btn is None:
-        _log("sort button not found in toolbar")
-        return
-    btn.connect("notify::active", functools.partial(_on_sort_button_active, ext), nautilus_win)
-    state["header_motion"] = btn  # reuse slot — just marks "already attached"
-    _log(f"sort button watch attached ({type(btn).__name__})")
-
-
-def _find_sort_button(ext, nautilus_win: Gtk.Window):
-    """Find the GtkMenuButton inside NautilusViewControls (the sort/view popover button)."""
-    # NautilusViewControls has no real buildable_id (auto-generated) and no css class.
-    # Tier 2 (class name) is the primary match; tier 4 structural is the fallback.
-    view_controls = _find_widget(
-        nautilus_win,
-        class_name="NautilusViewControls",
-        site="_find_sort_button",
-    )
-    if view_controls:
-        for child in _all_widgets(view_controls):
-            if isinstance(child, Gtk.MenuButton):
-                return child
-
-    # Structural fallback: navigate via typed Adwaita getters to the content
-    # toolbar and find the first MenuButton that isn't the hamburger.
-    split_view = next(
-        (w for w in _all_widgets(nautilus_win) if isinstance(w, Adw.OverlaySplitView)), None
-    )
-    if split_view:
-        content = split_view.get_content()
-        toolbar_view = (
-            next((w for w in _all_widgets(content) if isinstance(w, Adw.ToolbarView)), None)
-            if content
-            else None
-        )
-        if toolbar_view:
-            for w in _all_widgets(toolbar_view):
-                if isinstance(w, Gtk.MenuButton) and w.get_icon_name() != "open-menu-symbolic":
-                    _log("_find_sort_button: matched via structural nav (NautilusViewControls)")
-                    return w
-    return None
-
-
-def _on_sort_button_active(ext, btn: Gtk.MenuButton, _param, nautilus_win: Gtk.Window) -> None:
-    state = ext._active_panel_state(nautilus_win)
-    if not state or state.get("visible_view") != VIEW_DISKINFO:
-        return
-    if btn.get_active():
-        ext._sort_hover = True
-        if ext._sort_poll_id is None:
-            _log("sort menu opened → sort poll armed")
-            ext._sort_poll_id = GLib.timeout_add(_SORT_POLL_MS, functools.partial(_poll_sort, ext))
-    else:
-        ext._sort_hover = False
-        _log("sort menu closed → sort poll disarming")
-
-
-def _poll_sort(ext) -> bool:
-    if ext._read_sort_metadata():
-        _log(f"sort changed → col='{ext._sort_column}' rev={ext._sort_reverse}")
-        ext._repopulate_visible()
-        _log(f"sort applied → col='{ext._sort_column}' rev={ext._sort_reverse}")
-    if not ext._sort_hover:
-        # Menu closed — one final read already done above, now disarm.
-        _log("sort poll disarmed")
-        ext._sort_poll_id = None
-        return GLib.SOURCE_REMOVE
-    return GLib.SOURCE_CONTINUE
-
-
 def apply_card_filter(ext, win: Gtk.Window, query: str) -> None:
     """Forward `query` to every section's own filter (see
-    MyComputerCardSection.set_query in widgets.py -- each group filters its
+    MyComputerCardGroup.set_query in widgets.py -- each group filters its
     own cards and self-hides when empty). Stored on state so _populate()
     re-applies it after a live refresh or a navigate-away-and-back."""
     state = ext._active_panel_state(win)
@@ -1830,17 +1748,17 @@ def _on_ctrl_scroll_zoom(
     return Gdk.EVENT_STOP
 
 
-def _populate(ext, win: Gtk.Window) -> None:
+def _populate(ext, win: Gtk.Window, sort: tuple[str, bool] | None = None) -> None:
     """Populate whichever panel the window's active slot owns. Most call
     sites only ever care about "the panel currently in front of the user in
     this window" -- direct per-slot population (background tabs, the
     enter/leave machinery above) goes through _populate_slot instead."""
     slot = ext._active_slot_widget(win)
     if slot is not None:
-        _populate_slot(ext, slot)
+        _populate_slot(ext, slot, sort)
 
 
-def _populate_slot(ext, slot) -> None:
+def _populate_slot(ext, slot, sort: tuple[str, bool] | None = None) -> None:
     state = getattr(slot, "_mc_computer", None)
     if state is None:
         return
@@ -1851,12 +1769,19 @@ def _populate_slot(ext, slot) -> None:
     card_widgets = {}
     folder_card_widgets = {}
 
-    col = ext._sort_column
-    rev = ext._sort_reverse
+    # Fresh per-URI read on every populate, same as Column View's own
+    # _ColumnViewHost. Sort state is per folder/view, never a cache shared by
+    # whichever window most recently opened View Options.
+    col, rev = sort or ext._nautilus_prefs.get_effective_folder_sort(DISKS_URI)
 
     def _sort_key(m: MountInfo):
         if col == "size":
             return m.total
+        if col == "mtime":
+            # Disks have no real "modified" date -- Last/First Modified sorts
+            # by when this key was first seen by the extension instead, i.e.
+            # plug-in order for the current session (see MountInfo.first_seen).
+            return m.first_seen
         # Hidden bucket mirrors Column View's confirmed-against-Nautilus name
         # sort (widgets.py's _SORT_KEY_BUILDERS["name"]): normal items sorted
         # alpha-num first, then hidden items sorted alpha-num, as one flat
@@ -1878,8 +1803,15 @@ def _populate_slot(ext, slot) -> None:
         merged = vis_str == "merged"
         groups[gkey] = PanelGroup(key=gkey, label=label, visible=visible, merged=merged)
 
-    # Classify each mount into its group
+    # Classify each mount into its group. is_hidden was previously read only
+    # for sort bucketing (see _sort_key/_get_local_mount_tier below) -- there
+    # was never an actual exclusion filter, so toggling Show Hidden Files had
+    # no visible effect on the panel at all. Nautilus's own computer:///
+    # browsing filters on this exact flag, so match it here.
+    show_hidden = ext._nautilus_prefs.hidden_files()
     for m in _disk_data.values():
+        if m.is_hidden and not show_hidden:
+            continue
         groups[_classify_mount(m)].add_item(m)
 
     active_uris = {m.nav_uri for m in _disk_data.values()}
@@ -1947,7 +1879,7 @@ def _populate_slot(ext, slot) -> None:
             _refresh_folder_captions_async(ext, pf)
         _sync_folder_rename_watchers(ext, folders)
         if folders:
-            section = MyComputerCardSection(
+            section = MyComputerCardGroup(
                 ext,
                 win,
                 _("Preferred Folders"),
@@ -2006,7 +1938,7 @@ def _populate_slot(ext, slot) -> None:
         if not render_items:
             continue
 
-        section = MyComputerCardSection(
+        section = MyComputerCardGroup(
             ext,
             win,
             group.label,
@@ -2214,8 +2146,11 @@ def _refresh_folder_captions_async(ext, pf: "PreferredFolder") -> None:
     """Resolve whichever caption attributes the 3 active tokens need, then
     patch any rendered card in place via _show_folder_captions. Virtual
     places (recent:///, starred:///, x-network-view:///) have no real file to
-    query -- Nautilus itself shows no captions for them either."""
-    if pf.is_special_place or not ext._gsettings.get_boolean("show-preferred-folder-captions"):
+    query -- Nautilus itself shows no captions for them either. Captions
+    themselves are Nautilus's own global icon-view setting, not ours to
+    gate -- all tokens set to "none" already means nothing renders, same
+    as everywhere else in Nautilus."""
+    if pf.is_special_place:
         return
     tokens = ext._nautilus_prefs.captions()
     attrs = {_CAPTION_TOKEN_ATTRS[t] for t in tokens if t in _CAPTION_TOKEN_ATTRS}
@@ -2354,12 +2289,11 @@ def _show_folder_captions(ext, folder_key: str) -> None:
     pf = _folder_data.get(folder_key)
     if pf is None:
         return
-    show_captions = ext._gsettings.get_boolean("show-preferred-folder-captions")
     tokens = ext._nautilus_prefs.captions()
     data = _folder_caption_data.get(folder_key, {})
     lines = (
         [None, None, None]
-        if pf.is_special_place or not show_captions
+        if pf.is_special_place
         else [_resolve_caption_line(tok, pf, data) for tok in tokens]
     )
     for state in ext._iter_panel_states():
@@ -2453,13 +2387,13 @@ def _on_preferred_folder_file_changed(
 
 
 def _on_card_activated(ext, _flow_box, child: Gtk.FlowBoxChild, win: Gtk.Window) -> None:
+    """Fired by FlowBox's own "activate" keybinding (Return on a focused
+    card) -- mouse activation is handled separately, see _on_card_pressed/
+    _on_card_released."""
     card = child.get_child()
     if card is None:
         return
-    if isinstance(card, MyComputerDiskCard) and not card.model.is_mounted:
-        _do_mount(ext, card.model, win)
-        return
-    GLib.idle_add(ext._navigate_to, card.nav_uri, win)
+    _activate_card(ext, card, win)
 
 
 def _on_flow_selection_changed(ext, flow_box: Gtk.FlowBox, win: Gtk.Window) -> None:
@@ -2530,12 +2464,38 @@ def _select_single_card(card: Gtk.Widget) -> None:
             flow.select_child(wrapper)
 
 
+def _activate_card(ext, card: Gtk.Box, win: Gtk.Window) -> None:
+    """Shared by mouse activation (_on_card_released/_on_card_pressed) and
+    keyboard activation (_on_card_activated, fired by FlowBox's own "activate"
+    keybinding on Return -- see _attach_flow_shortcuts)."""
+    if isinstance(card, MyComputerDiskCard) and not card.model.is_mounted:
+        _do_mount(ext, card.model, win)
+        return
+    GLib.idle_add(ext._navigate_to, card.nav_uri, win)
+
+
 def _on_card_pressed(
     ext, gesture, n_press: int, x: float, y: float, win: Gtk.Window, card: Gtk.Box
 ) -> None:
     """Button dispatch on "pressed", mirroring on_item_click_pressed
-    (nautilus-list-base.c:270-292). Primary is left unclaimed (activation
-    stays on FlowBox's own child-activated binding, _on_card_activated)."""
+    (nautilus-list-base.c:270-292).
+
+    Primary single-press is deliberately left UNCLAIMED here (#161), same as
+    before: folder cards carry a Gtk.DragSource (CAPTURE phase) that needs the
+    sequence to stay unclaimed through this press so it can still recognize a
+    drag once motion exceeds the threshold -- claiming here would immediately
+    deny it (GTK denies every other still-recognizing gesture the instant one
+    gesture claims), breaking drag-reorder. Selection+activation for a plain
+    single click is instead driven entirely from _on_card_released, which only
+    ever fires if no drag claimed the sequence first -- if a drag did happen,
+    this gesture was already denied by the DragSource's own claim, and
+    _on_card_released simply never runs for that sequence.
+
+    Double-click-policy activation is the one primary case handled here, on
+    the second press: mirrors GtkFlowBox's own click_gesture_pressed
+    (gtkflowbox.c), which also does not wait for release, and is safe to claim
+    immediately since reaching a second press already means the first
+    click-release cycle completed cleanly without becoming a drag."""
     button = gesture.get_current_button()
     if button == Gdk.BUTTON_SECONDARY and n_press == 1:
         _on_card_right_clicked(ext, gesture, n_press, x, y, win, card)
@@ -2555,6 +2515,35 @@ def _on_card_pressed(
             ext._do_open_window(card.nav_uri)
         else:
             ext._do_open_tab(card.nav_uri, win, make_active=False)
+    elif button == Gdk.BUTTON_PRIMARY and n_press == 2 and ext._click_policy != "single":
+        gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+        _select_single_card(card)
+        _activate_card(ext, card, win)
+
+
+def _on_card_released(
+    ext, gesture, n_press: int, x: float, y: float, win: Gtk.Window, card: Gtk.Box
+) -> None:
+    """Primary-click release counterpart to _on_card_pressed (#161). Commits
+    selection here (release, not press -- matching native's own timing), and
+    activates too under single-click policy. Double-click activation already
+    happened at press time in _on_card_pressed; n_press==2 here is that same
+    click's release and is a no-op.
+
+    Release must still be over the card that was pressed, mirroring the
+    equivalent re-check native list widgets do before committing (GtkListBox's
+    `box->active_row == gtk_list_box_get_row_at_y(box, y)`): pressing one card
+    and releasing over another, or off the panel entirely, is a cancelled
+    click and must not select. The controller is on the card itself, so the
+    test is a bounds check on the card's own allocation."""
+    if gesture.get_current_button() != Gdk.BUTTON_PRIMARY or n_press != 1:
+        return
+    if not (0 <= x < card.get_width() and 0 <= y < card.get_height()):
+        return
+    gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+    _select_single_card(card)
+    if ext._click_policy == "single":
+        _activate_card(ext, card, win)
 
 
 def _on_card_right_clicked(ext, gesture, _n, x, y, win: Gtk.Window, row: Gtk.Box) -> None:

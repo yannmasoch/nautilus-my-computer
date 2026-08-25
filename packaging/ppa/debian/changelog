@@ -1,3 +1,19 @@
+nautilus-my-computer (0.13.2-1) UNRELEASED; urgency=medium
+
+  * Own the View Options popover, fixing Grid/List/Column/Computer sort menu inconsistencies
+  * Preferred Folders captions now follow Nautilus's native "Captions" setting
+  * Match native Nautilus hover, pressed, and selected states in Computer and Column views
+  * Add Column View keyboard navigation (arrows, Home/End, Page Up/Down, Return)
+  * Fix Column View needing three clicks to open a file on non-GNOME single-click setups (e.g. KDE)
+  * Fix Column View CPU spike and slow loading in large folders
+  * Fix Column View sort menu not applying the chosen sort
+  * Fix Nautilus opening many windows on startup on some versions
+  * Fix a developer-only debug helper that never actually navigated (no effect on normal use)
+  * Add Polish, Romanian, and Chinese (Simplified) translations
+  * Update German, Turkish, Estonian, Catalan, Spanish, and Hungarian translations
+
+ -- Yann Masoch <231734284+yannmasoch@users.noreply.github.com>  Tue, 25 Aug 2026 15:16:04 -0700
+
 nautilus-my-computer (0.13.1-1) UNRELEASED; urgency=medium
 
   * Fix a critical bug where navigating to or away from Column View could pin a CPU core and freeze Nautilus

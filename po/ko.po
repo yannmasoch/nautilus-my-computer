@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-04 11:31-0700\n"
+"POT-Creation-Date: 2026-08-25 15:20-0700\n"
 "PO-Revision-Date: 2026-07-30 05:22+0000\n"
 "Last-Translator: Saintliy\n"
 "Language-Team: Korean\n"
@@ -314,14 +314,6 @@ msgstr "시작 색상"
 #: nautilus_my_computer/main.py
 msgid "End color"
 msgstr "끝 색상"
-
-#: nautilus_my_computer/main.py
-msgid "Show captions"
-msgstr "캡션 표시"
-
-#: nautilus_my_computer/main.py
-msgid "Shows or hides the caption lines already configured in Nautilus"
-msgstr "Nautilus에 이미 설정된 캡션 줄을 표시하거나 숨깁니다"
 
 #: nautilus_my_computer/main.py
 msgid "Extension"

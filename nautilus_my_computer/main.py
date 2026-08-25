@@ -34,14 +34,19 @@ from nautilus_my_computer import (
     preferred_folders,
 )
 from nautilus_my_computer.common import (
+    ACTION_OPEN_LOCATION,
     _,
+    _action_names_for_version,
     _all_widgets,
+    _detect_nautilus_version,
     _find_widget,
     _icon_name_renders,
     _log,
     _native,
+    _nautilus_version,
     _pin_icon,
     _resolve_gtype,
+    _slot_action,
     slot_view_owner,
 )
 from nautilus_my_computer.context_menu import (
@@ -84,14 +89,13 @@ DEBUG_SIDEBAR_MODE = _sidebar_mode(
     DEBUG_NATIVE_SIDEBAR_ACTIVE
 )  # inner-wrapper default | native-list | native-list-bottom | outer-wrapper
 DEBUG_PATHBAR_ACTIVE = _flag("MC_PATHBAR")  # top URL bar: chip icon pinning
-DEBUG_SORT_WATCH_ACTIVE = _flag("MC_SORT_WATCH")  # top view-mode/sort buttons: sort metadata watch
 DEBUG_LOCATION_FILTER_ACTIVE = _flag("MC_LOCATION_FILTER")  # address bar: card filter watch
 DEBUG_SELFTEST = _flag("MC_SELFTEST", default=False)  # in-process navigation self-test driver
 DETACH_SETTINGS_WINDOW = False  # testing toggle: True opens settings as a standalone window
 
 # ── Extension metadata (keep in sync with pyproject.toml) ────────────────────
 EXT_NAME = "My Computer for Nautilus"
-EXT_VERSION = "0.13.1"
+EXT_VERSION = "0.13.2"
 EXT_AUTHOR = "Yann Masoch"
 EXT_LICENSE = "MIT"
 EXT_GITHUB = "https://github.com/yannmasoch/nautilus-my-computer"
@@ -131,6 +135,7 @@ _REFRESH_DEBOUNCE_MS = 300  # coalesce rapid mount/unmount/plug events
 _WIN_INIT_RETRY_MS = 20  # retry interval while waiting for NautilusWindow widget tree
 _WIN_INIT_MAX_ATTEMPTS = 100  # ~2 s budget waiting for the first view load to settle
 _NAV_RETRY_MS = 60  # retry interval while navigating to computer:///
+_NAV_RETRY_MAX_ATTEMPTS = 25  # 25 x 60 ms ~= 1.5 s budget, then stay on Home
 _TAB_WAIT_MS = 50  # retry interval while waiting for a new tab slot
 _USAGE_GATE_MS = 1000  # idle cadence: try a statvfs sweep this often, skip while disk is busy
 _USAGE_POLL_FAST_MS = 250  # fast cadence while writes are buffered (Dirty+Writeback elevated)
@@ -583,8 +588,12 @@ _LOCATION_ENTRY_KEYVALS = frozenset(
 class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def __init__(self):
         super().__init__()
+        # Detect the running Nautilus version exactly once, here, before any
+        # window exists. Every navigation call site reads the cached result
+        # via _nautilus_version() -- none of them re-detect or wait.
+        _detect_nautilus_version()
         # Maps each NautilusWindow to its per-window chrome state dict (sidebar
-        # row, pathbar/sort watches, start_on_computer, native place hiding).
+        # row, pathbar/focus watches, start_on_computer, native place hiding).
         # The Computer panel itself is per-slot state (slot._mc_computer, see
         # my_computer_view.py's injection machinery, issue #133) -- use
         # _active_panel_state()/_iter_panel_states() to reach it.
@@ -607,23 +616,10 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         self._watched_folder_keys: dict[str, str] = {}
         self._last_selected_folder_uri: str | None = None  # see get_file_items()
 
-        self._sort_column: str = "name"
-        self._sort_reverse: bool = False
         self._view_mode: str = "icon-view"
         self._click_policy: str = "double"  # Nautilus "click-policy": 'single' or 'double'
-        # Sort is read from per-folder GVfs metadata. There is no usable event
-        # for it (the metadata daemon writes via mmap so file monitors never
-        # fire, and the GTK4 Python bindings don't expose get_action_group, so
-        # we can't subscribe to Nautilus's "view.sort" GAction). We therefore
-        # poll — but only while the pointer is over the header bar (where the
-        # sort menu lives) and the Computer panel is visible.
-        # _sort_hover tracks whether the pointer is currently inside the navbar.
-        # The poll arms on enter and disarms on leave, with a short grace period
-        # to cover the gap when the pointer moves from the navbar into the sort
-        # popover (which is a separate native surface and triggers a leave event).
-        self._sort_poll_id = None  # GLib source id while polling, else None
-        self._sort_hover = False  # True while pointer is inside the navbar
         self._view_mode_gsettings = None  # Gio.Settings for org.gnome.nautilus.preferences
+        self._column_sort_sync_pending = False
         # Column View's own settings adapter (view mode/click policy/sort/zoom/hidden
         # files), independent of the disk view's ad hoc fields above. See
         # nautilus_prefs.NautilusPrefs.
@@ -660,20 +656,14 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     # this file) can keep calling ext._method(...) while the implementation lives
     # in my_computer_view.py. See CLAUDE.md "Project structure".
 
-    def _populate(self, win: Gtk.Window) -> None:
-        my_computer_view._populate(self, win)
+    def _populate(self, win: Gtk.Window, sort: tuple[str, bool] | None = None) -> None:
+        my_computer_view._populate(self, win, sort)
 
     def _build_panel(self, win: Gtk.Window) -> tuple:
         return my_computer_view._build_panel(self, win)
 
     def _apply_bar_color(self) -> None:
         my_computer_view._apply_bar_color(self)
-
-    def _read_sort_metadata(self) -> bool:
-        return my_computer_view._read_sort_metadata(self)
-
-    def _attach_sort_button_watch(self, nautilus_win: Gtk.Window) -> None:
-        my_computer_view._attach_sort_button_watch(self, nautilus_win)
 
     def _apply_card_filter(self, nautilus_win: Gtk.Window, query: str) -> None:
         my_computer_view.apply_card_filter(self, nautilus_win, query)
@@ -714,6 +704,9 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _on_card_pressed(self, gesture, n, x, y, win: Gtk.Window, card: Gtk.Box) -> None:
         my_computer_view._on_card_pressed(self, gesture, n, x, y, win, card)
 
+    def _on_card_released(self, gesture, n, x, y, win: Gtk.Window, card: Gtk.Box) -> None:
+        my_computer_view._on_card_released(self, gesture, n, x, y, win, card)
+
     # ── Initialisation ────────────────────────────────────────────────────────
 
     def _late_init(self) -> bool:
@@ -726,10 +719,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             app = Gtk.Application.get_default()
             if app:
                 app.connect("window-added", self._on_window_added)
-            self._read_sort_metadata()
             self._read_view_mode()
             self._watch_view_mode()
-            self._nautilus_prefs.refresh_folder_sort(DISKS_URI)
             self._nautilus_prefs.refresh_view_mode()
             self._nautilus_prefs.watch_global(self)
 
@@ -931,13 +922,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             uri = steps[idx[0]]
             idx[0] += 1
             _log(f"SELFTEST step -> {uri}")
-            for w in _all_widgets(win):
-                if "Slot" in type(w).__name__:
-                    try:
-                        if w.activate_action("open-location", GLib.Variant("s", uri)):
-                            break
-                    except Exception:
-                        pass
+            self._navigate_current_in_place(uri, win)
             return GLib.SOURCE_CONTINUE
 
         GLib.timeout_add(2500, step)
@@ -1008,8 +993,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             self._repopulate_visible()
         elif key == "preferred-folders":
             self._repopulate_visible()
-        elif key == "show-preferred-folder-captions":
-            self._reapply_folder_captions()
+        elif key in ("column-view-sort-by", "column-view-sort-reversed"):
+            column_view.schedule_global_column_sort_sync(self)
         elif key.startswith("sidebar-show-"):
             # Sidebar place toggle -- re-apply native row visibility in every window.
             GLib.idle_add(self._reapply_sidebar_visibility)
@@ -1055,6 +1040,27 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                 my_computer_view._populate_slot(self, state["slot"])
         for win in list(self._windows):
             column_view.refresh_all_column_views(self, win)
+        return GLib.SOURCE_REMOVE
+
+    def _restore_column_focus_after_sort(self, win: Gtk.Window, sort_button: Gtk.Widget) -> bool:
+        """Return focus from a closed sort popover to the active Miller column.
+
+        This is deliberately guarded: a click elsewhere while the popover was
+        open must keep its new focus rather than being overwritten by the
+        deferred close handler.
+        """
+        focus = win.get_focus()
+        widget = focus
+        while widget is not None and widget is not sort_button:
+            widget = widget.get_parent()
+        if widget is not sort_button:
+            return GLib.SOURCE_REMOVE
+
+        slot = self._active_slot_widget(win)
+        view = getattr(slot, "_mc_column_view", None) if slot is not None else None
+        host = getattr(view, "_mc_column_host", None) if view is not None else None
+        if host is not None:
+            host._focus_column_when_mapped(host._focused_column())
         return GLib.SOURCE_REMOVE
 
     def _reapply_folder_captions(self) -> None:
@@ -1113,38 +1119,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _active_slot_showing_column(self, win: Gtk.Window) -> bool:
         return column_view.is_active_slot_showing_column(self, win)
 
-    def _resolve_sort_target(self, win: Gtk.Window):
-        """(uri, on_changed) for whichever of our views is visible in `win`
-        right now, or None if neither is -- see NautilusPrefs.watch_sort_button.
-        The disk panel always watches DISKS_URI. Column View watches the real
-        Nautilus slot's current location -- the native sort popover writes
-        GVfs metadata for wherever Nautilus itself is actually navigated to,
-        which is exactly Column View's root (see _show_column_view /
-        column_view.enter_column_view: entering always reseeds the Miller
-        chain from the real current location, and internal drill-down never
-        moves the real Nautilus slot)."""
-        state = self._active_panel_state(win)
-        if state and state.get("visible_view") == VIEW_DISKINFO:
-            return (DISKS_URI, self._repopulate_visible)
-        if self._active_slot_showing_column(win):
-            loc = _active_slot_location(win)
-            if loc is None:
-                return None
-            return (loc.get_uri(), self._repopulate_visible)
-        return None
-
-    def _arm_sort_watch(self, win: Gtk.Window) -> None:
-        if not DEBUG_SORT_WATCH_ACTIVE:
-            return
-        GLib.idle_add(
-            lambda w=win: (
-                self._nautilus_prefs.watch_sort_button(
-                    self, w, resolve_sort_target=lambda _ext, ww: self._resolve_sort_target(ww)
-                )
-                or False
-            )
-        )
-
     def _show_column_view(self, win: Gtk.Window) -> None:
         """Ctrl+3: tmp shortcut, replaces the old location-trigger hack. Not
         a toggle -- always (re)opens Column View, reconciled to wherever
@@ -1167,7 +1141,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         _log(f"_show_column_view: entering column view at root_uri={root_uri!r}")
         column_view.enter_column_view(self, win, root_uri)
         column_view.refresh_column_view_chrome(self, win)
-        self._arm_sort_watch(win)
         self._set_default_view(column_view.VIEW_COLUMN)
 
     @staticmethod
@@ -1336,6 +1309,20 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             return consumed
         if not panel_state or panel_state.get("visible_view") != VIEW_DISKINFO:
             return False
+        # Ctrl+H: the native "view.show-hidden-files" action group IS present
+        # at the window root even while the Computer panel is showing
+        # (confirmed via win.activate_action), so this delegates straight to
+        # it rather than duplicating Nautilus's own hidden-files state in an
+        # owned action. Explicit activation here because falling through to
+        # GTK's implicit focus-based accelerator dispatch below does *not*
+        # reach it -- only a direct activate_action() call does.
+        if (
+            keyval in (Gdk.KEY_h, Gdk.KEY_H)
+            and gtk_state & Gdk.ModifierType.CONTROL_MASK
+            and not (gtk_state & (Gdk.ModifierType.ALT_MASK | Gdk.ModifierType.SUPER_MASK))
+        ):
+            win.activate_action("view.show-hidden-files", None)
+            return True
         # Let modified shortcuts through (Ctrl+L, Alt+Left, Super, …).
         if gtk_state & (
             Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.ALT_MASK | Gdk.ModifierType.SUPER_MASK
@@ -1383,7 +1370,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
     def _on_navigation(self, win: Gtk.Window) -> None:
         """Sync window-singleton chrome (sidebar highlight, pathbar chip,
-        sort watch, location filter watch) to whichever slot is active.
+        View Options focus watch, location filter watch) to whichever slot is active.
 
         Showing/hiding the panel itself is no longer this function's job:
         each slot owns that decision independently, driven directly by its
@@ -1426,8 +1413,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             # the active tab arrives at the computer view.
             if DEBUG_PATHBAR_ACTIVE:
                 GLib.idle_add(lambda w=win: self._fix_pathbar_icon(w) or False)
-            if DEBUG_SORT_WATCH_ACTIVE:
-                GLib.idle_add(lambda w=win: self._attach_sort_button_watch(w) or False)
             if DEBUG_LOCATION_FILTER_ACTIVE:
                 GLib.idle_add(lambda w=win: self._attach_location_filter_watch(w) or False)
         elif state.get("_chrome_in_view"):
@@ -1721,6 +1706,10 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         GLib.idle_add(_fire_and_wait)
 
     def _do_open_window(self, mountpoint: str) -> None:
+        """Open mountpoint in a guaranteed new window. Shells out to Nautilus's
+        own CLI flag rather than an in-process action, so it needs no
+        Nautilus-version gating - "--new-window" has been stable since long
+        before the 46/47 open-location action migration."""
         subprocess.Popen(["nautilus", "--new-window", mountpoint])
 
     def _do_properties(self, nav_uri: str, win: Gtk.Window) -> None:
@@ -1999,23 +1988,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         mode_row.connect("notify::selected", _on_mode_changed)
         _update_color_rows(mode_row.get_selected())
 
-        pf_group = Adw.PreferencesGroup()
-        pf_group.set_title(_("Preferred Folders"))
-        page_computer.add(pf_group)
-
-        pf_captions_row = Adw.SwitchRow()
-        pf_captions_row.set_title(_("Show captions"))
-        pf_captions_row.set_subtitle(
-            _("Shows or hides the caption lines already configured in Nautilus")
-        )
-        self._gsettings.bind(
-            "show-preferred-folder-captions",
-            pf_captions_row,
-            "active",
-            Gio.SettingsBindFlags.DEFAULT,
-        )
-        pf_group.add(pf_captions_row)
-
         about_group = Adw.PreferencesGroup()
         about_group.set_title(_native("About"))
         page_about.add(about_group)
@@ -2047,45 +2019,49 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         else:
             pref_win.present(win)
 
-    def _navigate_to_disks(self, win: Gtk.Window) -> None:
-        """Navigate a window to computer:/// at startup, retrying until the slot
-        is ready. The slot often isn't navigable the instant the window settles
-        on Home, so a single open-location call silently no-ops; we retry on a
-        short bounded poll and stop as soon as the location actually changes
-        (the active slot's own per-slot handler shows the panel at that point,
-        see my_computer_view._on_slot_location_changed)."""
-        attempts = [0]
+    @staticmethod
+    def _activate_qualified_action(name: str, param: GLib.Variant | None, win: Gtk.Window) -> bool:
+        """Activate one fully qualified "prefix.action" on the window's active
+        slot, falling back to the window itself. Prefers the active slot so a
+        background tab is never acted on instead of the visible one (issue #132);
+        the window's muxer carries both its own "win" group and the active
+        slot's "slot" group (inserted by nautilus_window_slot_set_active).
 
-        def _try() -> bool:
-            if win not in self._windows:
-                return GLib.SOURCE_REMOVE
-            if my_computer_view._window_is_at_disks(win):
-                return GLib.SOURCE_REMOVE
-            attempts[0] += 1
-            if attempts[0] > 25:  # ~1.5 s budget, then give up
-                return GLib.SOURCE_REMOVE
-            self._navigate_to(DISKS_URI, win)
-            return GLib.SOURCE_CONTINUE
+        Mechanism only, not a safety guarantee: it activates whatever name it is
+        given, including actions with side effects such as "win.new-tab".
+        Callers that need an in-place guarantee must pass only open-location
+        names.
 
-        GLib.timeout_add(_NAV_RETRY_MS, _try)
-
-    def _navigate_to(self, uri: str, win: Gtk.Window) -> bool:
-        # Target the active slot directly rather than walking every "Slot"
-        # widget in the window: with 2+ tabs open, a blind walk can hand the
-        # action to a background tab's slot first, silently navigating the
-        # wrong tab while the visible one looks frozen (issue #132).
-        slot = _active_slot(win)
-        if slot is not None:
+        Returns True if Nautilus accepted the action; the effect may still land
+        asynchronously."""
+        for target in (_active_slot(win), win):
+            if target is None:
+                continue
             try:
-                if slot.activate_action("open-location", GLib.Variant("s", uri)):
-                    return False
+                if target.activate_action(name, param):
+                    return True
             except Exception:
                 pass
-        try:
-            if win.activate_action("slot.open-location", GLib.Variant("s", uri)):
-                return False
-        except Exception:
-            pass
+        return False
+
+    def _navigate_current_in_place(self, uri: str, win: Gtk.Window) -> bool:
+        """Navigate the window's current tab to uri. Never opens a window or a
+        tab. Tries the open-location name for the running Nautilus first, the
+        other as a fallback. Returns False if neither resolved."""
+        param = GLib.Variant("s", uri)
+        for name in _action_names_for_version(ACTION_OPEN_LOCATION, _nautilus_version()):
+            if self._activate_qualified_action(name, param, win):
+                return True
+        return False
+
+    def _show_folder_via_file_manager(self, uri: str) -> None:
+        """Ask the file manager to show uri over the freedesktop D-Bus interface.
+        Placement is NOT guaranteed: ShowFolders reuses
+        gtk_application_get_active_window() when there is one and creates a new
+        window when there is not (nautilus_application_open_location_full,
+        flags == 0). Only ever call this from a deliberate user action - never
+        from automatic navigation, where an unexpected window is a defect
+        rather than a recoverable miss."""
 
         def _on_proxy(_, result):
             try:
@@ -2111,6 +2087,85 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             None,
             _on_proxy,
         )
+
+    def _navigate_to_disks(self, win: Gtk.Window) -> None:
+        """Navigate a window to computer:/// at startup, in place, retrying
+        until the slot is ready. Never opens a window: this passes only
+        open-location names to _activate_qualified_action and never calls a
+        function containing the D-Bus code. If every attempt fails the window
+        stays on Home, which is the correct automatic outcome - a second window
+        is only ever acceptable from a deliberate user action.
+
+        version is read once, here, from the cache _detect_nautilus_version()
+        populated at extension startup (MyComputerExtension.__init__) - this
+        never re-detects or waits, so it is exactly the version the extension
+        found the one time it checked, not a per-navigation re-check.
+
+          >= 47     "slot.open-location" every tick; "win.open-location" also
+                    tried on the final tick.
+          <= 46     nothing until the final tick, then "win.open-location"
+                    followed by "slot.open-location". The legacy action
+                    succeeds on its first try, but navigating that early raced
+                    Nautilus's allocation pass and tripped
+                    gtk_widget_ensure_allocate_on_children (~1 in 14 launches
+                    on Zorin OS 18.1). Deferring to the settled tick is the
+                    mitigation, verified on Zorin.
+          unknown   treated as modern, so both names still get tried on the
+                    final tick.
+        """
+        version = _nautilus_version()
+        is_legacy = version is not None and version[0] <= 46
+        attempts = [0]
+
+        def _try() -> bool:
+            if win not in self._windows:
+                return GLib.SOURCE_REMOVE
+            if my_computer_view._window_is_at_disks(win):
+                return GLib.SOURCE_REMOVE
+
+            attempts[0] += 1
+            final = attempts[0] >= _NAV_RETRY_MAX_ATTEMPTS
+
+            if final:
+                # Settled: preferred name for this version, then the other.
+                # This is the only tick the legacy action may run on.
+                names = _action_names_for_version(ACTION_OPEN_LOCATION, version)
+            elif not is_legacy:
+                names = (_slot_action(ACTION_OPEN_LOCATION),)
+            else:
+                names = ()
+
+            param = GLib.Variant("s", DISKS_URI)
+            # any() short-circuits: the second name is only tried if the first
+            # was not accepted.
+            activated = any(self._activate_qualified_action(n, param, win) for n in names)
+
+            if final:
+                # Do not wait for a 26th tick to confirm. activate_action()
+                # returning True means Nautilus accepted the action, but the
+                # location change can land asynchronously after this tick;
+                # treating acceptance as success avoids logging a false
+                # failure for navigation still in flight.
+                if not activated:
+                    _log(
+                        f"_navigate_to_disks: no in-place navigation after "
+                        f"{attempts[0]} attempts (nautilus {version}), staying on Home"
+                    )
+                return GLib.SOURCE_REMOVE
+            return GLib.SOURCE_CONTINUE
+
+        GLib.timeout_add(_NAV_RETRY_MS, _try)
+
+    def _navigate_to(self, uri: str, win: Gtk.Window) -> bool:
+        """Go to uri in the current window, from a deliberate user action
+        (Computer sidebar row, a card, a menu item). In place if possible,
+        otherwise handed to the file manager, which may open a window -
+        acceptable because the user asked to go somewhere. Returns False so it
+        can be used directly as a GLib.idle_add callback."""
+        if self._navigate_current_in_place(uri, win):
+            return False
+        _log(f"_navigate_to: no in-place action (nautilus {_nautilus_version()}), D-Bus for {uri}")
+        self._show_folder_via_file_manager(uri)
         return False
 
     # ── Chrome icon fix (path bar chip) ─────────────────────────────────────
@@ -2692,7 +2747,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _attach_file_view_context_menu(self, win: Gtk.Window) -> None:
         file_view_menu.attach_file_view_context_menu(self, win)
 
-    # ── Column view prototype (native view-options popover) ─────────────────
+    # ── Column View toolbar integration ─────────────────────────────────────
 
     def _inject_column_view_entry(self, win: Gtk.Window) -> None:
         column_view.inject_column_view_entry(self, win)
