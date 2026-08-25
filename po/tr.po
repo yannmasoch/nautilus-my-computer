@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-04 11:31-0700\n"
+"POT-Creation-Date: 2026-08-25 15:20-0700\n"
 "PO-Revision-Date: 2026-08-06 17:34+0000\n"
 "Last-Translator: Taylan Tatlı\n"
 "Language-Team: Turkish\n"
@@ -323,15 +323,6 @@ msgstr "Başlangıç rengi"
 #: nautilus_my_computer/main.py
 msgid "End color"
 msgstr "Bitiş rengi"
-
-#: nautilus_my_computer/main.py
-msgid "Show captions"
-msgstr "Açıklamaları göster"
-
-#: nautilus_my_computer/main.py
-msgid "Shows or hides the caption lines already configured in Nautilus"
-msgstr ""
-"Nautilus'ta zaten yapılandırılmış açıklama satırlarını gösterir veya gizler"
 
 #: nautilus_my_computer/main.py
 msgid "Extension"

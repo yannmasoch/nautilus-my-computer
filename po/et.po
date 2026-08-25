@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: My Computer for Nautilus 0.12.6\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-04 11:31-0700\n"
+"POT-Creation-Date: 2026-08-25 15:20-0700\n"
 "PO-Revision-Date: 2026-08-10 22:52+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: none\n"
@@ -327,14 +327,6 @@ msgstr "Lähtevärv"
 #: nautilus_my_computer/main.py
 msgid "End color"
 msgstr "Lõppvärv"
-
-#: nautilus_my_computer/main.py
-msgid "Show captions"
-msgstr "Näita ikoonipealkirju"
-
-#: nautilus_my_computer/main.py
-msgid "Shows or hides the caption lines already configured in Nautilus"
-msgstr "Näitab ikoonipealkirju või peidab nad vastavalt Nautiluse seadistustele"
 
 #: nautilus_my_computer/main.py
 msgid "Extension"

@@ -4,6 +4,49 @@ All notable changes to this project are documented here.
 
 ---
 
+## v0.13.2
+Own the View Options popover end to end, add Column View keyboard navigation, fix a KDE
+click-count bug and a large-folder CPU spike in Column View, and match native hover, pressed,
+and selected states across the Computer and Column views.
+
+### Added
+- Column View: keyboard navigation. Arrow keys, Home/End, Page Up/Down, and Return now work the
+  same way they do in Nautilus's own Grid and List views.
+- Polish translation.
+- Romanian translation.
+- Chinese (Simplified) translation.
+
+### Changed
+- View Options is now fully owned by the extension, fixing several cases where the Grid, List,
+  Column, and Computer sorting menus could disagree with what was actually applied.
+- Preferred Folders now follows Nautilus's own "Captions" setting instead of a separate toggle,
+  removing a preference that could look like it was resetting itself.
+- Disk/folder cards and Column View rows now match native Nautilus hover, pressed, and selected
+  states, including committing the selection on release rather than press.
+- Updated German, Turkish, Estonian, Catalan, Spanish, and Hungarian translations.
+
+### Fixed
+- Column View no longer needs three clicks to open a file when single-click is enabled outside
+  GNOME (KDE and others), where Nautilus's own click-policy setting isn't populated.
+- Column View no longer spikes CPU usage and loads slowly in folders with many files.
+- Column View's sort menu now actually applies the chosen sort instead of silently doing nothing.
+- Nautilus no longer opens dozens of windows on startup on some versions when "Open computer view
+  on start" is enabled.
+- Fixed a developer-only debug helper (used to reproduce hard-to-trigger bugs) that never
+  actually navigated, due to a dead action name. No effect on normal use.
+
+Thanks to @mweisshaupt1988 for reporting the Column View keyboard navigation issue in #91; to
+@hericlesbitencourt for the original keyboard navigation work ported from #146; to
+u/AntiqueSignpost on Reddit for reporting the KDE click-count issue in #138 and the CPU spike
+issue in #139; to @uwe-ss for updating the German translation in #147; to @oersen for updating
+the Turkish translation in #148; to Priit Jõerüüt for updating the Estonian translation in #148
+and #158; to @whoami96 for the Polish translation in #149; to @HeartBlin for the Romanian
+translation in #165 and #168; to @unaibenidorm for updating the Catalan and Spanish translations
+in #170; to @ilmpixar for the Chinese (Simplified) translation in #170 and #171; and to Gabor
+Virag for updating the Hungarian translation.
+
+---
+
 ## v0.13.1
 Releasing ahead of schedule to ship the fix for a critical bug: navigating to or away from
 Column View could pin a CPU core at full usage and freeze Nautilus.

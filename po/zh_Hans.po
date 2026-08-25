@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: My Computer for Nautilus 0.13.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-04 13:44-0700\n"
+"POT-Creation-Date: 2026-08-25 15:20-0700\n"
 "PO-Revision-Date: 2026-08-21 15:51+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: none\n"
@@ -317,14 +317,6 @@ msgstr "起始颜色"
 #: nautilus_my_computer/main.py
 msgid "End color"
 msgstr "结束颜色"
-
-#: nautilus_my_computer/main.py
-msgid "Show captions"
-msgstr "显示说明文字"
-
-#: nautilus_my_computer/main.py
-msgid "Shows or hides the caption lines already configured in Nautilus"
-msgstr "显示或隐藏 Nautilus 中已配置的说明行"
 
 #: nautilus_my_computer/main.py
 msgid "Extension"

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-04 11:31-0700\n"
+"POT-Creation-Date: 2026-08-25 15:20-0700\n"
 "PO-Revision-Date: 2026-08-06 05:01+0000\n"
 "Last-Translator: Yann Masoch\n"
 "Language-Team: French\n"
@@ -324,14 +324,6 @@ msgstr "Couleur de début"
 #: nautilus_my_computer/main.py
 msgid "End color"
 msgstr "Couleur de fin"
-
-#: nautilus_my_computer/main.py
-msgid "Show captions"
-msgstr "Afficher les légendes"
-
-#: nautilus_my_computer/main.py
-msgid "Shows or hides the caption lines already configured in Nautilus"
-msgstr "Affiche ou masque les lignes de légende déjà configurées dans Nautilus"
 
 #: nautilus_my_computer/main.py
 msgid "Extension"

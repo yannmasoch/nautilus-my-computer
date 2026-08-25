@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-04 11:31-0700\n"
+"POT-Creation-Date: 2026-08-25 15:20-0700\n"
 "PO-Revision-Date: 2026-08-06 05:01+0000\n"
 "Last-Translator: crian\n"
 "Language-Team: German\n"
@@ -326,16 +326,6 @@ msgstr "Startfarbe"
 #: nautilus_my_computer/main.py
 msgid "End color"
 msgstr "Endfarbe"
-
-#: nautilus_my_computer/main.py
-msgid "Show captions"
-msgstr "Beschriftungen anzeigen"
-
-#: nautilus_my_computer/main.py
-msgid "Shows or hides the caption lines already configured in Nautilus"
-msgstr ""
-"Zeigt die in Nautilus bereits konfigurierten Beschriftungszeilen an oder "
-"blendet sie aus"
 
 #: nautilus_my_computer/main.py
 msgid "Extension"

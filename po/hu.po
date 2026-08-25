@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-04 11:31-0700\n"
+"POT-Creation-Date: 2026-08-25 15:20-0700\n"
 "PO-Revision-Date: 2026-08-04 18:39+0000\n"
 "Last-Translator: Pelach András <pelach.andras@gmail.com>\n"
 "Language-Team: Hungarian\n"
@@ -327,14 +327,6 @@ msgstr "Induló szín"
 #: nautilus_my_computer/main.py
 msgid "End color"
 msgstr "Záró szín"
-
-#: nautilus_my_computer/main.py
-msgid "Show captions"
-msgstr "Feliratok megjelenítése"
-
-#: nautilus_my_computer/main.py
-msgid "Shows or hides the caption lines already configured in Nautilus"
-msgstr "Megjeleníti vagy elrejti a Nautilusban már beállított feliratsorokat"
 
 #: nautilus_my_computer/main.py
 msgid "Extension"
