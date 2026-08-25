@@ -3074,13 +3074,10 @@ def _build_owned_options_model(
     root = Gio.Menu()
 
     zoom = Gio.Menu()
-    for custom_id in ("zoom-out", "zoom-in"):
-        item = Gio.MenuItem.new(None, None)
-        item.set_attribute_value("custom", GLib.Variant.new_string(custom_id))
-        zoom.append_item(item)
-    zoom_item = Gio.MenuItem.new_section(_native("Icon Size"), zoom)
-    zoom_item.set_attribute_value("display-hint", GLib.Variant.new_string("inline-buttons"))
-    root.append_item(zoom_item)
+    zoom_item = Gio.MenuItem.new(None, None)
+    zoom_item.set_attribute_value("custom", GLib.Variant.new_string("icon-size-row"))
+    zoom.append_item(zoom_item)
+    root.append_section(None, zoom)
 
     sort = Gio.Menu()
     for label, token, reversed_order in (
@@ -3213,181 +3210,53 @@ def _on_owned_options_active(button: Gtk.MenuButton, _pspec, ext, win: Gtk.Windo
         GLib.idle_add(ext._restore_column_focus_after_sort, win, button)
 
 
-_OWNED_OPTIONS_POPOVER_UI = """\
-<interface>
-  <requires lib="gtk" version="4.0"/>
-  <menu id="bootstrap-menu">
-    <section>
-      <attribute name="label">Icon Size</attribute>
-      <attribute name="display-hint">inline-buttons</attribute>
-      <item><attribute name="custom">zoom-out</attribute></item>
-      <item><attribute name="custom">zoom-in</attribute></item>
-    </section>
-  </menu>
-  <object class="GtkPopoverMenu" id="mc-view-options-popover">
-    <property name="menu-model">bootstrap-menu</property>
-    <child type="zoom-out">
-      <object class="GtkButton" id="mc-view-options-zoom-out-button">
-        <property name="icon-name">zoom-out-symbolic</property>
-        <property name="action-name">view.zoom-out</property>
-        <property name="tooltip-text">Zoom Out</property>
-        <style><class name="flat"/></style>
-      </object>
-    </child>
-    <child type="zoom-in">
-      <object class="GtkButton" id="mc-view-options-zoom-in-button">
-        <property name="icon-name">zoom-in-symbolic</property>
-        <property name="action-name">view.zoom-in</property>
-        <property name="tooltip-text">Zoom In</property>
-        <style><class name="flat"/></style>
-      </object>
-    </child>
-  </object>
-</interface>
-"""
-
-
-def _build_owned_options_popover(
-    models: dict[str, Gio.Menu],
-) -> tuple[Gtk.PopoverMenu, Gtk.Builder]:
-    """Build an owned popover through GtkBuilder, like Nautilus's template."""
-    builder = Gtk.Builder.new_from_string(_OWNED_OPTIONS_POPOVER_UI, -1)
-    popover = builder.get_object("mc-view-options-popover")
-    if not isinstance(popover, Gtk.PopoverMenu):
-        raise RuntimeError("GtkBuilder did not create the owned View Options popover")
-    popover.set_menu_model(models["native"])
-    return popover, builder
-
-
-def _menu_label(text: str) -> str:
-    """Render Nautilus mnemonic labels as ordinary text in direct controls."""
-    return text.replace("_", "")
-
-
-def _on_owned_sort_toggled(
-    row: Gtk.CheckButton, token: str, reversed_order: bool, win: Gtk.Window, state: dict
-) -> None:
-    if not row.get_active() or state.get("owned_options_syncing"):
-        return
-    action_name = state.get("owned_options_sort_action")
-    if action_name is not None:
-        win.activate_action(action_name, GLib.Variant("(sb)", (token, reversed_order)))
-
-
-def _on_owned_hidden_toggled(row: Gtk.CheckButton, win: Gtk.Window, state: dict) -> None:
-    if not state.get("owned_options_syncing"):
-        win.activate_action("view.show-hidden-files", None)
-
-
-def _build_native_menu_row(
-    label: str, action: str, widget_name: str
-) -> tuple[Gtk.Widget, Gtk.Builder]:
-    """Construct GtkModelButton through GtkBuilder; it has no GI Python class."""
-    ui = f"""\
-<interface>
-  <requires lib="gtk" version="4.0"/>
-  <object class="GtkModelButton" id="row">
-    <property name="text">{GLib.markup_escape_text(label)}</property>
-    <property name="action-name">{GLib.markup_escape_text(action)}</property>
-    <style><class name="flat"/></style>
-  </object>
-</interface>
-"""
-    builder = Gtk.Builder.new_from_string(ui, -1)
-    row = builder.get_object("row")
-    if not isinstance(row, Gtk.Widget):
-        raise RuntimeError("GtkBuilder did not create a GtkModelButton")
-    row.set_name(widget_name)
-    return row, builder
-
-
-def _build_direct_options_content(win: Gtk.Window, state: dict) -> Gtk.Box:
-    """Build the compact, directly owned View Options layout."""
-    content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-    content.set_name("mc-view-options-content")
-    content.add_css_class("mc-view-options-content")
-    content.set_margin_top(8)
-    content.set_margin_bottom(8)
-    content.set_margin_start(12)
-    content.set_margin_end(12)
-
-    zoom_row = Gtk.Box(spacing=6)
-    zoom_row.set_name("mc-view-options-icon-size-row")
-    icon_size = Gtk.Label(label=_native("Icon Size"), xalign=0, hexpand=True)
-    icon_size.set_name("mc-view-options-icon-size-label")
-    zoom_row.append(icon_size)
+def _build_icon_size_row() -> Gtk.Widget:
+    """Icon Size row as one plain widget: label + a zoom-out/zoom-in button
+    pair. Bound into the popover as a single "custom" menu child (see
+    _apply_owned_options_model) -- one widget to rebind on every model
+    swap instead of two, matching Nautilus's own row visually without
+    depending on GtkPopoverMenu's per-item custom-child wiring twice over."""
+    row = Gtk.Box(spacing=6)
+    row.set_margin_start(6)
+    row.set_margin_end(6)
+    row.set_margin_top(6)
+    row.set_margin_bottom(6)
+    row.append(Gtk.Label(label=_native("Icon Size"), xalign=0, hexpand=True))
     for custom_id, icon_name, tooltip in (
         ("zoom-out", "zoom-out-symbolic", "Zoom Out"),
         ("zoom-in", "zoom-in-symbolic", "Zoom In"),
     ):
-        zoom = Gtk.Button(icon_name=icon_name, tooltip_text=_native(tooltip))
-        zoom.set_name(f"mc-view-options-{custom_id}-button")
-        zoom.set_action_name(f"view.{custom_id}")
-        zoom.add_css_class("flat")
-        zoom_row.append(zoom)
-    content.append(zoom_row)
-    content.append(Gtk.Separator())
+        button = Gtk.Button(icon_name=icon_name, tooltip_text=_native(tooltip))
+        button.set_action_name(f"view.{custom_id}")
+        button.add_css_class("flat")
+        row.append(button)
+    return row
 
-    sort_label = Gtk.Label(label=_native_context("menu item", "Sort"), xalign=0)
-    sort_label.set_name("mc-view-options-sort-label")
-    sort_label.add_css_class("heading")
-    content.append(sort_label)
-    rows: dict[tuple[str, bool], Gtk.CheckButton] = {}
-    group: Gtk.CheckButton | None = None
-    for label, token, reversed_order in (
-        (_native_context("Sort Criterion", "_A-Z"), "name", False),
-        (_native_context("Sort Criterion", "_Z-A"), "name", True),
-        (_native("Last _Modified"), "date_modified", True),
-        (_native("_First Modified"), "date_modified", False),
-        (_native("_Size"), "size", True),
-        (_native("_Type"), "type", False),
-    ):
-        row = Gtk.CheckButton(label=_menu_label(label))
-        row.set_name(f"mc-view-options-sort-{token}-{'reversed' if reversed_order else 'normal'}")
-        row.set_hexpand(True)
-        row.set_halign(Gtk.Align.FILL)
-        if group is None:
-            group = row
-        else:
-            row.set_group(group)
-        row.connect("toggled", _on_owned_sort_toggled, token, reversed_order, win, state)
-        content.append(row)
-        rows[(token, reversed_order)] = row
 
-    content.append(Gtk.Separator())
-    hidden = Gtk.CheckButton(label=_menu_label(_native("Show _Hidden Files")), hexpand=True)
-    hidden.set_name("mc-view-options-show-hidden-files")
-    hidden.set_halign(Gtk.Align.FILL)
-    hidden.connect("toggled", _on_owned_hidden_toggled, win, state)
-    hidden_box = Gtk.Box(spacing=12)
-    hidden_box.set_hexpand(True)
-    hidden_box.set_halign(Gtk.Align.FILL)
-    hidden_box.append(hidden)
-    shortcut = Gtk.Label(label="Ctrl+H", xalign=1)
-    shortcut.add_css_class("dim-label")
-    hidden_box.append(shortcut)
-    content.append(hidden_box)
-    details_separator = Gtk.Separator()
-    content.append(details_separator)
+def _apply_owned_options_model(
+    popover: Gtk.PopoverMenu, model: Gio.Menu, icon_size_row: Gtk.Widget
+) -> None:
+    """Select a menu model and rebind the Icon Size row to it.
 
-    details: dict[str, Gtk.Widget] = {"separator": details_separator}
-    detail_builders: list[Gtk.Builder] = []
-    for name, label, action in (
-        ("visible-columns", _native("_Visible Columns…"), "view.visible-columns"),
-        ("captions", _native("Captions…"), "view.visible-captions"),
-    ):
-        row, builder = _build_native_menu_row(_menu_label(label), action, f"mc-view-options-{name}")
-        row.set_hexpand(True)
-        row.set_halign(Gtk.Align.FILL)
-        content.append(row)
-        details[name] = row
-        detail_builders.append(builder)
+    GtkPopoverMenu only wires a "custom" menu item to its child widget for
+    the exact Gio.MenuModel instance active when add_child() is called --
+    swapping to a different (even structurally identical) model instance
+    via set_menu_model() alone leaves the row unbound and empty. add_child()
+    must be called again after every set_menu_model() to rebind it (verified
+    against GTK 4's behavior)."""
+    popover.set_menu_model(model)
+    popover.add_child(icon_size_row, "icon-size-row")
 
-    state["owned_options_sort_rows"] = rows
-    state["owned_options_hidden_row"] = hidden
-    state["owned_options_details"] = details
-    state["owned_options_detail_builders"] = detail_builders
-    return content
+
+def _build_owned_options_popover(
+    models: dict[str, Gio.Menu],
+) -> tuple[Gtk.PopoverMenu, Gtk.Widget]:
+    """Build an owned popover: a plain PopoverMenu plus the one hand-built
+    Icon Size row registered as its "icon-size-row" custom child."""
+    popover = Gtk.PopoverMenu()
+    icon_size_row = _build_icon_size_row()
+    _apply_owned_options_model(popover, models["native"], icon_size_row)
+    return popover, icon_size_row
 
 
 def install_owned_view_options(ext, win: Gtk.Window, state: dict) -> bool:
@@ -3397,7 +3266,7 @@ def install_owned_view_options(ext, win: Gtk.Window, state: dict) -> bool:
         return False
     try:
         models = _build_owned_options_models()
-        popover, builder = _build_owned_options_popover(models)
+        popover, icon_size_row = _build_owned_options_popover(models)
         popover.set_name("mc-view-options-popover")
         popover.add_css_class("mc-view-options-popover")
         options_button.set_popover(popover)
@@ -3422,7 +3291,7 @@ def install_owned_view_options(ext, win: Gtk.Window, state: dict) -> bool:
 
     options_button.connect("notify::active", _on_owned_options_active, ext, win)
     state["view_options_popover"] = popover
-    state["view_options_popover_builder"] = builder
+    state["view_options_icon_size_row"] = icon_size_row
     state["owned_view_options_models"] = models
     state["column_sort_action"] = column_action
     state["computer_sort_action"] = computer_action
@@ -3493,7 +3362,11 @@ def _sync_view_options_model(ext, win: Gtk.Window, active: str) -> None:
         button = state.get("view_options_menu_button")
         if button is not None and button.get_active():
             button.set_active(False)
-        popover.set_menu_model(wanted)
+        icon_size_row = state.get("view_options_icon_size_row")
+        if icon_size_row is not None:
+            _apply_owned_options_model(popover, wanted, icon_size_row)
+        else:
+            popover.set_menu_model(wanted)
         state["active_view_options_model"] = wanted
         _log(f"owned View Options model active={active!r} key={key!r}")
 
