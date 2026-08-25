@@ -3116,18 +3116,27 @@ def _build_owned_options_model(
     root.append_section(None, hidden)
 
     if native_details:
-        details = Gio.Menu()
+        # Two sections, each hidden-when-disabled: visible-columns is only
+        # enabled in List view, visible-captions only in Grid view, so
+        # exactly one of the two ever shows, matching Nautilus's own
+        # nautilus-view-controls.blp.
+        visible_columns = Gio.Menu()
         _append_action_item(
-            details,
+            visible_columns,
             _native("_Visible Columns…"),
             "view.visible-columns",
+            hidden_when_disabled=True,
         )
+        root.append_section(None, visible_columns)
+
+        captions = Gio.Menu()
         _append_action_item(
-            details,
+            captions,
             _native("Captions…"),
             "view.visible-captions",
+            hidden_when_disabled=True,
         )
-        root.append_section(None, details)
+        root.append_section(None, captions)
     return root
 
 
