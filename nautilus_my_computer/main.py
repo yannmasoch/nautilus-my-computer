@@ -89,7 +89,7 @@ DEBUG_SIDEBAR_MODE = _sidebar_mode(
     DEBUG_NATIVE_SIDEBAR_ACTIVE
 )  # inner-wrapper default | native-list | native-list-bottom | outer-wrapper
 DEBUG_PATHBAR_ACTIVE = _flag("MC_PATHBAR")  # top URL bar: chip icon pinning
-DEBUG_SORT_WATCH_ACTIVE = _flag("MC_SORT_WATCH")  # top view-mode/sort buttons: sort metadata watch
+DEBUG_SORT_WATCH_ACTIVE = _flag("MC_SORT_WATCH")  # View Options close: Column View focus restore
 DEBUG_LOCATION_FILTER_ACTIVE = _flag("MC_LOCATION_FILTER")  # address bar: card filter watch
 DEBUG_SELFTEST = _flag("MC_SELFTEST", default=False)  # in-process navigation self-test driver
 DETACH_SETTINGS_WINDOW = False  # testing toggle: True opens settings as a standalone window
@@ -594,7 +594,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         # via _nautilus_version() -- none of them re-detect or wait.
         _detect_nautilus_version()
         # Maps each NautilusWindow to its per-window chrome state dict (sidebar
-        # row, pathbar/sort watches, start_on_computer, native place hiding).
+        # row, pathbar/focus watches, start_on_computer, native place hiding).
         # The Computer panel itself is per-slot state (slot._mc_computer, see
         # my_computer_view.py's injection machinery, issue #133) -- use
         # _active_panel_state()/_iter_panel_states() to reach it.
@@ -620,6 +620,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         self._view_mode: str = "icon-view"
         self._click_policy: str = "double"  # Nautilus "click-policy": 'single' or 'double'
         self._view_mode_gsettings = None  # Gio.Settings for org.gnome.nautilus.preferences
+        self._column_sort_sync_pending = False
         # Column View's own settings adapter (view mode/click policy/sort/zoom/hidden
         # files), independent of the disk view's ad hoc fields above. See
         # nautilus_prefs.NautilusPrefs.
@@ -721,7 +722,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
                 app.connect("window-added", self._on_window_added)
             self._read_view_mode()
             self._watch_view_mode()
-            self._nautilus_prefs.refresh_folder_sort(DISKS_URI)
             self._nautilus_prefs.refresh_view_mode()
             self._nautilus_prefs.watch_global(self)
 
@@ -997,6 +997,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             self._repopulate_visible()
         elif key == "show-preferred-folder-captions":
             self._reapply_folder_captions()
+        elif key in ("column-view-sort-by", "column-view-sort-reversed"):
+            column_view.schedule_global_column_sort_sync(self)
         elif key.startswith("sidebar-show-"):
             # Sidebar place toggle -- re-apply native row visibility in every window.
             GLib.idle_add(self._reapply_sidebar_visibility)
@@ -1121,38 +1123,39 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _active_slot_showing_column(self, win: Gtk.Window) -> bool:
         return column_view.is_active_slot_showing_column(self, win)
 
-    def _resolve_sort_target(self, win: Gtk.Window):
-        """(uri, on_changed) for whichever of our views is visible in `win`
-        right now, or None if neither is -- see NautilusPrefs.watch_sort_button.
-        The disk panel always watches DISKS_URI. Column View watches the real
-        Nautilus slot's current location -- the native sort popover writes
-        GVfs metadata for wherever Nautilus itself is actually navigated to,
-        which is the deepest open column, NOT Column View's root: every
-        drill-down commits a real slot.open-location (_sync_slot_location),
-        it's only Column View's own internal chain bookkeeping
-        (host._root_uri) that stays fixed at the entry point. on_changed is
-        column_view.on_sort_detected rather than a direct repopulate for
-        exactly this reason -- it mirrors whatever was just detected here
-        onto host._root_uri before repopulating, so a change made several
-        levels deep still ends up somewhere _refresh_slot_sort will find it
-        (that function always reads root_uri, never this deep location)."""
+    def _sort_watch_target(self, win: Gtk.Window) -> str | None:
+        """URI whose native sort View Options will change in this window."""
         state = self._active_panel_state(win)
         if state and state.get("visible_view") == VIEW_DISKINFO:
-            return (DISKS_URI, self._repopulate_visible)
-        if self._active_slot_showing_column(win):
-            loc = _active_slot_location(win)
-            if loc is None:
-                return None
-            return (loc.get_uri(), lambda w=win: column_view.on_sort_detected(self, w))
+            return DISKS_URI
         return None
+
+    def _on_native_sort_metadata_changed(
+        self,
+        win: Gtk.Window,
+        uri: str,
+        raw_sort: tuple[str, bool] | None,
+        effective_sort: tuple[str, bool],
+    ) -> None:
+        """Apply one popover-close sort change to its original window and URI."""
+        if self._sort_watch_target(win) != uri:
+            _log(f"sort metadata change ignored after target moved uri={uri!r}")
+            return
+        state = self._active_panel_state(win)
+        if state and state.get("visible_view") == VIEW_DISKINFO:
+            _log(f"sort metadata apply disk uri={uri!r} sort={effective_sort!r}")
+            self._populate(win)
+            return
 
     def _arm_sort_watch(self, win: Gtk.Window) -> None:
         if not DEBUG_SORT_WATCH_ACTIVE:
+            _log("sort button focus watch disabled by MC_SORT_WATCH=0")
             return
+        _log("sort button focus and popover-close watch arming")
         GLib.idle_add(
             lambda w=win: (
                 self._nautilus_prefs.watch_sort_button(
-                    self, w, resolve_sort_target=lambda _ext, ww: self._resolve_sort_target(ww)
+                    self, w, on_sort_changed=self._on_native_sort_metadata_changed
                 )
                 or False
             )
@@ -1396,7 +1399,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
     def _on_navigation(self, win: Gtk.Window) -> None:
         """Sync window-singleton chrome (sidebar highlight, pathbar chip,
-        sort watch, location filter watch) to whichever slot is active.
+        View Options focus watch, location filter watch) to whichever slot is active.
 
         Showing/hiding the panel itself is no longer this function's job:
         each slot owns that decision independently, driven directly by its
@@ -1440,10 +1443,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             if DEBUG_PATHBAR_ACTIVE:
                 GLib.idle_add(lambda w=win: self._fix_pathbar_icon(w) or False)
             # _arm_sort_watch checks DEBUG_SORT_WATCH_ACTIVE itself and is a
-            # no-op if Column View already attached the watch first for this
-            # window (see watch_sort_button's own "attach once" guard) -- one
-            # shared watcher now serves both views, so call-site order here
-            # no longer matters the way it did with two separate watchers.
+            # no-op when this window already has the View Options focus watch.
             self._arm_sort_watch(win)
             if DEBUG_LOCATION_FILTER_ACTIVE:
                 GLib.idle_add(lambda w=win: self._attach_location_filter_watch(w) or False)

@@ -44,6 +44,38 @@ from nautilus_my_computer.widgets import (
 
 VIEW_COLUMN = "column"
 
+# These are deliberately Nautilus's action/metadata tokens rather than the
+# internal sorter vocabulary. Keeping the public GSettings/action boundary in
+# Nautilus terms lets the copied View Options menu retain its original targets;
+# conversion happens once, immediately before a MyComputerColumn consumes it.
+_COLUMN_SORT_TOKENS = frozenset(("name", "date_modified", "size", "type"))
+_COLUMN_SORT_TO_CANONICAL = {"date_modified": "mtime"}
+_COLUMN_SORT_ACTION_GROUP = "mc-column"
+_COLUMN_SORT_ACTION = f"{_COLUMN_SORT_ACTION_GROUP}.sort"
+
+
+def _column_sort_target(ext) -> tuple[str, bool]:
+    """Read the globally persistent Column View sort in menu-target form."""
+    settings = getattr(ext, "_gsettings", None)
+    if settings is None:
+        return ("name", False)
+    token = settings.get_string("column-view-sort-by")
+    if token not in _COLUMN_SORT_TOKENS:
+        _log(f"column sort setting ignored invalid token={token!r}")
+        token = "name"
+    return (token, settings.get_boolean("column-view-sort-reversed"))
+
+
+def get_column_view_sort(ext) -> tuple[str, bool]:
+    """Return the one canonical global sort consumed by every Column host."""
+    token, reversed_order = _column_sort_target(ext)
+    return (_COLUMN_SORT_TO_CANONICAL.get(token, token), reversed_order)
+
+
+def _column_sort_variant(ext) -> GLib.Variant:
+    return GLib.Variant("(sb)", _column_sort_target(ext))
+
+
 # Name Column View is added under on each slot's own GtkStack (see
 # watch_tab_view/_do_inject_into_slot below). Nautilus's own two stack
 # children (vbox, global_search_page) are added via gtk_stack_add_child
@@ -395,7 +427,7 @@ class _ColumnViewHost:
         self._clipboard.connect("changed", self._on_clipboard_changed)
         self._operation_monitors: list[Gio.FileMonitor] = []
         self._native_cut_observer = NativeCutStateObserver(win, self._apply_native_cut_uris)
-        self._sort = ext._nautilus_prefs.resolve_column_sort(root_uri)
+        self._sort = get_column_view_sort(ext)
 
         self.columns = self._build_columns()
         self.preview_column = self._make_preview_column()
@@ -524,7 +556,7 @@ class _ColumnViewHost:
         self._cancel_row_commit()
 
         self._root_uri = root_uri
-        self._sort = self._ext._nautilus_prefs.resolve_column_sort(root_uri)
+        self._sort = get_column_view_sort(self._ext)
         self.columns = self._build_columns()
         self.preview_column = self._make_preview_column()
         self.paneds = []
@@ -1450,15 +1482,9 @@ class _ColumnViewHost:
         existing tab-open callers).
 
         This navigates Nautilus's live-underneath native slot, which
-        begins to re-enumerate the folder. Measured (2026-07-11): the call
-        itself is sub-millisecond and fully async (0.3-0.6ms, never blocks
-        the main thread), and real drills land 0.7-9s apart, not in
-        coalescable bursts. A debounce was rejected on that data because it
-        would buy nothing and risk the sync-loop echo guard. Once Nautilus
-        commits the new location and chrome, _on_slot_location_changed
-        activates slot.stop to cancel the hidden native view's remaining
-        metadata, model, monitor, and thumbnail work. Ctrl+1/Ctrl+2 reloads
-        that model before exposing the native view again."""
+        re-enumerates the folder asynchronously. The covered native view stays
+        alive while Column View is active so returning to Grid/List restores
+        Nautilus's own slot state without a forced reload."""
         if restore_keyboard_focus:
             self._pending_focus_uri = uri
         try:
@@ -2691,41 +2717,14 @@ def leave_column_view(slot: Gtk.Widget) -> None:
 
 
 def _refresh_slot_sort(ext, slot: Gtk.Widget) -> None:
-    """One sort for the whole Miller chain, always sourced from the root
-    folder -- not whichever column the user has drilled into (several
-    columns showing different folders side by side has no single "current
-    location" that would make sense to read sort from instead). See
-    on_sort_detected below for how a change made while drilled deep still
-    reaches this."""
+    """Apply the one global Column View sort to one Miller chain."""
     view = getattr(slot, "_mc_column_view", None)
     host = getattr(view, "_mc_column_host", None) if view is not None else None
     if host is None:
         return
-    host._sort = ext._nautilus_prefs.resolve_column_sort(host._root_uri)
+    host._sort = get_column_view_sort(ext)
     for column in host.columns:
         column.set_sort(host._sort)
-
-
-def on_sort_detected(ext, win: Gtk.Window) -> None:
-    """Called from main.py's _resolve_sort_target when NautilusPrefs's sort
-    watch detects a real change -- at the active slot's actual current
-    location, which is wherever Nautilus's native sort popover is really
-    bound to (the deepest open column, not necessarily host._root_uri).
-
-    Mirror that onto the chain's own root folder so it becomes the
-    persistent source of truth for the whole chain (_refresh_slot_sort
-    always reads root_uri, never the deep location) -- otherwise a sort
-    changed while several levels deep would silently do nothing, since
-    nothing reads that deep folder's own metadata once this repopulates.
-    A no-op when the active location already *is* root_uri (root_uri gets
-    rewritten with the same value it already has)."""
-    slot = ext._active_slot_widget(win)
-    view = getattr(slot, "_mc_column_view", None) if slot is not None else None
-    host = getattr(view, "_mc_column_host", None) if view is not None else None
-    if host is not None:
-        prefs = ext._nautilus_prefs
-        prefs.write_folder_sort(host._root_uri, prefs.sort_column, prefs.sort_reverse)
-    ext._repopulate_visible()
 
 
 def refresh_column_view(ext, win: Gtk.Window) -> None:
@@ -2885,8 +2884,8 @@ def _maybe_auto_elect_column_view(ext, win: Gtk.Window, slot: Gtk.Widget) -> Non
         common.set_slot_view_owner(slot, "column")
         stack.set_visible_child(view)
         view._mc_column_host.set_native_cut_observer_active(True)
-    if ext._stop_hidden_native_slot(win, slot):
-        slot._mc_column_native_stopped = True
+    # Do not stop the covered native FilesView; Grid/List keeps its own
+    # per-folder state while Column View uses independent global settings.
 
 
 def _on_slot_location_changed(slot, _pspec, ext, win: Gtk.Window) -> None:
@@ -2915,8 +2914,8 @@ def _on_slot_location_changed(slot, _pspec, ext, win: Gtk.Window) -> None:
         return
     host = slot._mc_column_view._mc_column_host
     host.sync_to_uri(loc.get_uri())
-    if ext._stop_hidden_native_slot(win, slot):
-        slot._mc_column_native_stopped = True
+    # Do not stop the covered native FilesView; it remains responsible for
+    # Grid/List's independent per-folder state.
 
 
 _SEGMENTS = (
@@ -2978,7 +2977,6 @@ def inject_column_view_entry(ext, win: Gtk.Window) -> None:
     )
     if popover is not None:
         options_btn.set_popover(popover)
-
     switcher = _build_view_switcher(ext, win)
 
     box = Gtk.Box(spacing=6)
@@ -2993,6 +2991,7 @@ def inject_column_view_entry(ext, win: Gtk.Window) -> None:
     state["native_split_button"] = split_button
     state["view_switcher"] = switcher
     state["view_options_menu_button"] = options_btn
+    install_column_sort_action(ext, win, state)
 
     # The hidden split button's icon-name is still bound to the window slot,
     # so this is how a native Grid<->List change (e.g. Ctrl+1/2) is detected.
@@ -3045,6 +3044,151 @@ def init_icon_watcher(ext) -> None:
     icon_theme.connect(
         "changed", lambda *_a, ext=ext: GLib.idle_add(_refresh_column_icon_all_windows, ext)
     )
+
+
+def _clone_column_options_model(model: Gio.MenuModel) -> Gio.Menu:
+    """Copy Nautilus's menu model, replacing only supported sort actions.
+
+    This operates on the public GMenuModel contract, not on ephemeral menu
+    widgets. Context-only Nautilus sort rows are intentionally absent because
+    Column View cannot be opened for the locations that enable them.
+    """
+    clone = Gio.Menu()
+    for index in range(model.get_n_items()):
+        attributes: dict[str, GLib.Variant] = {}
+        iterator = model.iterate_item_attributes(index)
+        while iterator.next():
+            name = iterator.get_name()
+            value = iterator.get_value()
+            if name is not None and value is not None:
+                attributes[name] = value
+
+        if "nautilus-menu-item" in attributes:
+            continue
+
+        action_variant = attributes.get("action")
+        action_name = action_variant.get_string() if action_variant is not None else None
+        if action_name == "view.sort":
+            target = attributes.get("target")
+            try:
+                token, reversed_order = target.unpack() if target is not None else (None, None)
+            except Exception:
+                token, reversed_order = None, None
+            if token not in _COLUMN_SORT_TOKENS or not isinstance(reversed_order, bool):
+                continue
+            attributes["action"] = GLib.Variant.new_string(_COLUMN_SORT_ACTION)
+
+        item = Gio.MenuItem.new(None, None)
+        for name, value in attributes.items():
+            item.set_attribute_value(name, value)
+
+        links = model.iterate_item_links(index)
+        while links.next():
+            name = links.get_name()
+            child = links.get_value()
+            if name is not None and child is not None:
+                item.set_link(name, _clone_column_options_model(child))
+        clone.append_item(item)
+    return clone
+
+
+def _on_column_sort_change_state(action: Gio.SimpleAction, value: GLib.Variant, ext) -> None:
+    """Persist a View Options selection; the settings signal fans it out."""
+    try:
+        token, reversed_order = value.unpack()
+    except Exception:
+        _log("column sort action ignored malformed target")
+        return
+    if token not in _COLUMN_SORT_TOKENS or not isinstance(reversed_order, bool):
+        _log(f"column sort action ignored unsupported target={value.print_(False)}")
+        return
+
+    action.set_state(value)
+    settings = getattr(ext, "_gsettings", None)
+    if settings is None:
+        return
+    settings.delay()
+    settings.set_string("column-view-sort-by", token)
+    settings.set_boolean("column-view-sort-reversed", reversed_order)
+    settings.apply()
+
+
+def install_column_sort_action(ext, win: Gtk.Window, state: dict) -> bool:
+    """Install the per-window action and prepare its Column View menu model."""
+    options_button = state.get("view_options_menu_button")
+    popover = options_button.get_popover() if options_button is not None else None
+    if not isinstance(popover, Gtk.PopoverMenu):
+        _log("column sort override unavailable: View Options is not GtkPopoverMenu")
+        return False
+    native_model = popover.get_menu_model()
+    if native_model is None:
+        _log("column sort override unavailable: View Options has no GMenuModel")
+        return False
+    try:
+        column_model = _clone_column_options_model(native_model)
+    except Exception as exc:
+        _log(f"column sort override unavailable: menu clone failed: {exc!r}")
+        return False
+
+    column_action = Gio.SimpleAction.new_stateful(
+        "sort", GLib.VariantType.new("(sb)"), _column_sort_variant(ext)
+    )
+    column_action.connect("change-state", _on_column_sort_change_state, ext)
+    group = Gio.SimpleActionGroup()
+    group.add_action(column_action)
+    win.insert_action_group(_COLUMN_SORT_ACTION_GROUP, group)
+
+    state["view_options_popover"] = popover
+    state["native_view_options_model"] = native_model
+    state["column_view_options_model"] = column_model
+    state["column_sort_action"] = column_action
+    state["column_sort_action_group"] = group
+    state["active_view_options_model"] = native_model
+    _log("column sort override installed")
+    return True
+
+
+def sync_global_column_sort(ext) -> bool:
+    """Synchronize settings, every window action, and every open chain once."""
+    ext._column_sort_sync_pending = False
+    target = _column_sort_variant(ext)
+    for _win, state in list(ext._windows.items()):
+        action = state.get("column_sort_action")
+        if action is not None:
+            action.set_state(target)
+    for win in list(ext._windows):
+        refresh_all_column_views(ext, win)
+    _log(f"column sort globally applied target={target.print_(False)}")
+    return GLib.SOURCE_REMOVE
+
+
+def schedule_global_column_sort_sync(ext) -> None:
+    """Coalesce the two persistent-key notifications into one refresh."""
+    if getattr(ext, "_column_sort_sync_pending", False):
+        return
+    ext._column_sort_sync_pending = True
+    GLib.idle_add(sync_global_column_sort, ext)
+
+
+def _sync_view_options_model(ext, win: Gtk.Window, active: str) -> None:
+    """Expose the correct sort action without changing Nautilus's model."""
+    state = ext._windows.get(win)
+    if state is None:
+        return
+    popover = state.get("view_options_popover")
+    native_model = state.get("native_view_options_model")
+    column_model = state.get("column_view_options_model")
+    if popover is None or native_model is None or column_model is None:
+        return
+    wanted = column_model if active == VIEW_COLUMN else native_model
+    if state.get("active_view_options_model") is wanted:
+        return
+    button = state.get("view_options_menu_button")
+    if button is not None and button.get_active():
+        button.set_active(False)
+    popover.set_menu_model(wanted)
+    state["active_view_options_model"] = wanted
+    _log(f"column sort options model active={active!r}")
 
 
 def _build_view_switcher(ext, win: Gtk.Window) -> Gtk.Widget:
@@ -3118,6 +3262,7 @@ def _sync_view_switcher(ext, win: Gtk.Window) -> None:
         active = "list" if native_icon == _ICON_TARGET_GRID else "grid"
 
     _set_active_segment(switcher, active)
+    _sync_view_options_model(ext, win, active)
 
 
 def refresh_column_view_chrome(ext, win: Gtk.Window) -> None:
@@ -3126,5 +3271,13 @@ def refresh_column_view_chrome(ext, win: Gtk.Window) -> None:
 
 
 def detach_column_view_entry(ext, win: Gtk.Window, state: dict | None = None) -> None:
-    """Nothing to restore -- injection only hides/reparents widgets that stay
-    alive in the tree, and window teardown drops our Box along with them."""
+    """Restore the native menu contract before this window is destroyed."""
+    state = state or ext._windows.get(win)
+    if state is None:
+        return
+    popover = state.get("view_options_popover")
+    native_model = state.get("native_view_options_model")
+    if popover is not None and native_model is not None:
+        popover.set_menu_model(native_model)
+    if state.get("column_sort_action_group") is not None:
+        win.insert_action_group(_COLUMN_SORT_ACTION_GROUP, None)

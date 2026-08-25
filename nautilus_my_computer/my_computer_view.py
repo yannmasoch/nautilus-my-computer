@@ -1754,10 +1754,9 @@ def _populate_slot(ext, slot) -> None:
     folder_card_widgets = {}
 
     # Fresh per-URI read on every populate, same as Column View's own
-    # _ColumnViewHost -- never the sort-watch poll's cache (NautilusPrefs.
-    # sort_column/sort_reverse), which holds whichever URI's popover was
-    # last open and would silently apply the wrong view's sort otherwise.
-    col, rev = ext._nautilus_prefs.resolve_column_sort(DISKS_URI)
+    # _ColumnViewHost. Sort state is per folder/view, never a cache shared by
+    # whichever window most recently opened View Options.
+    col, rev = ext._nautilus_prefs.get_effective_folder_sort(DISKS_URI)
 
     def _sort_key(m: MountInfo):
         if col == "size":

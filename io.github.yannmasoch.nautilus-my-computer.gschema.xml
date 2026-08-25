@@ -25,6 +25,18 @@
       <description>Which of this extension's own views new tabs and windows open into. 'native' defers entirely to Nautilus's own grid/list default.</description>
     </key>
 
+    <key name="column-view-sort-by" type="s">
+      <default>'name'</default>
+      <summary>Column View sort criterion</summary>
+      <description>Global sort criterion for Column View. Uses Nautilus sort tokens: name, date_modified, size, or type.</description>
+    </key>
+
+    <key name="column-view-sort-reversed" type="b">
+      <default>false</default>
+      <summary>Reverse Column View sort order</summary>
+      <description>Whether the global Column View sort order is reversed.</description>
+    </key>
+
     <key name="show-system-partitions" type="b">
       <default>false</default>
       <summary>Show system partitions</summary>
