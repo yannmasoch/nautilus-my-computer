@@ -1803,8 +1803,15 @@ def _populate_slot(ext, slot, sort: tuple[str, bool] | None = None) -> None:
         merged = vis_str == "merged"
         groups[gkey] = PanelGroup(key=gkey, label=label, visible=visible, merged=merged)
 
-    # Classify each mount into its group
+    # Classify each mount into its group. is_hidden was previously read only
+    # for sort bucketing (see _sort_key/_get_local_mount_tier below) -- there
+    # was never an actual exclusion filter, so toggling Show Hidden Files had
+    # no visible effect on the panel at all. Nautilus's own computer:///
+    # browsing filters on this exact flag, so match it here.
+    show_hidden = ext._nautilus_prefs.hidden_files()
     for m in _disk_data.values():
+        if m.is_hidden and not show_hidden:
+            continue
         groups[_classify_mount(m)].add_item(m)
 
     active_uris = {m.nav_uri for m in _disk_data.values()}

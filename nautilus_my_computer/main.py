@@ -1311,6 +1311,20 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             return consumed
         if not panel_state or panel_state.get("visible_view") != VIEW_DISKINFO:
             return False
+        # Ctrl+H: the native "view.show-hidden-files" action group IS present
+        # at the window root even while the Computer panel is showing
+        # (confirmed via win.activate_action), so this delegates straight to
+        # it rather than duplicating Nautilus's own hidden-files state in an
+        # owned action. Explicit activation here because falling through to
+        # GTK's implicit focus-based accelerator dispatch below does *not*
+        # reach it -- only a direct activate_action() call does.
+        if (
+            keyval in (Gdk.KEY_h, Gdk.KEY_H)
+            and gtk_state & Gdk.ModifierType.CONTROL_MASK
+            and not (gtk_state & (Gdk.ModifierType.ALT_MASK | Gdk.ModifierType.SUPER_MASK))
+        ):
+            win.activate_action("view.show-hidden-files", None)
+            return True
         # Let modified shortcuts through (Ctrl+L, Alt+Left, Super, …).
         if gtk_state & (
             Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.ALT_MASK | Gdk.ModifierType.SUPER_MASK
