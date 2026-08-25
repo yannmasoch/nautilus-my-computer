@@ -1732,17 +1732,17 @@ def _on_ctrl_scroll_zoom(
     return Gdk.EVENT_STOP
 
 
-def _populate(ext, win: Gtk.Window) -> None:
+def _populate(ext, win: Gtk.Window, sort: tuple[str, bool] | None = None) -> None:
     """Populate whichever panel the window's active slot owns. Most call
     sites only ever care about "the panel currently in front of the user in
     this window" -- direct per-slot population (background tabs, the
     enter/leave machinery above) goes through _populate_slot instead."""
     slot = ext._active_slot_widget(win)
     if slot is not None:
-        _populate_slot(ext, slot)
+        _populate_slot(ext, slot, sort)
 
 
-def _populate_slot(ext, slot) -> None:
+def _populate_slot(ext, slot, sort: tuple[str, bool] | None = None) -> None:
     state = getattr(slot, "_mc_computer", None)
     if state is None:
         return
@@ -1756,7 +1756,7 @@ def _populate_slot(ext, slot) -> None:
     # Fresh per-URI read on every populate, same as Column View's own
     # _ColumnViewHost. Sort state is per folder/view, never a cache shared by
     # whichever window most recently opened View Options.
-    col, rev = ext._nautilus_prefs.get_effective_folder_sort(DISKS_URI)
+    col, rev = sort or ext._nautilus_prefs.get_effective_folder_sort(DISKS_URI)
 
     def _sort_key(m: MountInfo):
         if col == "size":

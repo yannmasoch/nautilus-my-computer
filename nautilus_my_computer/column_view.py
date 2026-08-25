@@ -52,6 +52,7 @@ _COLUMN_SORT_TOKENS = frozenset(("name", "date_modified", "size", "type"))
 _COLUMN_SORT_TO_CANONICAL = {"date_modified": "mtime"}
 _COLUMN_SORT_ACTION_GROUP = "mc-column"
 _COLUMN_SORT_ACTION = f"{_COLUMN_SORT_ACTION_GROUP}.sort"
+_COMPUTER_SORT_ACTION = f"{_COLUMN_SORT_ACTION_GROUP}.computer-sort"
 
 
 def _column_sort_target(ext) -> tuple[str, bool]:
@@ -2683,12 +2684,6 @@ def enter_column_view(ext, win: Gtk.Window, root_uri: str) -> None:
     stack.set_visible_child(view)
     host.set_native_cut_observer_active(True)
     populate_column_view(ext, win)
-    # This shared entry path is also used by _maybe_auto_elect_column_view.
-    # That persisted-default route bypasses main._show_column_view(), which
-    # is otherwise where the sort watch is armed. Defer one turn so the
-    # caller's refresh_column_view_chrome() has installed the replacement
-    # view-options button before NautilusPrefs looks for it.
-    GLib.idle_add(lambda: (ext._arm_sort_watch(win), GLib.SOURCE_REMOVE)[1])
 
 
 def leave_column_view(slot: Gtk.Widget) -> None:
@@ -2932,12 +2927,11 @@ def inject_column_view_entry(ext, win: Gtk.Window) -> None:
     nautilus-view-controls.blp) with a segmented Grid/List/Column switcher.
 
     Nautilus creates one NautilusViewControls per window and never rewrites
-    it afterwards. The native Adw.SplitButton is kept alive (hidden, not
-    removed/rebound) inside our own Box: its icon-name binding to the window
-    slot still tells us which native side (Grid/List) is showing, and it
-    stays the target we activate for native Grid<->List transitions. If the
-    expected widget contract is not present, fail closed and leave Nautilus
-    alone.
+    it afterwards. The native Adw.SplitButton remains a hidden sibling in our
+    replacement box: its icon-name binding still tells us which native side
+    (Grid/List) is showing, and it remains the target we activate for native
+    Grid<->List transitions. If the expected widget contract is not present,
+    fail closed and leave Nautilus alone.
     """
     state = ext._windows.get(win)
     if state is None:
@@ -2967,23 +2961,23 @@ def inject_column_view_entry(ext, win: Gtk.Window) -> None:
         _log("inject_column_view_entry: unexpected parent, leaving Nautilus control untouched")
         return
 
-    popover = split_button.get_popover()
-    split_button.set_popover(None)
     split_button.set_visible(False)
     split_button._mc_column_attached = True
 
     options_btn = Gtk.MenuButton(
         icon_name="view-more-symbolic", tooltip_text=_native("View Options")
     )
-    if popover is not None:
-        options_btn.set_popover(popover)
+    options_btn.set_name("mc-view-options-button")
+    options_btn.add_css_class("mc-view-options-button")
     switcher = _build_view_switcher(ext, win)
 
     box = Gtk.Box(spacing=6)
     box.append(switcher)
     box.append(options_btn)
     # Unparent from the Adw.Bin first: appending a still-parented child is a
-    # no-op that trips a GTK assertion and leaves the native button orphaned.
+    # no-op that trips a GTK assertion. The native split button remains hidden
+    # here to preserve its Nautilus lifecycle; only our three-dots button is
+    # visible.
     view_controls.set_child(None)
     box.append(split_button)
     view_controls.set_child(box)
@@ -2991,13 +2985,13 @@ def inject_column_view_entry(ext, win: Gtk.Window) -> None:
     state["native_split_button"] = split_button
     state["view_switcher"] = switcher
     state["view_options_menu_button"] = options_btn
-    install_column_sort_action(ext, win, state)
+    install_owned_view_options(ext, win, state)
 
     # The hidden split button's icon-name is still bound to the window slot,
     # so this is how a native Grid<->List change (e.g. Ctrl+1/2) is detected.
     split_button.connect("notify::icon-name", lambda *_a: _sync_view_switcher(ext, win))
     _sync_view_switcher(ext, win)
-    _log("inject_column_view_entry: hid native split button behind three-way switcher")
+    _log("inject_column_view_entry: hid native split button behind owned View Options")
 
 
 def _ancestor_split_button(widget: Gtk.Widget) -> Adw.SplitButton | None:
@@ -3046,50 +3040,122 @@ def init_icon_watcher(ext) -> None:
     )
 
 
-def _clone_column_options_model(model: Gio.MenuModel) -> Gio.Menu:
-    """Copy Nautilus's menu model, replacing only supported sort actions.
+def _native_context(context: str, text: str) -> str:
+    """Translate a Nautilus string whose catalog entry has a context."""
+    return GLib.dpgettext2("nautilus", context, text)
 
-    This operates on the public GMenuModel contract, not on ephemeral menu
-    widgets. Context-only Nautilus sort rows are intentionally absent because
-    Column View cannot be opened for the locations that enable them.
-    """
-    clone = Gio.Menu()
-    for index in range(model.get_n_items()):
-        attributes: dict[str, GLib.Variant] = {}
-        iterator = model.iterate_item_attributes(index)
-        while iterator.next():
-            name = iterator.get_name()
-            value = iterator.get_value()
-            if name is not None and value is not None:
-                attributes[name] = value
 
-        if "nautilus-menu-item" in attributes:
-            continue
+def _append_action_item(
+    menu: Gio.Menu,
+    label: str,
+    action: str,
+    target: GLib.Variant | None = None,
+    *,
+    hidden_when_disabled: bool = False,
+    accel: str | None = None,
+) -> None:
+    item = Gio.MenuItem.new(label, action)
+    if target is not None:
+        item.set_attribute_value("target", target)
+    if hidden_when_disabled:
+        item.set_attribute_value("hidden-when", GLib.Variant.new_string("action-disabled"))
+    if accel is not None:
+        item.set_attribute_value("accel", GLib.Variant.new_string(accel))
+    menu.append_item(item)
 
-        action_variant = attributes.get("action")
-        action_name = action_variant.get_string() if action_variant is not None else None
-        if action_name == "view.sort":
-            target = attributes.get("target")
-            try:
-                token, reversed_order = target.unpack() if target is not None else (None, None)
-            except Exception:
-                token, reversed_order = None, None
-            if token not in _COLUMN_SORT_TOKENS or not isinstance(reversed_order, bool):
-                continue
-            attributes["action"] = GLib.Variant.new_string(_COLUMN_SORT_ACTION)
 
+def _build_owned_options_model(
+    sort_action: str,
+    *,
+    special_sort: tuple[str, str, bool] | None = None,
+    native_details: bool,
+) -> Gio.Menu:
+    """Create one complete extension-owned View Options model."""
+    root = Gio.Menu()
+
+    zoom = Gio.Menu()
+    for custom_id in ("zoom-out", "zoom-in"):
         item = Gio.MenuItem.new(None, None)
-        for name, value in attributes.items():
-            item.set_attribute_value(name, value)
+        item.set_attribute_value("custom", GLib.Variant.new_string(custom_id))
+        zoom.append_item(item)
+    zoom_item = Gio.MenuItem.new_section(_native("Icon Size"), zoom)
+    zoom_item.set_attribute_value("display-hint", GLib.Variant.new_string("inline-buttons"))
+    root.append_item(zoom_item)
 
-        links = model.iterate_item_links(index)
-        while links.next():
-            name = links.get_name()
-            child = links.get_value()
-            if name is not None and child is not None:
-                item.set_link(name, _clone_column_options_model(child))
-        clone.append_item(item)
-    return clone
+    sort = Gio.Menu()
+    for label, token, reversed_order in (
+        (_native_context("Sort Criterion", "_A-Z"), "name", False),
+        (_native_context("Sort Criterion", "_Z-A"), "name", True),
+        (_native("Last _Modified"), "date_modified", True),
+        (_native("_First Modified"), "date_modified", False),
+        (_native("_Size"), "size", True),
+        (_native("_Type"), "type", False),
+    ):
+        _append_action_item(
+            sort,
+            label,
+            sort_action,
+            GLib.Variant("(sb)", (token, reversed_order)),
+            hidden_when_disabled=True,
+        )
+    if special_sort is not None:
+        label, token, reversed_order = special_sort
+        _append_action_item(
+            sort,
+            label,
+            sort_action,
+            GLib.Variant("(sb)", (token, reversed_order)),
+            hidden_when_disabled=True,
+        )
+    root.append_section(_native_context("menu item", "Sort"), sort)
+
+    hidden = Gio.Menu()
+    _append_action_item(
+        hidden,
+        _native("Show _Hidden Files"),
+        "view.show-hidden-files",
+        accel="<control>h",
+    )
+    root.append_section(None, hidden)
+
+    if native_details:
+        details = Gio.Menu()
+        _append_action_item(
+            details,
+            _native("_Visible Columns…"),
+            "view.visible-columns",
+        )
+        _append_action_item(
+            details,
+            _native("Captions…"),
+            "view.visible-captions",
+        )
+        root.append_section(None, details)
+    return root
+
+
+def _build_owned_options_models() -> dict[str, Gio.Menu]:
+    """Build fixed models once; location and view only select among them."""
+    return {
+        "native": _build_owned_options_model("view.sort", native_details=True),
+        "trash": _build_owned_options_model(
+            "view.sort",
+            special_sort=(_native("Last _Trashed"), "trashed_on", True),
+            native_details=True,
+        ),
+        "recent": _build_owned_options_model(
+            "view.sort",
+            special_sort=(_native("Recency"), "recency", True),
+            native_details=True,
+        ),
+        "search": _build_owned_options_model(
+            "view.sort",
+            special_sort=(_native("Relevance"), "search_relevance", True),
+            native_details=True,
+        ),
+        "computer": _build_owned_options_model(_COMPUTER_SORT_ACTION, native_details=True),
+        "column": _build_owned_options_model(_COLUMN_SORT_ACTION, native_details=True),
+    }
 
 
 def _on_column_sort_change_state(action: Gio.SimpleAction, value: GLib.Variant, ext) -> None:
@@ -3113,38 +3179,256 @@ def _on_column_sort_change_state(action: Gio.SimpleAction, value: GLib.Variant, 
     settings.apply()
 
 
-def install_column_sort_action(ext, win: Gtk.Window, state: dict) -> bool:
-    """Install the per-window action and prepare its Column View menu model."""
-    options_button = state.get("view_options_menu_button")
-    popover = options_button.get_popover() if options_button is not None else None
+def _native_sort_target(ext, uri: str) -> tuple[str, bool]:
+    token, reversed_order = (
+        ext._nautilus_prefs.folder_sort(uri) or ext._nautilus_prefs.default_sort()
+    )
+    if token == "mtime":
+        token = "date_modified"
+    if token not in _COLUMN_SORT_TOKENS:
+        token = "name"
+    return (token, reversed_order)
+
+
+def _on_computer_sort_change_state(
+    action: Gio.SimpleAction, value: GLib.Variant, ext, win: Gtk.Window
+) -> None:
+    """Persist Computer sorting natively and repaint from the selected value."""
+    try:
+        token, reversed_order = value.unpack()
+    except Exception:
+        _log("computer sort action ignored malformed target")
+        return
+    if token not in _COLUMN_SORT_TOKENS or not isinstance(reversed_order, bool):
+        _log(f"computer sort action ignored unsupported target={value.print_(False)}")
+        return
+    action.set_state(value)
+    win.activate_action("view.sort", value)
+    ext._populate(win, (_COLUMN_SORT_TO_CANONICAL.get(token, token), reversed_order))
+
+
+def _on_owned_options_active(button: Gtk.MenuButton, _pspec, ext, win: Gtk.Window) -> None:
+    """Restore Column keyboard focus after our own popover closes."""
+    if not button.get_active():
+        GLib.idle_add(ext._restore_column_focus_after_sort, win, button)
+
+
+_OWNED_OPTIONS_POPOVER_UI = """\
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <menu id="bootstrap-menu">
+    <section>
+      <attribute name="label">Icon Size</attribute>
+      <attribute name="display-hint">inline-buttons</attribute>
+      <item><attribute name="custom">zoom-out</attribute></item>
+      <item><attribute name="custom">zoom-in</attribute></item>
+    </section>
+  </menu>
+  <object class="GtkPopoverMenu" id="mc-view-options-popover">
+    <property name="menu-model">bootstrap-menu</property>
+    <child type="zoom-out">
+      <object class="GtkButton" id="mc-view-options-zoom-out-button">
+        <property name="icon-name">zoom-out-symbolic</property>
+        <property name="action-name">view.zoom-out</property>
+        <property name="tooltip-text">Zoom Out</property>
+        <style><class name="flat"/></style>
+      </object>
+    </child>
+    <child type="zoom-in">
+      <object class="GtkButton" id="mc-view-options-zoom-in-button">
+        <property name="icon-name">zoom-in-symbolic</property>
+        <property name="action-name">view.zoom-in</property>
+        <property name="tooltip-text">Zoom In</property>
+        <style><class name="flat"/></style>
+      </object>
+    </child>
+  </object>
+</interface>
+"""
+
+
+def _build_owned_options_popover(
+    models: dict[str, Gio.Menu],
+) -> tuple[Gtk.PopoverMenu, Gtk.Builder]:
+    """Build an owned popover through GtkBuilder, like Nautilus's template."""
+    builder = Gtk.Builder.new_from_string(_OWNED_OPTIONS_POPOVER_UI, -1)
+    popover = builder.get_object("mc-view-options-popover")
     if not isinstance(popover, Gtk.PopoverMenu):
-        _log("column sort override unavailable: View Options is not GtkPopoverMenu")
-        return False
-    native_model = popover.get_menu_model()
-    if native_model is None:
-        _log("column sort override unavailable: View Options has no GMenuModel")
+        raise RuntimeError("GtkBuilder did not create the owned View Options popover")
+    popover.set_menu_model(models["native"])
+    return popover, builder
+
+
+def _menu_label(text: str) -> str:
+    """Render Nautilus mnemonic labels as ordinary text in direct controls."""
+    return text.replace("_", "")
+
+
+def _on_owned_sort_toggled(
+    row: Gtk.CheckButton, token: str, reversed_order: bool, win: Gtk.Window, state: dict
+) -> None:
+    if not row.get_active() or state.get("owned_options_syncing"):
+        return
+    action_name = state.get("owned_options_sort_action")
+    if action_name is not None:
+        win.activate_action(action_name, GLib.Variant("(sb)", (token, reversed_order)))
+
+
+def _on_owned_hidden_toggled(row: Gtk.CheckButton, win: Gtk.Window, state: dict) -> None:
+    if not state.get("owned_options_syncing"):
+        win.activate_action("view.show-hidden-files", None)
+
+
+def _build_native_menu_row(
+    label: str, action: str, widget_name: str
+) -> tuple[Gtk.Widget, Gtk.Builder]:
+    """Construct GtkModelButton through GtkBuilder; it has no GI Python class."""
+    ui = f"""\
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <object class="GtkModelButton" id="row">
+    <property name="text">{GLib.markup_escape_text(label)}</property>
+    <property name="action-name">{GLib.markup_escape_text(action)}</property>
+    <style><class name="flat"/></style>
+  </object>
+</interface>
+"""
+    builder = Gtk.Builder.new_from_string(ui, -1)
+    row = builder.get_object("row")
+    if not isinstance(row, Gtk.Widget):
+        raise RuntimeError("GtkBuilder did not create a GtkModelButton")
+    row.set_name(widget_name)
+    return row, builder
+
+
+def _build_direct_options_content(win: Gtk.Window, state: dict) -> Gtk.Box:
+    """Build the compact, directly owned View Options layout."""
+    content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+    content.set_name("mc-view-options-content")
+    content.add_css_class("mc-view-options-content")
+    content.set_margin_top(8)
+    content.set_margin_bottom(8)
+    content.set_margin_start(12)
+    content.set_margin_end(12)
+
+    zoom_row = Gtk.Box(spacing=6)
+    zoom_row.set_name("mc-view-options-icon-size-row")
+    icon_size = Gtk.Label(label=_native("Icon Size"), xalign=0, hexpand=True)
+    icon_size.set_name("mc-view-options-icon-size-label")
+    zoom_row.append(icon_size)
+    for custom_id, icon_name, tooltip in (
+        ("zoom-out", "zoom-out-symbolic", "Zoom Out"),
+        ("zoom-in", "zoom-in-symbolic", "Zoom In"),
+    ):
+        zoom = Gtk.Button(icon_name=icon_name, tooltip_text=_native(tooltip))
+        zoom.set_name(f"mc-view-options-{custom_id}-button")
+        zoom.set_action_name(f"view.{custom_id}")
+        zoom.add_css_class("flat")
+        zoom_row.append(zoom)
+    content.append(zoom_row)
+    content.append(Gtk.Separator())
+
+    sort_label = Gtk.Label(label=_native_context("menu item", "Sort"), xalign=0)
+    sort_label.set_name("mc-view-options-sort-label")
+    sort_label.add_css_class("heading")
+    content.append(sort_label)
+    rows: dict[tuple[str, bool], Gtk.CheckButton] = {}
+    group: Gtk.CheckButton | None = None
+    for label, token, reversed_order in (
+        (_native_context("Sort Criterion", "_A-Z"), "name", False),
+        (_native_context("Sort Criterion", "_Z-A"), "name", True),
+        (_native("Last _Modified"), "date_modified", True),
+        (_native("_First Modified"), "date_modified", False),
+        (_native("_Size"), "size", True),
+        (_native("_Type"), "type", False),
+    ):
+        row = Gtk.CheckButton(label=_menu_label(label))
+        row.set_name(f"mc-view-options-sort-{token}-{'reversed' if reversed_order else 'normal'}")
+        row.set_hexpand(True)
+        row.set_halign(Gtk.Align.FILL)
+        if group is None:
+            group = row
+        else:
+            row.set_group(group)
+        row.connect("toggled", _on_owned_sort_toggled, token, reversed_order, win, state)
+        content.append(row)
+        rows[(token, reversed_order)] = row
+
+    content.append(Gtk.Separator())
+    hidden = Gtk.CheckButton(label=_menu_label(_native("Show _Hidden Files")), hexpand=True)
+    hidden.set_name("mc-view-options-show-hidden-files")
+    hidden.set_halign(Gtk.Align.FILL)
+    hidden.connect("toggled", _on_owned_hidden_toggled, win, state)
+    hidden_box = Gtk.Box(spacing=12)
+    hidden_box.set_hexpand(True)
+    hidden_box.set_halign(Gtk.Align.FILL)
+    hidden_box.append(hidden)
+    shortcut = Gtk.Label(label="Ctrl+H", xalign=1)
+    shortcut.add_css_class("dim-label")
+    hidden_box.append(shortcut)
+    content.append(hidden_box)
+    details_separator = Gtk.Separator()
+    content.append(details_separator)
+
+    details: dict[str, Gtk.Widget] = {"separator": details_separator}
+    detail_builders: list[Gtk.Builder] = []
+    for name, label, action in (
+        ("visible-columns", _native("_Visible Columns…"), "view.visible-columns"),
+        ("captions", _native("Captions…"), "view.visible-captions"),
+    ):
+        row, builder = _build_native_menu_row(_menu_label(label), action, f"mc-view-options-{name}")
+        row.set_hexpand(True)
+        row.set_halign(Gtk.Align.FILL)
+        content.append(row)
+        details[name] = row
+        detail_builders.append(builder)
+
+    state["owned_options_sort_rows"] = rows
+    state["owned_options_hidden_row"] = hidden
+    state["owned_options_details"] = details
+    state["owned_options_detail_builders"] = detail_builders
+    return content
+
+
+def install_owned_view_options(ext, win: Gtk.Window, state: dict) -> bool:
+    """Attach our permanent View Options popover and action group."""
+    options_button = state.get("view_options_menu_button")
+    if options_button is None:
         return False
     try:
-        column_model = _clone_column_options_model(native_model)
+        models = _build_owned_options_models()
+        popover, builder = _build_owned_options_popover(models)
+        popover.set_name("mc-view-options-popover")
+        popover.add_css_class("mc-view-options-popover")
+        options_button.set_popover(popover)
     except Exception as exc:
-        _log(f"column sort override unavailable: menu clone failed: {exc!r}")
+        _log(f"owned View Options unavailable: {exc!r}")
         return False
 
     column_action = Gio.SimpleAction.new_stateful(
         "sort", GLib.VariantType.new("(sb)"), _column_sort_variant(ext)
     )
     column_action.connect("change-state", _on_column_sort_change_state, ext)
+    computer_action = Gio.SimpleAction.new_stateful(
+        "computer-sort",
+        GLib.VariantType.new("(sb)"),
+        GLib.Variant("(sb)", _native_sort_target(ext, "computer:///")),
+    )
+    computer_action.connect("change-state", _on_computer_sort_change_state, ext, win)
     group = Gio.SimpleActionGroup()
     group.add_action(column_action)
+    group.add_action(computer_action)
     win.insert_action_group(_COLUMN_SORT_ACTION_GROUP, group)
 
+    options_button.connect("notify::active", _on_owned_options_active, ext, win)
     state["view_options_popover"] = popover
-    state["native_view_options_model"] = native_model
-    state["column_view_options_model"] = column_model
+    state["view_options_popover_builder"] = builder
+    state["owned_view_options_models"] = models
     state["column_sort_action"] = column_action
+    state["computer_sort_action"] = computer_action
     state["column_sort_action_group"] = group
-    state["active_view_options_model"] = native_model
-    _log("column sort override installed")
+    state["active_view_options_model"] = models["native"]
+    _log("owned View Options installed")
     return True
 
 
@@ -3170,25 +3454,54 @@ def schedule_global_column_sort_sync(ext) -> None:
     GLib.idle_add(sync_global_column_sort, ext)
 
 
+def _owned_options_model_key(ext, win: Gtk.Window, active: str) -> str:
+    if active == VIEW_COLUMN:
+        return "column"
+    panel = ext._active_panel_state(win)
+    if panel and panel.get("visible_view") == "diskinfo":
+        return "computer"
+    location = ext._slot_location(win)
+    if location is None:
+        return "native"
+    uri = location.get_uri()
+    if uri.startswith("trash:"):
+        return "trash"
+    if uri.startswith("recent:"):
+        return "recent"
+    if uri.startswith("x-nautilus-search:"):
+        return "search"
+    return "native"
+
+
 def _sync_view_options_model(ext, win: Gtk.Window, active: str) -> None:
-    """Expose the correct sort action without changing Nautilus's model."""
+    """Select the owned View Options model for the active context."""
     state = ext._windows.get(win)
     if state is None:
         return
     popover = state.get("view_options_popover")
-    native_model = state.get("native_view_options_model")
-    column_model = state.get("column_view_options_model")
-    if popover is None or native_model is None or column_model is None:
+    models = state.get("owned_view_options_models")
+    if not isinstance(popover, Gtk.PopoverMenu) or models is None:
         return
-    wanted = column_model if active == VIEW_COLUMN else native_model
-    if state.get("active_view_options_model") is wanted:
-        return
+    key = _owned_options_model_key(ext, win, active)
+    wanted = models[key]
+    if key == "computer":
+        action = state.get("computer_sort_action")
+        if action is not None:
+            action.set_state(GLib.Variant("(sb)", _native_sort_target(ext, "computer:///")))
+
+    if state.get("active_view_options_model") is not wanted:
+        button = state.get("view_options_menu_button")
+        if button is not None and button.get_active():
+            button.set_active(False)
+        popover.set_menu_model(wanted)
+        state["active_view_options_model"] = wanted
+        _log(f"owned View Options model active={active!r} key={key!r}")
+
     button = state.get("view_options_menu_button")
-    if button is not None and button.get_active():
-        button.set_active(False)
-    popover.set_menu_model(wanted)
-    state["active_view_options_model"] = wanted
-    _log(f"column sort options model active={active!r}")
+    if button is not None:
+        # The owned menu remains useful while the native slot is settling and
+        # must not inherit the old control's transient insensitive state.
+        button.set_sensitive(True)
 
 
 def _build_view_switcher(ext, win: Gtk.Window) -> Gtk.Widget:
@@ -3271,13 +3584,9 @@ def refresh_column_view_chrome(ext, win: Gtk.Window) -> None:
 
 
 def detach_column_view_entry(ext, win: Gtk.Window, state: dict | None = None) -> None:
-    """Restore the native menu contract before this window is destroyed."""
+    """Detach the action group backing the owned View Options popover."""
     state = state or ext._windows.get(win)
     if state is None:
         return
-    popover = state.get("view_options_popover")
-    native_model = state.get("native_view_options_model")
-    if popover is not None and native_model is not None:
-        popover.set_menu_model(native_model)
     if state.get("column_sort_action_group") is not None:
         win.insert_action_group(_COLUMN_SORT_ACTION_GROUP, None)

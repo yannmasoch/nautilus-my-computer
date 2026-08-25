@@ -2,7 +2,7 @@
 icon zoom, hidden files. Consolidates reads that used to be scattered ad hoc
 GSettings/GVfs-metadata calls across main.py into one cached object, so a
 second view module (Column View) can read the same values without duplicating
-the GSettings handles or native View Options action watching.
+the GSettings handles.
 
 `NautilusPrefs` takes `ext` as an explicit parameter on its watcher methods,
 same as every other target module -- it does not import main.py.
@@ -10,7 +10,7 @@ same as every other target module -- it does not import main.py.
 
 from __future__ import annotations
 
-from gi.repository import Adw, Gio, GLib, Gtk
+from gi.repository import Adw, Gio, Gtk
 
 from nautilus_my_computer.common import (
     _GRID_ZOOM_PX,
@@ -205,30 +205,6 @@ class NautilusPrefs:
         _log(f"zoom changed → {settings.get_string('default-zoom-level')}")
         ext._repopulate_visible()
 
-    def watch_sort_button(self, ext, nautilus_win: Gtk.Window, *, on_sort_changed) -> None:
-        """Sample native folder metadata when View Options closes.
-
-        The menu's action group is private, so its sort signal is not exposed
-        to Python extensions. The known MenuButton active state gives a stable
-        lifecycle: capture the target URI and baseline on open, then read that
-        same URI once after the user's selection closes the popover.
-        """
-        state = ext._windows.get(nautilus_win)
-        if not state or state.get("sort_watch_button"):
-            return
-        # Once inject_column_view_entry has run, the view-options popover
-        # lives on our own MenuButton (the native split button's popover was
-        # moved there), not on the native MenuButton find_sort_button locates.
-        btn = state.get("view_options_menu_button") or self.find_sort_button(nautilus_win)
-        if btn is None:
-            _log("sort button not found in toolbar")
-            return
-        btn.connect(
-            "notify::active", self._on_sort_button_active, ext, nautilus_win, on_sort_changed
-        )
-        state["sort_watch_button"] = btn
-        _log(f"sort button focus watch attached ({type(btn).__name__})")
-
     def find_sort_button(self, nautilus_win: Gtk.Window):
         """Find the GtkMenuButton inside NautilusViewControls (the sort/view popover button)."""
         # NautilusViewControls has no real buildable_id (auto-generated) and no css class.
@@ -261,59 +237,3 @@ class NautilusPrefs:
                         _log("find_sort_button: matched via structural nav (NautilusViewControls)")
                         return w
         return None
-
-    def _on_sort_button_active(
-        self, btn: Gtk.MenuButton, _param, ext, nautilus_win: Gtk.Window, on_sort_changed
-    ) -> None:
-        """Capture a baseline on open and resolve the selected sort on close."""
-        state = ext._windows.get(nautilus_win)
-        if state is None:
-            return
-        if btn.get_active():
-            target = ext._sort_watch_target(nautilus_win)
-            if target is None:
-                return
-            raw = self.folder_sort(target)
-            state["sort_watch_uri"] = target
-            state["sort_watch_snapshot"] = (raw, self._effective_sort_from_override(raw))
-            _log(f"view.sort watch armed uri={target!r} baseline={state['sort_watch_snapshot']!r}")
-            return
-
-        uri = state.pop("sort_watch_uri", None)
-        previous = state.pop("sort_watch_snapshot", None)
-        if uri is None:
-            GLib.idle_add(ext._restore_column_focus_after_sort, nautilus_win, btn)
-            return
-        _log(f"view.sort popover closed; deferring selected-sort read uri={uri!r}")
-        GLib.idle_add(
-            self._read_sort_after_popover_close,
-            ext,
-            nautilus_win,
-            btn,
-            uri,
-            previous,
-            on_sort_changed,
-        )
-
-    def _read_sort_after_popover_close(
-        self,
-        ext,
-        nautilus_win: Gtk.Window,
-        btn: Gtk.MenuButton,
-        uri: str,
-        previous: tuple[tuple[str, bool] | None, tuple[str, bool]] | None,
-        on_sort_changed,
-    ) -> bool:
-        """Read after the menu click has dispatched its native sort action."""
-        raw = self.folder_sort(uri)
-        current = (raw, self._effective_sort_from_override(raw))
-        _log(
-            "view.sort chosen after popover close "
-            f"uri={uri!r} raw={raw!r} effective={current[1]!r} "
-            f"baseline={previous!r} changed={current != previous}"
-        )
-        if current != previous:
-            on_sort_changed(nautilus_win, uri, raw, current[1])
-        _log("view.sort watch disarmed")
-        GLib.idle_add(ext._restore_column_focus_after_sort, nautilus_win, btn)
-        return GLib.SOURCE_REMOVE

@@ -89,7 +89,6 @@ DEBUG_SIDEBAR_MODE = _sidebar_mode(
     DEBUG_NATIVE_SIDEBAR_ACTIVE
 )  # inner-wrapper default | native-list | native-list-bottom | outer-wrapper
 DEBUG_PATHBAR_ACTIVE = _flag("MC_PATHBAR")  # top URL bar: chip icon pinning
-DEBUG_SORT_WATCH_ACTIVE = _flag("MC_SORT_WATCH")  # View Options close: Column View focus restore
 DEBUG_LOCATION_FILTER_ACTIVE = _flag("MC_LOCATION_FILTER")  # address bar: card filter watch
 DEBUG_SELFTEST = _flag("MC_SELFTEST", default=False)  # in-process navigation self-test driver
 DETACH_SETTINGS_WINDOW = False  # testing toggle: True opens settings as a standalone window
@@ -657,8 +656,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     # this file) can keep calling ext._method(...) while the implementation lives
     # in my_computer_view.py. See CLAUDE.md "Project structure".
 
-    def _populate(self, win: Gtk.Window) -> None:
-        my_computer_view._populate(self, win)
+    def _populate(self, win: Gtk.Window, sort: tuple[str, bool] | None = None) -> None:
+        my_computer_view._populate(self, win, sort)
 
     def _build_panel(self, win: Gtk.Window) -> tuple:
         return my_computer_view._build_panel(self, win)
@@ -803,7 +802,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             "view_switcher": None,
             "view_options_menu_button": None,
             "header_motion": None,  # Gtk.EventControllerMotion on the header bar
-            "sort_watch_button": None,  # Gtk.MenuButton with the shared sort metadata watch
             "location_filter_watch_attached": False,
             # A file-picker dialog should never auto-navigate itself to
             # computer:/// on open - that heuristic is normal-window-only.
@@ -1123,44 +1121,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _active_slot_showing_column(self, win: Gtk.Window) -> bool:
         return column_view.is_active_slot_showing_column(self, win)
 
-    def _sort_watch_target(self, win: Gtk.Window) -> str | None:
-        """URI whose native sort View Options will change in this window."""
-        state = self._active_panel_state(win)
-        if state and state.get("visible_view") == VIEW_DISKINFO:
-            return DISKS_URI
-        return None
-
-    def _on_native_sort_metadata_changed(
-        self,
-        win: Gtk.Window,
-        uri: str,
-        raw_sort: tuple[str, bool] | None,
-        effective_sort: tuple[str, bool],
-    ) -> None:
-        """Apply one popover-close sort change to its original window and URI."""
-        if self._sort_watch_target(win) != uri:
-            _log(f"sort metadata change ignored after target moved uri={uri!r}")
-            return
-        state = self._active_panel_state(win)
-        if state and state.get("visible_view") == VIEW_DISKINFO:
-            _log(f"sort metadata apply disk uri={uri!r} sort={effective_sort!r}")
-            self._populate(win)
-            return
-
-    def _arm_sort_watch(self, win: Gtk.Window) -> None:
-        if not DEBUG_SORT_WATCH_ACTIVE:
-            _log("sort button focus watch disabled by MC_SORT_WATCH=0")
-            return
-        _log("sort button focus and popover-close watch arming")
-        GLib.idle_add(
-            lambda w=win: (
-                self._nautilus_prefs.watch_sort_button(
-                    self, w, on_sort_changed=self._on_native_sort_metadata_changed
-                )
-                or False
-            )
-        )
-
     def _show_column_view(self, win: Gtk.Window) -> None:
         """Ctrl+3: tmp shortcut, replaces the old location-trigger hack. Not
         a toggle -- always (re)opens Column View, reconciled to wherever
@@ -1183,7 +1143,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         _log(f"_show_column_view: entering column view at root_uri={root_uri!r}")
         column_view.enter_column_view(self, win, root_uri)
         column_view.refresh_column_view_chrome(self, win)
-        self._arm_sort_watch(win)
         self._set_default_view(column_view.VIEW_COLUMN)
 
     @staticmethod
@@ -1442,9 +1401,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             # the active tab arrives at the computer view.
             if DEBUG_PATHBAR_ACTIVE:
                 GLib.idle_add(lambda w=win: self._fix_pathbar_icon(w) or False)
-            # _arm_sort_watch checks DEBUG_SORT_WATCH_ACTIVE itself and is a
-            # no-op when this window already has the View Options focus watch.
-            self._arm_sort_watch(win)
             if DEBUG_LOCATION_FILTER_ACTIVE:
                 GLib.idle_add(lambda w=win: self._attach_location_filter_watch(w) or False)
         elif state.get("_chrome_in_view"):
@@ -2796,7 +2752,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _attach_file_view_context_menu(self, win: Gtk.Window) -> None:
         file_view_menu.attach_file_view_context_menu(self, win)
 
-    # ── Column view prototype (native view-options popover) ─────────────────
+    # ── Column View toolbar integration ─────────────────────────────────────
 
     def _inject_column_view_entry(self, win: Gtk.Window) -> None:
         column_view.inject_column_view_entry(self, win)
