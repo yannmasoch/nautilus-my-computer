@@ -2073,6 +2073,12 @@ class MyComputerColumn(Gtk.ScrolledWindow):
             # reaches the "if (reversed) result = -result" branch.
             entries.sort(key=lambda e: not e.is_dir)
 
+        _log(
+            "view.sort column populated "
+            f"uri={self.folder_uri!r} sort={self._sort!r} "
+            f"first_10={[entry.display_name for entry in entries[:10]]!r}"
+        )
+
         base = Gio.File.new_for_uri(self.folder_uri)
         items = [
             _ColumnRowItem(
