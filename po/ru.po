@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-08-25 15:20-0700\n"
-"PO-Revision-Date: 2026-07-30 05:22+0000\n"
+"PO-Revision-Date: 2026-09-24 07:48+0000\n"
 "Last-Translator: Kirill Fish\n"
 "Language-Team: Russian\n"
 "Language: ru\n"
@@ -15,31 +15,31 @@ msgstr ""
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
-msgstr ""
+msgstr "Изменить значок"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Search icons…"
-msgstr ""
+msgstr "Поиск значков…"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Reset"
-msgstr ""
+msgstr "Сброс"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select"
-msgstr ""
+msgstr "Выбрать"
 
 #: nautilus_my_computer/column_view.py
 msgid "Beta"
-msgstr ""
+msgstr "Бета"
 
 #: nautilus_my_computer/column_view.py
 msgid "Early access feature. It may contain bugs or inconsistencies."
-msgstr ""
+msgstr "Особенность ранней версии. Может содержать баги и несоответствия."
 
 #: nautilus_my_computer/column_view.py
 msgid "Column View"
-msgstr ""
+msgstr "Колоночный вид"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
@@ -163,7 +163,7 @@ msgstr[2] "через {n} лет"
 
 #: nautilus_my_computer/components.py
 msgid "Rename"
-msgstr ""
+msgstr "Переименовать"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Tab"
@@ -179,45 +179,45 @@ msgstr "Открыть с помощью…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Remove from Bookmarks"
-msgstr ""
+msgstr "Удалить из закладок"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Add to Bookmarks"
-msgstr ""
+msgstr "Добавить в закладки"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Unpin from My Computer"
-msgstr ""
+msgstr "Открепить из Моего компьютера"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Pin to My Computer"
-msgstr ""
+msgstr "Закрепить в Моем компьютере"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
-msgstr ""
+msgstr "Новая папка…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Document"
-msgstr ""
+msgstr "Новый документ"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in Terminal"
-msgstr ""
+msgstr "Открыть в терминале"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Rename…"
-msgstr ""
+msgstr "Переименовать…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Compress…"
-msgstr ""
+msgstr "Сжатие…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
-msgstr ""
+msgstr "Переместить в корзину"
 
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
@@ -229,11 +229,11 @@ msgstr "Открыть Мой компьютер"
 
 #: nautilus_my_computer/main.py
 msgid "Recommended Apps"
-msgstr ""
+msgstr "Рекомендованные приложения"
 
 #: nautilus_my_computer/main.py
 msgid "Other Apps"
-msgstr ""
+msgstr "Другие приложения"
 
 #: nautilus_my_computer/main.py
 msgid "General"
@@ -384,56 +384,56 @@ msgstr "{free} свободно из {total}"
 
 #: nautilus_my_computer/widgets.py
 msgid "Program"
-msgstr ""
+msgstr "Программа"
 
 #: nautilus_my_computer/widgets.py
 msgid "Audio"
-msgstr ""
+msgstr "Звук"
 
 #: nautilus_my_computer/widgets.py
 msgid "Font"
-msgstr ""
+msgstr "Шрифт"
 
 #: nautilus_my_computer/widgets.py
 msgid "Image"
-msgstr ""
+msgstr "Изображение"
 
 #: nautilus_my_computer/widgets.py
 msgid "Archive"
-msgstr ""
+msgstr "Архив"
 
 #: nautilus_my_computer/widgets.py
 msgid "Markup"
-msgstr ""
+msgstr "Разметка"
 
 #: nautilus_my_computer/widgets.py
 msgid "Text"
-msgstr ""
+msgstr "Текст"
 
 #: nautilus_my_computer/widgets.py
 msgid "Video"
-msgstr ""
+msgstr "Видео"
 
 #: nautilus_my_computer/widgets.py
 msgid "Contacts"
-msgstr ""
+msgstr "Контакты"
 
 #: nautilus_my_computer/widgets.py
 msgid "Calendar"
-msgstr ""
+msgstr "Календарь"
 
 #: nautilus_my_computer/widgets.py
 msgid "Document"
-msgstr ""
+msgstr "Документ"
 
 #: nautilus_my_computer/widgets.py
 msgid "Presentation"
-msgstr ""
+msgstr "Презентация"
 
 #: nautilus_my_computer/widgets.py
 msgid "Spreadsheet"
-msgstr ""
+msgstr "Таблица"
 
 #: nautilus_my_computer/widgets.py
 msgid "Dimensions"
-msgstr ""
+msgstr "Измерения"
