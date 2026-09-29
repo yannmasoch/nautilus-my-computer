@@ -2186,16 +2186,30 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             )
         search_root = places_sidebar or nautilus_sidebar
 
+        # Our own injected Computer listbox also carries .navigation-sidebar, so
+        # it must never be returned here -- picking it up would make a second
+        # injection pass treat it as the native list.
+        def _is_ours(w) -> bool:
+            return w.get_name() == "sidebar_my_computer_listbox"
+
         for w in _all_widgets(search_root):
-            if isinstance(w, Gtk.ListBox) and w.has_css_class("navigation-sidebar"):
+            if (
+                isinstance(w, Gtk.ListBox)
+                and w.has_css_class("navigation-sidebar")
+                and not _is_ours(w)
+            ):
                 return w
 
         for w in _all_widgets(search_root):
-            if isinstance(w, Gtk.ListBox) and w.has_css_class("places-sidebar-list"):
+            if (
+                isinstance(w, Gtk.ListBox)
+                and w.has_css_class("places-sidebar-list")
+                and not _is_ours(w)
+            ):
                 return w
 
         for w in _all_widgets(search_root):
-            if isinstance(w, Gtk.ListBox):
+            if isinstance(w, Gtk.ListBox) and not _is_ours(w):
                 _log("_find_sidebar_listbox: no known sidebar class found, using first GtkListBox")
                 return w
         return None
@@ -2613,7 +2627,15 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             return False
 
         # Guard: skip if we already wrapped this sidebar (double-injection).
+        # The wrapper is a GtkBox, which is not a GtkScrollable, so
+        # gtk_scrolled_window_set_child() auto-creates a GtkViewport around it.
+        # get_child() therefore returns that viewport, not the wrapper, so the
+        # name has to be checked through it -- otherwise the guard never fires,
+        # every pass re-wraps, and set_child() destroys the previous wrapper
+        # together with Nautilus' native listbox inside it (empty sidebar).
         existing = native_scrolled_window.get_child()
+        if isinstance(existing, Gtk.Viewport):
+            existing = existing.get_child()
         if existing is not None and existing.get_name() == "sidebar_my_computer_wrapper":
             _log("_inject_sidebar_link: wrapper already present, skipping")
             return True
