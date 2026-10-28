@@ -17,6 +17,8 @@ My Computer for Nautilus, what GNOME Files should have always been
 <br>
 
 <a href="https://itsfoss.com/nautilus-my-computer/" target="_blank" rel="noopener noreferrer"><img src="https://itsfoss.com/assets/images/badges/itsfoss-linux-app-of-the-week-badge-dark.png" alt="It's FOSS Linux App of the Week" width="40%"></a>
+<br>
+<a href="https://www.omgubuntu.co.uk/2026/10/nautilus-my-computer-view" target="_blank" rel="noopener noreferrer">Featured on OMG! Ubuntu</a>
 
 </div>
 
