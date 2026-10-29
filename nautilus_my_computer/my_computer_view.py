@@ -33,7 +33,6 @@ from gi.repository import Gdk, Gio, GLib, Gtk
 
 from nautilus_my_computer import common, preferred_folders
 from nautilus_my_computer.common import (
-    _CARD_WIDTH,
     _DISK_CARD_ROW_SPACING,
     _DISK_CARD_SPACING,
     _FLOW_COLS_GRID,
@@ -2013,7 +2012,6 @@ def _populate_slot(ext, slot, sort: tuple[str, bool] | None = None) -> None:
             col_spacing=_DISK_CARD_SPACING,
             row_spacing=_DISK_CARD_ROW_SPACING,
             homogeneous=True,
-            max_card_width=_CARD_WIDTH,
         )
         section_flows.append(section.flow)
 

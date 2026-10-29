@@ -1022,40 +1022,6 @@ class MyComputerToggleButton(Gtk.Box):
             btn.set_child(self._make_segment_image(icon))
 
 
-class MyComputerCappedGridFlowBox(Gtk.FlowBox):
-    """Homogeneous FlowBox that raises its column count as the window widens,
-    capping each card's stretched width at max_card_width instead of letting a
-    single row of cards grow past it -- same trigger native Nautilus grid view
-    uses to add a column, applied to our homogeneous card cells."""
-
-    __gtype_name__ = "MyComputerCappedGridFlowBox"
-
-    def __init__(self, max_card_width: int, spacing: int, hard_max_cols: int) -> None:
-        super().__init__()
-        self._max_card_width = max_card_width
-        self._spacing = spacing
-        self._hard_max_cols = hard_max_cols
-        self.set_max_children_per_line(hard_max_cols)
-
-    def _cols_for_width(self, width: int) -> int:
-        step = self._max_card_width + self._spacing
-        cols = -(-(width + self._spacing) // step) if step > 0 else 1  # ceil division
-        return max(1, min(cols, self._hard_max_cols))
-
-    def do_measure(self, orientation, for_size):
-        if orientation == Gtk.Orientation.VERTICAL and for_size > 0:
-            self.set_max_children_per_line(self._cols_for_width(for_size))
-        minimum, natural, _min_bl, _nat_bl = Gtk.FlowBox.do_measure(self, orientation, for_size)
-        # A FlowBox has no baseline. Chaining up through PyGObject hands the
-        # baseline out-params back as 0 instead of leaving them at -1, and GTK
-        # warns on any non -1 horizontal baseline.
-        return minimum, natural, -1, -1
-
-    def do_size_allocate(self, width: int, height: int, baseline: int) -> None:
-        self.set_max_children_per_line(self._cols_for_width(width))
-        Gtk.FlowBox.do_size_allocate(self, width, height, baseline)
-
-
 class MyComputerCardGroup(Gtk.Box):
     """A heading + FlowBox of cards. Dedups the section setup shared by the
     Preferred Folders block and each disk group in _populate()."""
@@ -1074,7 +1040,6 @@ class MyComputerCardGroup(Gtk.Box):
         row_spacing: int,
         always_grid: bool = False,
         homogeneous: bool = False,
-        max_card_width: int = 0,
     ) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         self._ext = ext
@@ -1088,14 +1053,9 @@ class MyComputerCardGroup(Gtk.Box):
         self.append(heading)
 
         is_list = view_mode == "list-view" and not always_grid
-        is_capped_grid = homogeneous and max_card_width > 0 and not is_list
-        if is_capped_grid:
-            self.flow = MyComputerCappedGridFlowBox(max_card_width, col_spacing, max_cols)
-        else:
-            self.flow = Gtk.FlowBox()
+        self.flow = Gtk.FlowBox()
         self.flow.set_homogeneous(homogeneous)
-        if not is_capped_grid:
-            self.flow.set_max_children_per_line(1 if is_list else max_cols)
+        self.flow.set_max_children_per_line(1 if is_list else max_cols)
         self.flow.set_column_spacing(col_spacing)
         self.flow.set_row_spacing(row_spacing)
         self.flow.set_margin_bottom(12)

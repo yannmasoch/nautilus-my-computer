@@ -887,8 +887,8 @@ def _folder_card_width() -> int:
 # ── Card geometry constants ──────────────────────────────────────────────────────
 # (disk icon px now comes from _disk_icon_size()/_disk_list_icon_size() above)
 _FLOW_COLS_GRID = 8  # max columns in grid (FlowBox) view
-_CARD_WIDTH = 280  # disk grid card width cap (px); beyond this,
-# the grid gains another column instead of stretching cards further
+_CARD_WIDTH = 280  # disk grid card minimum width (px); the FlowBox adds a column
+# whenever one more card of this width fits
 _LIST_BAR_MAX_WIDTH = 240  # max width (px) of the usage bar at the end of a list-view row
 _DISK_CARD_SPACING = 16  # disk card FlowBox column spacing (px)
 _DISK_CARD_ROW_SPACING = 6  # disk card FlowBox row spacing (px)
