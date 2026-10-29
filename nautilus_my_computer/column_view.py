@@ -905,27 +905,55 @@ class _ColumnViewHost:
             )
         return items
 
+
     def _terminal_action(self, uri: str):
-        """Return a launcher for an installed GNOME terminal, if one is available."""
+        """Return a launcher for the preferred terminal or a GNOME fallback."""
         if not uri.startswith("file://"):
             return None
+
+        # Convert the URI to a local path for xdg-terminal-exec.
+        path = Gio.File.new_for_uri(uri).get_path()
+        # Prefer the user's XDG terminal launcher when it is installed.
+        terminal_exec = GLib.find_program_in_path("xdg-terminal-exec")
+
+        # Keep known GNOME terminals as a fallback.
         terminal_ids = {
             "org.gnome.Console.desktop",
             "org.gnome.Terminal.desktop",
             "org.gnome.Ptyxis.desktop",
         }
-        terminal = next(
+
+        fallback_terminal = next(
             (app for app in Gio.AppInfo.get_all() if app.get_id() in terminal_ids),
             None,
         )
-        if terminal is None:
+
+        # XDG launch requires both the executable and a local path.
+        can_use_xdg = terminal_exec is not None and path is not None
+
+        # Hide the action when neither launch method is available.
+        if not can_use_xdg and fallback_terminal is None:
             return None
 
         def open_terminal() -> None:
-            try:
-                terminal.launch_uris([uri], None)
-            except GLib.Error as error:
-                _log(f"Could not open terminal for {uri!r}: {error.message}")
+            if can_use_xdg:
+                try:
+                    # Pass the working directory without invoking a shell.
+                    Gio.Subprocess.new(
+                        [terminal_exec, f"--dir={path}"],
+                        Gio.SubprocessFlags.NONE,
+                    )
+                    return
+                except GLib.Error as error:
+                    _log("Could not open terminal through xdg-terminal-exec "
+                        f"for {uri!r}: {error.message}; trying fallback")
+
+            # Fall back when XDG is unavailable or its process cannot be started.
+            if fallback_terminal is not None:
+                try:
+                    fallback_terminal.launch_uris([uri], None)
+                except GLib.Error as error:
+                    _log(f"Could not open terminal for {uri!r}: {error.message}")
 
         return open_terminal
 
