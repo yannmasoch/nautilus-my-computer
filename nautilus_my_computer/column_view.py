@@ -170,13 +170,19 @@ _NATIVE_TOGGLE_ACTION = "slot.files-view-mode-toggle"
 # keep the layout arithmetic below legible.
 COLUMN_WIDTH = _COLUMN_WIDTH
 PREVIEW_WIDTH = _COLUMN_PREVIEW_WIDTH
-HANDLE_WIDTH_ESTIMATE = 12
+# Fallback until a real Gtk.Paned handle has been allocated and measured (see
+# _ColumnViewHost._measure_handle_width). 1 px is the Adwaita default with
+# wide_handle off; other themes are picked up by the live measurement.
+HANDLE_WIDTH_ESTIMATE = 1
+# Upper bound for a plausible measured handle width, to ignore a transient
+# mid-reparent reading.
+_HANDLE_WIDTH_MAX = 16
 # Generous hit margin (in px, either side of a paned's current position)
 # used to tell a genuine press-and-drag on the handle apart from GTK
 # repositioning the handle itself during layout (see
 # _on_paned_handle_pressed/_on_paned_position_changed). Errs wide rather
-# than narrow since HANDLE_WIDTH_ESTIMATE above is itself only an estimate
-# (theme-dependent, confirmed narrower than expected in prior measurement).
+# than narrow since the handle width is theme-dependent (confirmed narrower than
+# the old 12 px guess: 1 px on Adwaita).
 HANDLE_HIT_SLOP = 16
 # Gtk.Adjustment can emit several "changed" events in a quick burst when
 # several rebuilds/relayouts land close together (e.g. a resize settling
@@ -427,6 +433,7 @@ class _ColumnViewHost:
         # Outermost paned of the chain, built by _rebuild_chain.
         self.root: Gtk.Widget | None = None
         self._multi_preview_idle = 0
+        self._handle_width = HANDLE_WIDTH_ESTIMATE
 
         self.columns = self._build_columns()
         self.preview_column = self._make_preview_column()
@@ -2562,7 +2569,22 @@ class _ColumnViewHost:
             self._scroll_animation = None
         self.scroller.get_hadjustment().set_value(0)
 
+    def _measure_handle_width(self) -> None:
+        """Read the real Gtk.Paned handle width from an allocated paned: it is
+        whatever its allocation leaves between the two children. Updates
+        self._handle_width only for a plausible reading, so the estimate
+        stays in place until GTK has actually laid a paned out."""
+        for paned in self.paneds:
+            start, end = paned.get_start_child(), paned.get_end_child()
+            if start is None or end is None:
+                continue
+            width = paned.get_width() - start.get_width() - end.get_width()
+            if 0 < width <= _HANDLE_WIDTH_MAX:
+                self._handle_width = width
+                return
+
     def _sync_root_width(self) -> None:
+        self._measure_handle_width()
         adj = self.scroller.get_hadjustment()
         viewport_width = self.scroller.get_width()
         viewport_height = self.scroller.get_height()
@@ -2611,7 +2633,7 @@ class _ColumnViewHost:
         relaid it out, so it reads a stale/zeroed position. This has no such
         settling delay, so it's safe to call any time relative to
         _rebuild_chain()."""
-        return sum(c.width for c in self.columns[:index]) + HANDLE_WIDTH_ESTIMATE * index
+        return sum(c.width for c in self.columns[:index]) + self._handle_width * index
 
     def _column_fully_visible(self, index: int) -> bool:
         """True if self.columns[index] is entirely within the currently
@@ -2629,12 +2651,12 @@ class _ColumnViewHost:
     def _widget_canvas_x(self, widget: Gtk.Widget) -> float | None:
         """True on-canvas x position of widget's left edge, read directly
         from GTK's own layout rather than arithmetic through each column's
-        .width/HANDLE_WIDTH_ESTIMATE. Relative to self.root, which doesn't itself
+        .width/self._handle_width. Relative to self.root, which doesn't itself
         get shifted by scrolling (only its parent aligner does, via
         _MillerCanvas._reposition's move()), so this is already canvas-space
         with no scroll offset to subtract back out. Used for the actual
         scroll landing position (see _apply_pending_scroll) since that's
-        where a HANDLE_WIDTH_ESTIMATE mismatch is most visible -- it's only
+        where a handle width mismatch is most visible -- it's only
         ever a guess at a Gtk.Paned handle's real rendered width, and the
         error compounds with every handle counted. Returns None if widget
         isn't part of self.root's hierarchy or hasn't been allocated yet.
