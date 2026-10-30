@@ -1385,6 +1385,9 @@ class _ColumnViewHost:
             self._native_cut_observer.stop()
 
     def _apply_native_cut_uris(self, uris: set[str]) -> None:
+        # An empty native view does not mean the clipboard was cleared.
+        if not uris:
+            return
         self._set_miller_clipboard_state(sorted(uris), cut=bool(uris))
 
     def _set_cut_rows(self) -> None:
@@ -1427,8 +1430,7 @@ class _ColumnViewHost:
     ) -> None:
         """Paste a Nautilus Copy file list after an explicit user request."""
         try:
-            value = clipboard.read_value_finish(result)
-            file_list = value.get_boxed()
+            file_list = clipboard.read_value_finish(result)
             uris = [file.get_uri() for file in file_list.get_files()]
         except (GLib.Error, AttributeError, TypeError) as error:
             _log(f"Could not read clipboard files for paste: {error}")
@@ -1564,10 +1566,13 @@ class _ColumnViewHost:
     def paste_into_focused_folder(self) -> bool:
         """Paste into the focused Miller folder (the Ctrl+V target)."""
         column = self._focused_column()
-        item = column.selected_item() if column is not None else None
-        if item is None or not item.is_dir or not self._clipboard_has_pasteable_files():
+        if column is None or not self._clipboard_has_pasteable_files():
             return False
-        self._paste_into_folder(item.uri)
+        item = column.selected_item()
+        if item is not None and not item.is_dir:
+            return False
+        destination_uri = item.uri if item is not None else column.folder_uri
+        self._paste_into_folder(destination_uri)
         return True
 
     def rename_focused_folder(self) -> bool:
