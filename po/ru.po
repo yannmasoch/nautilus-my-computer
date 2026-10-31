@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-26 08:57-0700\n"
+"POT-Creation-Date: 2026-11-01 00:06+0100\n"
 "PO-Revision-Date: 2026-09-24 07:48+0000\n"
 "Last-Translator: Kirill Fish\n"
 "Language-Team: Russian\n"
@@ -307,6 +307,26 @@ msgid "Choose which locations appear on the sidebar."
 msgstr "Выберите, какие места будут отображаться на боковой панели."
 
 #: nautilus_my_computer/main.py
+msgid "Drives"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Show disk usage"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Show a usage bar under each mounted drive."
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Warn when fuller than (%)"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Turn the usage bar red at this percentage used."
+msgstr ""
+
+#: nautilus_my_computer/main.py
 msgid "Bar Color"
 msgstr "Цвет полоски"
 
@@ -386,14 +406,14 @@ msgstr "Внешние"
 msgid "Disc"
 msgstr "Диски"
 
-#: nautilus_my_computer/widgets.py
-msgid "Not mounted"
-msgstr "Не присоединён"
-
-#: nautilus_my_computer/widgets.py
+#: nautilus_my_computer/sidebar_usage.py nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{free} free of {total}"
 msgstr "{free} свободно из {total}"
+
+#: nautilus_my_computer/widgets.py
+msgid "Not mounted"
+msgstr "Не присоединён"
 
 #: nautilus_my_computer/widgets.py
 msgid "Program"
