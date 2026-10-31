@@ -32,6 +32,7 @@ from nautilus_my_computer import (
     my_computer_view,
     nautilus_prefs,
     preferred_folders,
+    sidebar_usage,
 )
 from nautilus_my_computer.common import (
     ACTION_OPEN_LOCATION,
@@ -798,6 +799,13 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             display,
             css_sidebar,
             Gtk.STYLE_PROVIDER_PRIORITY_USER + 1,
+        )
+        css_sidebar_usage = Gtk.CssProvider()
+        css_sidebar_usage.load_from_data(sidebar_usage.CSS)
+        Gtk.StyleContext.add_provider_for_display(
+            display,
+            css_sidebar_usage,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
         )
         if self._bar_css_display is None:
             self._bar_css_display = display
@@ -2499,6 +2507,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         self._apply_native_place_visibility(native_listbox, boundary_separator)
         self._attach_bookmark_context_menus(win, native_listbox)
         self._apply_bookmark_icons(native_listbox)
+        sidebar_usage.apply_usage_bars(native_listbox)
+        sidebar_usage.start_refresh(self)
         self._watch_native_list_changes(win, native_listbox)
 
         self._wire_computer_drop_dimming(wrapper, computer_row)
@@ -2577,6 +2587,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             )
             self._attach_bookmark_context_menus(win, native_listbox)
             self._apply_bookmark_icons(native_listbox)
+            sidebar_usage.apply_usage_bars(native_listbox)
             return GLib.SOURCE_REMOVE
 
         def _on_items_changed(*_a) -> None:
