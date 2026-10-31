@@ -819,12 +819,10 @@ def _repin_icon(img: Gtk.Image, icon_name: str) -> None:
     img._diskinfo_restoring = False
 
 
-def _find_row_start_image(row: Gtk.Widget) -> Gtk.Image | None:
-    """Find a NautilusSidebarRow's start-icon Gtk.Image, skipping the eject
-    button's image (same in_button walk as _build_place_sidebar_row's
-    _pin_row_icon)."""
+def _find_row_child(row: Gtk.Widget, cls: type) -> Gtk.Widget | None:
+    """First `cls` widget in a NautilusSidebarRow that is not inside a button"""
     for w in _all_widgets(row):
-        if not isinstance(w, Gtk.Image):
+        if not isinstance(w, cls):
             continue
         parent = w.get_parent()
         in_button = False
@@ -836,6 +834,13 @@ def _find_row_start_image(row: Gtk.Widget) -> Gtk.Image | None:
         if not in_button:
             return w
     return None
+
+
+def _find_row_start_image(row: Gtk.Widget) -> Gtk.Image | None:
+    """Find a NautilusSidebarRow's start-icon Gtk.Image, skipping the eject
+    button's image (same in_button walk as _build_place_sidebar_row's
+    _pin_row_icon)."""
+    return _find_row_child(row, Gtk.Image)
 
 
 # ── Zoom -> icon px ──────────────────────────────────────────────────────────────
