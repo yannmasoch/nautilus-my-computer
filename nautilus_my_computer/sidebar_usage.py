@@ -7,6 +7,7 @@ from nautilus_my_computer.common import _, _find_row_child, _format_size, _log
 _BAR_CLASS = "mc-sidebar-usage-bar"
 _BOX_NAME = "mc_sidebar_usage_box"
 _REFRESH_SECONDS = 30
+SETTING_KEY = "sidebar-show-disk-usage"
 _ATTRS = f"{Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE},{Gio.FILE_ATTRIBUTE_FILESYSTEM_FREE}"
 
 # Thib bar coloured using .diskinfo-bar rule
@@ -107,18 +108,32 @@ def _query(bar: Gtk.LevelBar, mount: Gio.Mount) -> None:
     root.query_filesystem_info_async(_ATTRS, GLib.PRIORITY_LOW, None, _on_info_ready, bar)
 
 
-def apply_usage_bars(native_listbox: Gtk.ListBox) -> None:
-    """Add / refresh a usage bar on every mounted drive row."""
+def enabled(gsettings) -> bool:
+    return gsettings is None or gsettings.get_boolean(SETTING_KEY)
+
+
+def apply_usage_bars(native_listbox: Gtk.ListBox, show: bool = True) -> None:
+    """Add / refresh a usage bar on every mounted drive row, or hide them all."""
     for row in native_listbox:
-        mount = _row_mount(row)
+        mount = _row_mount(row) if show else None
         if mount is None:
             bar = getattr(row, "_mc_usage_bar", None)
             if bar is not None:
-                bar.set_visible(False)
+                _show_usage(bar, None)
             continue
         bar = _ensure_bar(row)
         if bar is not None:
             _query(bar, mount)
+
+
+def refresh_all(ext, only_mapped: bool = False) -> bool:
+    """Re-apply the bars in every window, e.g. after the setting changes."""
+    show = enabled(ext._gsettings)
+    for state in list(ext._windows.values()):
+        listbox = state.get("sidebar_listbox")
+        if listbox is not None and (listbox.get_mapped() or not only_mapped):
+            apply_usage_bars(listbox, show)
+    return GLib.SOURCE_REMOVE
 
 
 def start_refresh(ext) -> None:
@@ -128,10 +143,8 @@ def start_refresh(ext) -> None:
         return
 
     def _tick() -> bool:
-        for state in list(ext._windows.values()):
-            listbox = state.get("sidebar_listbox")
-            if listbox is not None and listbox.get_mapped():
-                apply_usage_bars(listbox)
+        if enabled(ext._gsettings):
+            refresh_all(ext, only_mapped=True)
         return GLib.SOURCE_CONTINUE
 
     _timer_id = GLib.timeout_add_seconds(_REFRESH_SECONDS, _tick)

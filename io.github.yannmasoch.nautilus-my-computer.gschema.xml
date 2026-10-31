@@ -97,6 +97,12 @@
       <description>Show the Trash place in the custom Computer group on the sidebar</description>
     </key>
 
+    <key name="sidebar-show-disk-usage" type="b">
+      <default>true</default>
+      <summary>Show disk usage bars in the sidebar</summary>
+      <description>Show a usage bar under each mounted drive in the sidebar</description>
+    </key>
+
     <key name="color-mode" type="s">
       <default>'accent'</default>
       <summary>Level bar color mode</summary>

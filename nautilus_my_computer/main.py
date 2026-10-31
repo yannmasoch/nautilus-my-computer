@@ -1012,6 +1012,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             self._repopulate_visible()
         elif key in ("column-view-sort-by", "column-view-sort-reversed"):
             column_view.schedule_global_column_sort_sync(self)
+        elif key == sidebar_usage.SETTING_KEY:
+            GLib.idle_add(sidebar_usage.refresh_all, self)
         elif key.startswith("sidebar-show-"):
             # Sidebar place toggle -- re-apply native row visibility in every window.
             GLib.idle_add(self._reapply_sidebar_visibility)
@@ -1978,6 +1980,17 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             self._gsettings.bind(gskey, place_row, "active", Gio.SettingsBindFlags.DEFAULT)
             sidebar_vis_group.add(place_row)
 
+        sidebar_drives_group = Adw.PreferencesGroup()
+        sidebar_drives_group.set_title(_("Drives"))
+        page_sidebar.add(sidebar_drives_group)
+        usage_row = Adw.SwitchRow()
+        usage_row.set_title(_("Show disk usage"))
+        usage_row.set_subtitle(_("Show a usage bar under each mounted drive."))
+        self._gsettings.bind(
+            sidebar_usage.SETTING_KEY, usage_row, "active", Gio.SettingsBindFlags.DEFAULT
+        )
+        sidebar_drives_group.add(usage_row)
+
         color_group = Adw.PreferencesGroup()
         color_group.set_title(_("Bar Color"))
         color_group.set_description(_("Select or customize the bar color."))
@@ -2507,7 +2520,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         self._apply_native_place_visibility(native_listbox, boundary_separator)
         self._attach_bookmark_context_menus(win, native_listbox)
         self._apply_bookmark_icons(native_listbox)
-        sidebar_usage.apply_usage_bars(native_listbox)
+        sidebar_usage.apply_usage_bars(native_listbox, sidebar_usage.enabled(self._gsettings))
         sidebar_usage.start_refresh(self)
         self._watch_native_list_changes(win, native_listbox)
 
@@ -2587,7 +2600,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             )
             self._attach_bookmark_context_menus(win, native_listbox)
             self._apply_bookmark_icons(native_listbox)
-            sidebar_usage.apply_usage_bars(native_listbox)
+            sidebar_usage.apply_usage_bars(native_listbox, sidebar_usage.enabled(self._gsettings))
             return GLib.SOURCE_REMOVE
 
         def _on_items_changed(*_a) -> None:
