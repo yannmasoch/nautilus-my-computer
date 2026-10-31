@@ -805,7 +805,9 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         Gtk.StyleContext.add_provider_for_display(
             display,
             css_sidebar_usage,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+            # above the bar colour provider (APPLICATION + 1), so the
+            # nearly-full red wins over the user's bar colour
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 2,
         )
         if self._bar_css_display is None:
             self._bar_css_display = display
@@ -1012,7 +1014,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             self._repopulate_visible()
         elif key in ("column-view-sort-by", "column-view-sort-reversed"):
             column_view.schedule_global_column_sort_sync(self)
-        elif key == sidebar_usage.SETTING_KEY:
+        elif key in (sidebar_usage.SETTING_KEY, sidebar_usage.WARNING_KEY):
             GLib.idle_add(sidebar_usage.refresh_all, self)
         elif key.startswith("sidebar-show-"):
             # Sidebar place toggle -- re-apply native row visibility in every window.
@@ -1990,6 +1992,16 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             sidebar_usage.SETTING_KEY, usage_row, "active", Gio.SettingsBindFlags.DEFAULT
         )
         sidebar_drives_group.add(usage_row)
+        warning_row = Adw.SpinRow.new_with_range(50, 100, 1)
+        warning_row.set_title(_("Warn when fuller than (%)"))
+        warning_row.set_subtitle(_("Turn the usage bar red at this percentage used."))
+        self._gsettings.bind(
+            sidebar_usage.WARNING_KEY, warning_row, "value", Gio.SettingsBindFlags.DEFAULT
+        )
+        usage_row.bind_property(
+            "active", warning_row, "sensitive", GObject.BindingFlags.SYNC_CREATE
+        )
+        sidebar_drives_group.add(warning_row)
 
         color_group = Adw.PreferencesGroup()
         color_group.set_title(_("Bar Color"))
@@ -2520,7 +2532,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         self._apply_native_place_visibility(native_listbox, boundary_separator)
         self._attach_bookmark_context_menus(win, native_listbox)
         self._apply_bookmark_icons(native_listbox)
-        sidebar_usage.apply_usage_bars(native_listbox, sidebar_usage.enabled(self._gsettings))
+        sidebar_usage.apply_usage_bars(native_listbox, self._gsettings)
         sidebar_usage.start_refresh(self)
         self._watch_native_list_changes(win, native_listbox)
 
@@ -2600,7 +2612,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             )
             self._attach_bookmark_context_menus(win, native_listbox)
             self._apply_bookmark_icons(native_listbox)
-            sidebar_usage.apply_usage_bars(native_listbox, sidebar_usage.enabled(self._gsettings))
+            sidebar_usage.apply_usage_bars(native_listbox, self._gsettings)
             return GLib.SOURCE_REMOVE
 
         def _on_items_changed(*_a) -> None:

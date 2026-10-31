@@ -103,6 +103,13 @@
       <description>Show a usage bar under each mounted drive in the sidebar</description>
     </key>
 
+    <key name="sidebar-disk-usage-warning" type="i">
+      <range min="50" max="100"/>
+      <default>90</default>
+      <summary>Sidebar disk usage warning threshold</summary>
+      <description>Percentage of a drive used at which its sidebar usage bar turns red</description>
+    </key>
+
     <key name="color-mode" type="s">
       <default>'accent'</default>
       <summary>Level bar color mode</summary>

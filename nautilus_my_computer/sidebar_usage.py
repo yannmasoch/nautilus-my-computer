@@ -6,8 +6,10 @@ from nautilus_my_computer.common import _, _find_row_child, _format_size, _log
 
 _BAR_CLASS = "mc-sidebar-usage-bar"
 _BOX_NAME = "mc_sidebar_usage_box"
+_FULL_CLASS = "mc-nearly-full"
 _REFRESH_SECONDS = 30
 SETTING_KEY = "sidebar-show-disk-usage"
+WARNING_KEY = "sidebar-disk-usage-warning"
 _ATTRS = f"{Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE},{Gio.FILE_ATTRIBUTE_FILESYSTEM_FREE}"
 
 # Thib bar coloured using .diskinfo-bar rule
@@ -15,6 +17,10 @@ CSS = b"""
 levelbar.mc-sidebar-usage-bar trough,
 levelbar.mc-sidebar-usage-bar block {
     min-height: 3px;
+}
+
+levelbar.mc-sidebar-usage-bar.mc-nearly-full block.filled {
+    background: @error_bg_color;
 }
 """
 
@@ -69,6 +75,8 @@ def _show_usage(bar: Gtk.LevelBar, usage: str | None) -> None:
     """Show/hide the bar and display disk usage info"""
     bar.set_visible(usage is not None)
     vbox = bar.get_parent()
+    if vbox is None:
+        return
     if usage is None:
         vbox.set_tooltip_text(None)
         return
@@ -77,7 +85,10 @@ def _show_usage(bar: Gtk.LevelBar, usage: str | None) -> None:
     vbox.set_tooltip_text(f"{native}\n{usage}" if native else usage)
 
 
-def _on_info_ready(gfile: Gio.File, result: Gio.AsyncResult, bar: Gtk.LevelBar) -> None:
+def _on_info_ready(
+    gfile: Gio.File, result: Gio.AsyncResult, data: tuple[Gtk.LevelBar, float]
+) -> None:
+    bar, threshold = data
     bar._mc_inflight = False
     try:
         info = gfile.query_filesystem_info_finish(result)
@@ -92,28 +103,41 @@ def _on_info_ready(gfile: Gio.File, result: Gio.AsyncResult, bar: Gtk.LevelBar) 
     if total <= 0:
         _show_usage(bar, None)
         return
-    bar.set_value((total - free) / total)
+    used = (total - free) / total
+    bar.set_value(used)
+    if used >= threshold:
+        bar.add_css_class(_FULL_CLASS)
+    else:
+        bar.remove_css_class(_FULL_CLASS)
     _show_usage(
         bar, _("{free} free of {total}").format(free=_format_size(free), total=_format_size(total))
     )
 
 
-def _query(bar: Gtk.LevelBar, mount: Gio.Mount) -> None:
+def _query(bar: Gtk.LevelBar, mount: Gio.Mount, threshold: float) -> None:
     if getattr(bar, "_mc_inflight", False):
         return
     root = mount.get_root()
     if root is None:
         return
     bar._mc_inflight = True
-    root.query_filesystem_info_async(_ATTRS, GLib.PRIORITY_LOW, None, _on_info_ready, bar)
+    root.query_filesystem_info_async(
+        _ATTRS, GLib.PRIORITY_LOW, None, _on_info_ready, (bar, threshold)
+    )
 
 
 def enabled(gsettings) -> bool:
     return gsettings is None or gsettings.get_boolean(SETTING_KEY)
 
 
-def apply_usage_bars(native_listbox: Gtk.ListBox, show: bool = True) -> None:
+def _warning_threshold(gsettings) -> float:
+    return (gsettings.get_int(WARNING_KEY) if gsettings is not None else 90) / 100
+
+
+def apply_usage_bars(native_listbox: Gtk.ListBox, gsettings) -> None:
     """Add / refresh a usage bar on every mounted drive row, or hide them all."""
+    show = enabled(gsettings)
+    threshold = _warning_threshold(gsettings)
     for row in native_listbox:
         mount = _row_mount(row) if show else None
         if mount is None:
@@ -123,16 +147,15 @@ def apply_usage_bars(native_listbox: Gtk.ListBox, show: bool = True) -> None:
             continue
         bar = _ensure_bar(row)
         if bar is not None:
-            _query(bar, mount)
+            _query(bar, mount, threshold)
 
 
 def refresh_all(ext, only_mapped: bool = False) -> bool:
     """Re-apply the bars in every window, e.g. after the setting changes."""
-    show = enabled(ext._gsettings)
     for state in list(ext._windows.values()):
         listbox = state.get("sidebar_listbox")
         if listbox is not None and (listbox.get_mapped() or not only_mapped):
-            apply_usage_bars(listbox, show)
+            apply_usage_bars(listbox, ext._gsettings)
     return GLib.SOURCE_REMOVE
 
 
