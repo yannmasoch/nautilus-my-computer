@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-26 08:57-0700\n"
+"POT-Creation-Date: 2026-11-01 11:48-0800\n"
 "PO-Revision-Date: 2026-08-19 11:51+0000\n"
 "Last-Translator: Unai Lomas\n"
 "Language-Team: Spanish\n"
@@ -193,10 +193,6 @@ msgstr "Nueva Carpeta…"
 #: nautilus_my_computer/context_menu.py
 msgid "New Document"
 msgstr "Nuevo Documento"
-
-#: nautilus_my_computer/context_menu.py
-msgid "Open in Terminal"
-msgstr "Abrir en Terminal"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Rename…"
