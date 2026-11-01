@@ -28,9 +28,9 @@ from nautilus_my_computer.common import (
 from nautilus_my_computer.context_menu import (
     ContextMenu,
     ContextMenuItem,
+    ContextMenuSection,
     background_clipboard_section,
     background_creation_section,
-    background_terminal_section,
     clipboard_actions_section,
     file_actions_section,
     my_computer_additions_section,
@@ -871,9 +871,12 @@ class _ColumnViewHost:
                 select_all_action=lambda: self._select_all_in_column(column),
             ),
         ]
-        terminal_action = self._terminal_action(uri)
-        if terminal_action is not None:
-            sections.append(background_terminal_section(open_terminal_action=terminal_action))
+        sections[0].items.extend(
+            self._background_items(self._native_bridge.native_terminal_items())
+        )
+        extension_items = self._background_items(self._native_bridge.extension_background_items())
+        if extension_items:
+            sections.append(ContextMenuSection(extension_items))
         sections.append(properties_section(lambda: self._ext._do_properties(uri, self._win)))
         # Parent the column-background menu to the MillerCanvas rather than
         # its GtkPaned child chain. The canvas is the actual view surface and
@@ -912,57 +915,16 @@ class _ColumnViewHost:
             )
         return items
 
-
-    def _terminal_action(self, uri: str):
-        """Return a launcher for the preferred terminal or a GNOME fallback."""
-        if not uri.startswith("file://"):
-            return None
-
-        # Convert the URI to a local path for xdg-terminal-exec.
-        path = Gio.File.new_for_uri(uri).get_path()
-        # Prefer the user's XDG terminal launcher when it is installed.
-        terminal_exec = GLib.find_program_in_path("xdg-terminal-exec")
-
-        # Keep known GNOME terminals as a fallback.
-        terminal_ids = {
-            "org.gnome.Console.desktop",
-            "org.gnome.Terminal.desktop",
-            "org.gnome.Ptyxis.desktop",
-        }
-
-        fallback_terminal = next(
-            (app for app in Gio.AppInfo.get_all() if app.get_id() in terminal_ids),
-            None,
-        )
-
-        # XDG launch requires both the executable and a local path.
-        can_use_xdg = terminal_exec is not None and path is not None
-
-        # Hide the action when neither launch method is available.
-        if not can_use_xdg and fallback_terminal is None:
-            return None
-
-        def open_terminal() -> None:
-            if can_use_xdg:
-                try:
-                    # Pass the working directory without invoking a shell.
-                    Gio.Subprocess.new(
-                        [terminal_exec, f"--dir={path}"],
-                        Gio.SubprocessFlags.NONE,
-                    )
-                    return
-                except GLib.Error as error:
-                    _log("Could not open terminal through xdg-terminal-exec "
-                        f"for {uri!r}: {error.message}; trying fallback")
-
-            # Fall back when XDG is unavailable or its process cannot be started.
-            if fallback_terminal is not None:
-                try:
-                    fallback_terminal.launch_uris([uri], None)
-                except GLib.Error as error:
-                    _log(f"Could not open terminal for {uri!r}: {error.message}")
-
-        return open_terminal
+    def _background_items(self, entries: list[tuple[str, str]]) -> list[ContextMenuItem]:
+        """Menu items for native view actions, run through the view itself so they act on
+        its folder like in Grid/List."""
+        return [
+            ContextMenuItem(
+                label.replace("_", ""),
+                action=lambda name=action: self._win.activate_action(name, None),
+            )
+            for label, action in entries
+        ]
 
     def _create_folder(self, column: Gtk.Widget) -> None:
         """Create a new folder in one column, then refresh its listing."""

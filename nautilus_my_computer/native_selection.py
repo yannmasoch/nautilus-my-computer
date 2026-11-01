@@ -17,10 +17,12 @@ of the matching folder to load. It is never applied to a model showing another
 folder and is dropped on the next location change or the next selection change.
 """
 
+import os
+
 from gi.repository import Gio, GLib, Gtk, Nautilus
 
 from . import selection
-from .common import _log
+from .common import _log, _native
 
 # Stack pages the extension adds to the slot (Column View, Computer panel).
 _OWN_PAGE_PREFIX = "mc-"
@@ -93,6 +95,67 @@ class NativeModelBinding:
         return GLib.SOURCE_REMOVE
 
 
+def _menu_entries(menu: Gio.MenuModel):
+    """(label, action) of every item in `menu`, descending into sections."""
+    for i in range(menu.get_n_items()):
+        label = menu.get_item_attribute_value(i, "label", None)
+        action = menu.get_item_attribute_value(i, "action", None)
+        if label is not None and action is not None:
+            yield label.get_string(), action.get_string()
+        section = menu.get_item_link(i, Gio.MENU_LINK_SECTION)
+        if section is not None:
+            yield from _menu_entries(section)
+
+
+# Terminal actions Nautilus itself ships (upstream, and Ubuntu's xdg-terminal-exec patch),
+# in priority order, with the label Grid/List shows for them.
+_NATIVE_MENU_RESOURCES = (
+    "/org/gnome/nautilus/menu/nautilus-files-view-context-menus.ui",
+    "/org/gnome/nautilus/ui/nautilus-files-view-context-menus.ui",
+)
+_NATIVE_TERMINAL_ACTIONS = (
+    ("current-directory-xdg-terminal", "Open in T_erminal"),
+    ("current-directory-console", "Open in Consol_e"),
+)
+
+
+def _native_terminal_item() -> list[tuple[str, str]]:
+    """The terminal item Nautilus's own folder menu defines, read from the menu resource it
+    was built with, so an action is only offered when this Nautilus really has it."""
+    text = ""
+    for path in _NATIVE_MENU_RESOURCES:
+        try:
+            data = Gio.resources_lookup_data(path, Gio.ResourceLookupFlags.NONE)
+        except GLib.Error:
+            continue
+        text = data.get_data().decode("utf-8", "replace")
+        break
+    else:
+        _log("native_selection: native menu resource unavailable")
+        return []
+    for name, label in _NATIVE_TERMINAL_ACTIONS:
+        if f"view.{name}<" not in text:
+            continue
+        if name == "current-directory-console" and not _console_service_installed():
+            continue
+        return [(_native(label), f"view.{name}")]
+    return []
+
+
+# D-Bus names Nautilus's console action launches: upstream's, and Fedora's Ptyxis patch.
+_CONSOLE_SERVICES = ("org.gnome.Console", "org.gnome.Ptyxis")
+
+
+def _console_service_installed() -> bool:
+    """Nautilus enables its console action only when the terminal's D-Bus service can be
+    activated; it hides the item otherwise, so do the same."""
+    for data_dir in GLib.get_system_data_dirs() + [GLib.get_user_data_dir()]:
+        for service in _CONSOLE_SERVICES:
+            if os.path.exists(os.path.join(data_dir, "dbus-1", "services", f"{service}.service")):
+                return True
+    return False
+
+
 class NativeBridge:
     """Per-slot access to the native view's selection."""
 
@@ -124,6 +187,26 @@ class NativeBridge:
                 f"folder={loc.get_uri() if loc else None!r} found={model is not None}"
             )
         return model
+
+    def extension_background_items(self) -> list[tuple[str, str]]:
+        """(label, action) of the items extensions add to the native folder background
+        menu, such as gnome-terminal's "Open in Terminal". The view is only looked up
+        for the read and never kept."""
+        slot = self._slot_ref()
+        if slot is None:
+            return []
+        for w in _walk(slot):
+            if type(w).__name__ == "NautilusFilesView":
+                menu = w.get_property("extensions-background-menu")
+                items = list(_menu_entries(menu)) if menu is not None else []
+                _log(f"native_selection: extension background items={items!r}")
+                return items
+        _log("native_selection: no NautilusFilesView found for extension items")
+        return []
+
+    def native_terminal_items(self) -> list[tuple[str, str]]:
+        """(label, action) of the terminal item Nautilus's own folder menu offers."""
+        return _native_terminal_item()
 
     def shows(self, folder_uri: str) -> bool:
         slot = self._slot_ref()

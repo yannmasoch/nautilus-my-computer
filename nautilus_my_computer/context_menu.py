@@ -253,19 +253,6 @@ def background_clipboard_section(
     return ContextMenuSection(items)
 
 
-def background_terminal_section(*, open_terminal_action=None) -> ContextMenuSection:
-    """Build the optional terminal action for a local folder background."""
-    return ContextMenuSection(
-        [
-            ContextMenuItem(
-                _("Open in Terminal"),
-                action=open_terminal_action,
-                enabled=callable(open_terminal_action),
-            )
-        ]
-    )
-
-
 def file_actions_section(
     *,
     rename_action=None,
