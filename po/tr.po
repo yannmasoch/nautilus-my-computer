@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-01 11:48-0800\n"
-"PO-Revision-Date: 2026-08-06 17:34+0000\n"
+"PO-Revision-Date: 2026-11-03 08:51+0000\n"
 "Last-Translator: Taylan Tatlı\n"
 "Language-Team: Turkish\n"
 "Language: tr\n"
@@ -277,13 +277,13 @@ msgid "Include boot and EFI partitions in the System group"
 msgstr "Önyükleme ve EFI bölümlerini Sistem grubuna dahil et"
 
 #: nautilus_my_computer/main.py
-#, fuzzy
 msgid "Hidden drives"
-msgstr "Gizli"
+msgstr "Gizli sürücüler"
 
 #: nautilus_my_computer/main.py
 msgid "Drives you manually hide from the Computer view will appear here."
 msgstr ""
+"Bilgisayar görünümünden elle gizlediğiniz sürücüler burada görünecektir."
 
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
@@ -355,7 +355,7 @@ msgstr "Bağla"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Hide"
-msgstr ""
+msgstr "Gizle"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "System"
@@ -435,23 +435,23 @@ msgid "Spreadsheet"
 msgstr "Hesap tablosu"
 
 #: nautilus_my_computer/widgets.py
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "{n} document"
 msgid_plural "{n} documents"
-msgstr[0] "Belge"
-msgstr[1] "Belge"
+msgstr[0] "{n} belge"
+msgstr[1] "{n} belge"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{n} folder"
 msgid_plural "{n} folders"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} klasör"
+msgstr[1] "{n} klasör"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{first} and {second}"
-msgstr ""
+msgstr "{first} ve {second}"
 
 #: nautilus_my_computer/widgets.py
 msgid "Dimensions"
