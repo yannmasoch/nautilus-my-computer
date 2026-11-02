@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: My Computer for Nautilus 0.13.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 11:48-0800\n"
+"POT-Creation-Date: 2026-11-02 17:15+0100\n"
 "PO-Revision-Date: 2026-08-16 20:51+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: none\n"
@@ -308,6 +308,26 @@ msgid "Choose which locations appear on the sidebar."
 msgstr "Arată ce locații apar pe bara laterală."
 
 #: nautilus_my_computer/main.py
+msgid "Drives"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Show disk usage"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Show a usage bar under each mounted drive."
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Warn when fuller than (%)"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Turn the usage bar red at this percentage used."
+msgstr ""
+
+#: nautilus_my_computer/main.py
 msgid "Bar Color"
 msgstr "Culoarea Bării"
 
@@ -387,14 +407,14 @@ msgstr "Înlăturabil"
 msgid "Disc"
 msgstr "Disc"
 
-#: nautilus_my_computer/widgets.py
-msgid "Not mounted"
-msgstr "Nemontat"
-
-#: nautilus_my_computer/widgets.py
+#: nautilus_my_computer/sidebar_usage.py nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{free} free of {total}"
 msgstr "{free} liber din {total}"
+
+#: nautilus_my_computer/widgets.py
+msgid "Not mounted"
+msgstr "Nemontat"
 
 #: nautilus_my_computer/widgets.py
 msgid "Program"

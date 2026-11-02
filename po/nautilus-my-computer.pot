@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: My Computer for Nautilus 0.13.3\n"
+"Project-Id-Version: My Computer for Nautilus 0.13.4\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 11:48-0800\n"
+"POT-Creation-Date: 2026-11-02 17:15+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -295,6 +295,26 @@ msgid "Choose which locations appear on the sidebar."
 msgstr ""
 
 #: nautilus_my_computer/main.py
+msgid "Drives"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Show disk usage"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Show a usage bar under each mounted drive."
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Warn when fuller than (%)"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Turn the usage bar red at this percentage used."
+msgstr ""
+
+#: nautilus_my_computer/main.py
 msgid "Bar Color"
 msgstr ""
 
@@ -374,13 +394,13 @@ msgstr ""
 msgid "Disc"
 msgstr ""
 
-#: nautilus_my_computer/widgets.py
-msgid "Not mounted"
+#: nautilus_my_computer/sidebar_usage.py nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "{free} free of {total}"
 msgstr ""
 
 #: nautilus_my_computer/widgets.py
-#, python-brace-format
-msgid "{free} free of {total}"
+msgid "Not mounted"
 msgstr ""
 
 #: nautilus_my_computer/widgets.py

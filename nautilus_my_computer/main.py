@@ -32,6 +32,7 @@ from nautilus_my_computer import (
     my_computer_view,
     nautilus_prefs,
     preferred_folders,
+    sidebar_usage,
 )
 from nautilus_my_computer.common import (
     ACTION_OPEN_LOCATION,
@@ -799,6 +800,15 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             css_sidebar,
             Gtk.STYLE_PROVIDER_PRIORITY_USER + 1,
         )
+        css_sidebar_usage = Gtk.CssProvider()
+        css_sidebar_usage.load_from_data(sidebar_usage.CSS)
+        Gtk.StyleContext.add_provider_for_display(
+            display,
+            css_sidebar_usage,
+            # above the bar colour provider (APPLICATION + 1), so the
+            # nearly-full red wins over the user's bar colour
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 2,
+        )
         if self._bar_css_display is None:
             self._bar_css_display = display
             self._apply_bar_color()
@@ -1004,6 +1014,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             self._repopulate_visible()
         elif key in ("column-view-sort-by", "column-view-sort-reversed"):
             column_view.schedule_global_column_sort_sync(self)
+        elif key in (sidebar_usage.SETTING_KEY, sidebar_usage.WARNING_KEY):
+            GLib.idle_add(sidebar_usage.refresh_all, self)
         elif key.startswith("sidebar-show-"):
             # Sidebar place toggle -- re-apply native row visibility in every window.
             GLib.idle_add(self._reapply_sidebar_visibility)
@@ -1970,6 +1982,27 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             self._gsettings.bind(gskey, place_row, "active", Gio.SettingsBindFlags.DEFAULT)
             sidebar_vis_group.add(place_row)
 
+        sidebar_drives_group = Adw.PreferencesGroup()
+        sidebar_drives_group.set_title(_("Drives"))
+        page_sidebar.add(sidebar_drives_group)
+        usage_row = Adw.SwitchRow()
+        usage_row.set_title(_("Show disk usage"))
+        usage_row.set_subtitle(_("Show a usage bar under each mounted drive."))
+        self._gsettings.bind(
+            sidebar_usage.SETTING_KEY, usage_row, "active", Gio.SettingsBindFlags.DEFAULT
+        )
+        sidebar_drives_group.add(usage_row)
+        warning_row = Adw.SpinRow.new_with_range(50, 100, 1)
+        warning_row.set_title(_("Warn when fuller than (%)"))
+        warning_row.set_subtitle(_("Turn the usage bar red at this percentage used."))
+        self._gsettings.bind(
+            sidebar_usage.WARNING_KEY, warning_row, "value", Gio.SettingsBindFlags.DEFAULT
+        )
+        usage_row.bind_property(
+            "active", warning_row, "sensitive", GObject.BindingFlags.SYNC_CREATE
+        )
+        sidebar_drives_group.add(warning_row)
+
         color_group = Adw.PreferencesGroup()
         color_group.set_title(_("Bar Color"))
         color_group.set_description(_("Select or customize the bar color."))
@@ -2499,6 +2532,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         self._apply_native_place_visibility(native_listbox, boundary_separator)
         self._attach_bookmark_context_menus(win, native_listbox)
         self._apply_bookmark_icons(native_listbox)
+        sidebar_usage.apply_usage_bars(native_listbox, self._gsettings)
+        sidebar_usage.start_refresh(self)
         self._watch_native_list_changes(win, native_listbox)
 
         self._wire_computer_drop_dimming(wrapper, computer_row)
@@ -2577,6 +2612,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             )
             self._attach_bookmark_context_menus(win, native_listbox)
             self._apply_bookmark_icons(native_listbox)
+            sidebar_usage.apply_usage_bars(native_listbox, self._gsettings)
             return GLib.SOURCE_REMOVE
 
         def _on_items_changed(*_a) -> None:
