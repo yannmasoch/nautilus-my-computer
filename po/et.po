@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: My Computer for Nautilus 0.12.6\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-01 11:48-0800\n"
-"PO-Revision-Date: 2026-08-10 22:52+0000\n"
+"PO-Revision-Date: 2026-11-03 08:51+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: none\n"
 "Language: et\n"
@@ -281,13 +281,13 @@ msgid "Include boot and EFI partitions in the System group"
 msgstr "Kaasa süsteemipartitsioonide gruppi ka „boot“ ja „EFI“ partitsioonid"
 
 #: nautilus_my_computer/main.py
-#, fuzzy
 msgid "Hidden drives"
-msgstr "Peidetud"
+msgstr "Peidetud kettad"
 
 #: nautilus_my_computer/main.py
 msgid "Drives you manually hide from the Computer view will appear here."
 msgstr ""
+"Sinu poolt käsitsi arvutist peidetud kettad asaavad olema nähtavad siin."
 
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
@@ -359,7 +359,7 @@ msgstr "Haagi"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Hide"
-msgstr ""
+msgstr "Peida"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "System"
@@ -439,23 +439,23 @@ msgid "Spreadsheet"
 msgstr "Arvutustabel"
 
 #: nautilus_my_computer/widgets.py
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "{n} document"
 msgid_plural "{n} documents"
-msgstr[0] "Dokument"
-msgstr[1] "Dokument"
+msgstr[0] "{n} dokument"
+msgstr[1] "{n} dokumenti"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{n} folder"
 msgid_plural "{n} folders"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} kaust"
+msgstr[1] "{n} kausta"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{first} and {second}"
-msgstr ""
+msgstr "{first} ja {second}"
 
 #: nautilus_my_computer/widgets.py
 msgid "Dimensions"
