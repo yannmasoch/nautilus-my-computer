@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: My Computer for Nautilus 0.13.1\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-01 11:48-0800\n"
-"PO-Revision-Date: 2026-11-01 20:56+0000\n"
+"PO-Revision-Date: 2026-11-02 08:13+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: none\n"
 "Language: pl\n"
@@ -40,7 +40,7 @@ msgstr "Beta"
 
 #: nautilus_my_computer/column_view.py
 msgid "Early access feature. It may contain bugs or inconsistencies."
-msgstr "Funkcja we wczesnym dostępie. Może zawierać bugi lub nieścisłości."
+msgstr "Funkcja we wczesnym dostępie. Może zawierać błędy lub nieścisłości."
 
 #: nautilus_my_computer/column_view.py
 msgid "Column View"
@@ -202,7 +202,7 @@ msgstr "Przypnij do Mojego komputera"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
-msgstr "Nowy folder…"
+msgstr "Nowy katalog…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Document"
@@ -214,7 +214,7 @@ msgstr "Zmień nazwę…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Compress…"
-msgstr "Kompresuj…"
+msgstr "Skompresuj…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
@@ -263,7 +263,7 @@ msgid ""
 "Hidden: hides the group entirely."
 msgstr ""
 "Wybierz sposób wyświetlania każdej z grup. Widoczne: pokazuje grupy jako "
-"zwykłą, osobną sekcje. Połączone: dołącza grupę do widoku Na tym komputerze. "
+"zwykłą, osobną sekcję. Połączone: dołącza grupę do widoku Na tym komputerze. "
 "Ukryte: całkowicie ukrywa grupę."
 
 #: nautilus_my_computer/main.py
@@ -280,7 +280,7 @@ msgstr "Ukryte"
 
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Preferred Folders"
-msgstr "Preferowane foldery"
+msgstr "Ulubione katalogi"
 
 #: nautilus_my_computer/main.py
 msgid "Show system partitions"
@@ -288,7 +288,7 @@ msgstr "Pokaż partycje systemowe"
 
 #: nautilus_my_computer/main.py
 msgid "Include boot and EFI partitions in the System group"
-msgstr "Dołącza partycje rozruchową i EFI do grupy System"
+msgstr "Dołącza partycję rozruchową i partycję EFI do grupy System."
 
 #: nautilus_my_computer/main.py
 msgid "Hidden drives"
@@ -364,7 +364,7 @@ msgstr "GitHub"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Mount"
-msgstr "Udział"
+msgstr "Zamontuj"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Hide"
@@ -380,15 +380,15 @@ msgstr "Na tym komputerze"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Removable"
-msgstr "Nośnik wymienny"
+msgstr "Nośniki wymienne"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Disc"
-msgstr "Dysk"
+msgstr "Napędy optyczne"
 
 #: nautilus_my_computer/widgets.py
 msgid "Not mounted"
-msgstr "Nie zamontowany"
+msgstr "Niezamontowane"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
@@ -459,9 +459,9 @@ msgstr[2] "{n} dokumentów"
 #, python-brace-format
 msgid "{n} folder"
 msgid_plural "{n} folders"
-msgstr[0] "{n} folder"
-msgstr[1] "{n} foldery"
-msgstr[2] "{n} folderów"
+msgstr[0] "{n} katalog"
+msgstr[1] "{n} katalogi"
+msgstr[2] "{n} katalogów"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
