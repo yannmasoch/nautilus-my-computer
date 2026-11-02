@@ -43,6 +43,8 @@ Croatian, Serbian, Bosnian, and Montenegrin translations; to Piotr Icikowski for
 translation update; and to @arbtttrn6 for the Interslavic translation and the Russian
 translation update.
 
+---
+
 ## v0.13.3
 Column View gains drag and drop, multi-selection, and a Finder-style multi-file preview, and
 the sidebar no longer goes empty after repeated navigation.
