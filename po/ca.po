@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-01 11:48-0800\n"
-"PO-Revision-Date: 2026-08-19 11:51+0000\n"
+"PO-Revision-Date: 2026-11-03 08:51+0000\n"
 "Last-Translator: Unai Lomas\n"
 "Language-Team: Catalan\n"
 "Language: ca\n"
@@ -127,7 +127,7 @@ msgstr[1] "d’aquí a {n} mesos"
 
 #: nautilus_my_computer/common.py
 msgid "This year"
-msgstr "Aquest any"
+msgstr "Enguany"
 
 #: nautilus_my_computer/common.py
 msgid "Last year"
