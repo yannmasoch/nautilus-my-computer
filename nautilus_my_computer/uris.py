@@ -42,3 +42,16 @@ def rebase(uri: str, old: str, new: str) -> str:
     rest = normalize(uri)[len(normalize(old)) :].lstrip("/")
     base = normalize(new)
     return f"{base}{rest}" if base.endswith("/") else f"{base}/{rest}"
+
+
+def admin_uri_if_needed(uri: str, can_read: bool, can_execute: bool) -> str:
+    """The URI a deliberate open should navigate to. A local folder the user
+    can't read or enter moves to the gvfs admin backend, which asks for a
+    password through polkit. Mirrors Nautilus's own activation rewrite
+    (nautilus-mime-actions.c:1703). Every other URI comes back unchanged.
+
+    A file:// URI is already percent-encoded, so swapping the scheme keeps the
+    path exactly as GIO built it (Nautilus concatenates the raw path instead)."""
+    if not uri.startswith("file://") or (can_read and can_execute):
+        return uri
+    return "admin://" + uri[len("file://") :]

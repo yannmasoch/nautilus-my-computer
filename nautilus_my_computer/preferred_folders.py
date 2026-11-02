@@ -28,15 +28,74 @@ from nautilus_my_computer.common import (
 )
 from nautilus_my_computer.context_menu import (
     ContextMenu,
+    ContextMenuItem,
+    ContextMenuSection,
     my_computer_additions_section,
     open_section,
     properties_section,
 )
 
 
+def _call_async(bus_name: str, path: str, interface: str, method: str, params) -> None:
+    """Fire-and-forget session-bus call; sync bus round trips can stall Nautilus."""
+
+    def on_done(bus, result, _data) -> None:
+        try:
+            bus.call_finish(result)
+        except GLib.Error as error:
+            _log(f"{interface}.{method} failed: {error.message}")
+
+    def on_bus(_source, result, _data) -> None:
+        try:
+            bus = Gio.bus_get_finish(result)
+        except GLib.Error as error:
+            _log(f"Could not reach session bus for {method}: {error.message}")
+            return
+        bus.call(
+            bus_name, path, interface, method, params, None,
+            Gio.DBusCallFlags.NONE, -1, None, on_done, None,
+        )  # fmt: skip
+
+    Gio.bus_get(Gio.BusType.SESSION, None, on_bus, None)
+
+
+def empty_trash() -> None:
+    """Run Nautilus's own Empty Trash (with its confirmation dialog)."""
+    _call_async(
+        "org.gnome.Nautilus",
+        "/org/gnome/Nautilus/FileOperations2",
+        "org.gnome.Nautilus.FileOperations2",
+        "EmptyTrash",
+        GLib.Variant("(ba{sv})", (True, {})),
+    )
+
+
+def open_trash_settings() -> None:
+    """Open GNOME Settings on Privacy > File History & Trash, like Nautilus does."""
+    _call_async(
+        "org.gnome.Settings",
+        "/org/gnome/Settings",
+        "org.gtk.Actions",
+        "Activate",
+        GLib.Variant.parse(None, "('launch-panel', [<('privacy', [<'usage'>])>], @a{sv} {})"),
+    )
+
+
+def trash_section() -> ContextMenuSection:
+    """Trash-only actions, in the order and sections of Nautilus's sidebar Trash row."""
+    return ContextMenuSection(
+        [ContextMenuItem(_native("Trash _Settings…"), action=open_trash_settings)]
+    )
+
+
+def empty_trash_section() -> ContextMenuSection:
+    return ContextMenuSection([ContextMenuItem(_native("_Empty Trash…"), action=empty_trash)])
+
+
 def folder_context_menu(ext, win, pf) -> ContextMenu:
     """Preferred-folder card menu: open actions, remove from group, properties."""
     uri = pf.nav_uri
+    trash_sections = [trash_section(), empty_trash_section()] if uri.startswith("trash:") else []
     return ContextMenu(
         [
             open_section(
@@ -53,6 +112,7 @@ def folder_context_menu(ext, win, pf) -> ContextMenu:
                 preferred=True,
                 toggle_preferred_action=lambda: ext._do_remove_preferred_folder(pf, win),
             ),
+            *trash_sections,
             properties_section(lambda: ext._do_properties(uri, win)),
         ]
     )

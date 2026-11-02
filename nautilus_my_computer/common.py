@@ -20,6 +20,8 @@ gi.require_version("GObject", "2.0")
 gi.require_version("Gtk", "4.0")
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 
+from nautilus_my_computer import uris as uri_utils
+
 _custom_translation = None
 for _localedir in (os.path.expanduser("~/.local/share/locale"), None):
     try:
@@ -327,6 +329,68 @@ def _uri_is_hidden(uri: str) -> bool:
         return info.get_attribute_boolean("standard::is-hidden")
     except GLib.Error:
         return False
+
+
+_ADMIN_BACKEND_CACHE = None
+_OPEN_ACCESS_ATTRS = "standard::type,access::can-read,access::can-execute"
+
+
+def admin_backend_available() -> bool:
+    """True if gvfs ships its admin backend (admin://). Nautilus rewrites
+    without checking and fails with "admin locations are not supported";
+    checking first keeps the native permission error instead."""
+    global _ADMIN_BACKEND_CACHE
+    if _ADMIN_BACKEND_CACHE is None:
+        schemes = Gio.Vfs.get_default().get_supported_uri_schemes()
+        _ADMIN_BACKEND_CACHE = "admin" in schemes
+    return _ADMIN_BACKEND_CACHE
+
+
+def resolve_open_uri(uri: str, callback, cancellable=None) -> None:
+    """Call callback(target_uri) with the URI a deliberate open should navigate
+    to: admin:// for a local folder the user can't read or enter, uri itself
+    otherwise (issue #187). Always asynchronous, so every open behaves the same
+    whatever the scheme. Any query error hands back uri unchanged, letting
+    Nautilus show its own error for it.
+
+    Stateless: every open path (click, keyboard, menu, new tab, new window)
+    calls it the same way. Sync and sidebar navigation stay out, matching
+    Nautilus, which rewrites only on activation."""
+
+    def _deliver(target: str) -> bool:
+        callback(target)
+        return GLib.SOURCE_REMOVE
+
+    if not uri.startswith("file://") or not admin_backend_available():
+        GLib.idle_add(_deliver, uri)
+        return
+
+    def _on_info(gfile, result):
+        try:
+            info = gfile.query_info_finish(result)
+        except GLib.Error as e:
+            if not e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED):
+                callback(uri)
+            return
+        if info.get_file_type() != Gio.FileType.DIRECTORY:
+            callback(uri)
+            return
+        target = uri_utils.admin_uri_if_needed(
+            uri,
+            info.get_attribute_boolean("access::can-read"),
+            info.get_attribute_boolean("access::can-execute"),
+        )
+        if target != uri:
+            _log(f"resolve_open_uri: {uri} -> {target}")
+        callback(target)
+
+    Gio.File.new_for_uri(uri).query_info_async(
+        _OPEN_ACCESS_ATTRS,
+        Gio.FileQueryInfoFlags.NONE,
+        GLib.PRIORITY_DEFAULT,
+        cancellable,
+        _on_info,
+    )
 
 
 DEBUG_LOG = os.environ.get("DEBUG", "").lower() in ("1", "true", "yes")
@@ -823,8 +887,8 @@ def _folder_card_width() -> int:
 # ── Card geometry constants ──────────────────────────────────────────────────────
 # (disk icon px now comes from _disk_icon_size()/_disk_list_icon_size() above)
 _FLOW_COLS_GRID = 8  # max columns in grid (FlowBox) view
-_CARD_WIDTH = 280  # disk grid card width cap (px); beyond this,
-# the grid gains another column instead of stretching cards further
+_CARD_WIDTH = 280  # disk grid card minimum width (px); the FlowBox adds a column
+# whenever one more card of this width fits
 _LIST_BAR_MAX_WIDTH = 240  # max width (px) of the usage bar at the end of a list-view row
 _DISK_CARD_SPACING = 16  # disk card FlowBox column spacing (px)
 _DISK_CARD_ROW_SPACING = 6  # disk card FlowBox row spacing (px)

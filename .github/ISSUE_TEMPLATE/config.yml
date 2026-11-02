@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/yannmasoch/nautilus-my-computer/discussions
+    about: Ask how something works or talk through an idea before filing it.
+  - name: Help translate
+    url: https://hosted.weblate.org/projects/nautilus-my-computer/
+    about: Translations are managed on Weblate, not through issues or pull requests.

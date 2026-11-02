@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-15 12:50-0700\n"
+"POT-Creation-Date: 2026-11-01 11:48-0800\n"
 "PO-Revision-Date: 2026-08-06 17:34+0000\n"
 "Last-Translator: Taylan Tatlı\n"
 "Language-Team: Turkish\n"
@@ -195,10 +195,6 @@ msgid "New Document"
 msgstr "Yeni Belge"
 
 #: nautilus_my_computer/context_menu.py
-msgid "Open in Terminal"
-msgstr "Uçbirimde Aç"
-
-#: nautilus_my_computer/context_menu.py
 msgid "Rename…"
 msgstr "Yeniden Adlandır…"
 
@@ -281,6 +277,15 @@ msgid "Include boot and EFI partitions in the System group"
 msgstr "Önyükleme ve EFI bölümlerini Sistem grubuna dahil et"
 
 #: nautilus_my_computer/main.py
+#, fuzzy
+msgid "Hidden drives"
+msgstr "Gizli"
+
+#: nautilus_my_computer/main.py
+msgid "Drives you manually hide from the Computer view will appear here."
+msgstr ""
+
+#: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
 msgstr "Kenar çubuğu görünürlüğü"
 
@@ -347,6 +352,10 @@ msgstr "GitHub"
 #: nautilus_my_computer/my_computer_view.py
 msgid "Mount"
 msgstr "Bağla"
+
+#: nautilus_my_computer/my_computer_view.py
+msgid "Hide"
+msgstr ""
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "System"

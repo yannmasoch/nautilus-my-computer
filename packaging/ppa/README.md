@@ -1,7 +1,7 @@
 # Ubuntu PPA packaging
 
 Source packaging for `ppa:yannmasoch/nautilus-my-computer`, targeting only currently-supported
-series: resolute (26.04 LTS, GNOME 50) and stonking (26.10, in development). Non-LTS Ubuntu
+series: resolute (26.04 LTS, GNOME 50) and stonking (26.10). Non-LTS Ubuntu
 releases only get ~9 months of support, so older series (noble, oracular, plucky, questing)
 either ship GNOME older than this extension targets or are already EOL - Launchpad rejects
 uploads to EOL series outright ("obsolete and will not accept new uploads"). Revisit this list
@@ -23,20 +23,21 @@ packaging/ppa/build-and-upload.sh 0.11.2            # build only, output in ./pp
 packaging/ppa/build-and-upload.sh 0.11.2 --upload    # build and dput to the PPA
 ```
 
-This builds the source package (`.dsc`/`.orig.tar.gz`/`.debian.tar.xz`) **once**, from a tarball
-of the current checked-out commit, then generates one signed `.changes` per target series that
-all reference those same files - only the `Distribution:` field differs. This matters because
-Launchpad's pool is shared across every series in a PPA: uploading the same filename with
-different contents (e.g. from rebuilding the source package per series with a different
-changelog baked in) gets rejected as a conflict. Tag and push the release commit first, since the
-build tarball must match what actually gets built.
+This builds one source package per target series from a tarball of the current checked-out
+commit, each with a series-suffixed version (`0.13.3-1~ubuntu26.04.1`, `0.13.3-1~ubuntu26.10.1`).
+Launchpad rejects uploading a version that already exists in another series of the same PPA,
+so a single shared version only ever gets published to the first series (dput still succeeds;
+the rejection arrives by email). The `.orig.tar.gz` is created once and shared, since
+Launchpad's pool is shared across every series in a PPA and rejects re-uploading the same
+filename with different contents. Tag and push the release commit first, since the build
+tarball must match what actually gets built.
 
 ## Layout
 
 - `debian/control` - package metadata and dependencies (`python3-nautilus`, `gir1.2-adw-1`, ...)
 - `debian/rules` - delegates to the same `make build` / `make install` used by the AUR, Fedora,
   and openSUSE packages
-- `debian/changelog` - base entry; `build-and-upload.sh` retargets its distribution field
+- `debian/changelog` - base entry; `build-and-upload.sh` rewrites its version and distribution
   per series at build time (see above)
 - `debian/copyright` - DEP-5 format, MIT license
 - `debian/watch` - `uscan` rule tracking GitHub release tags

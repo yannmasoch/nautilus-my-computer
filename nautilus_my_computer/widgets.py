@@ -211,6 +211,7 @@ from nautilus_my_computer.common import (
     _nautilus_list_icon_size,
     _resolve_custom_gicon,
     _set_regular_icon,
+    admin_backend_available,
 )
 from nautilus_my_computer.components import set_row_drop_active
 
@@ -1021,40 +1022,6 @@ class MyComputerToggleButton(Gtk.Box):
             btn.set_child(self._make_segment_image(icon))
 
 
-class MyComputerCappedGridFlowBox(Gtk.FlowBox):
-    """Homogeneous FlowBox that raises its column count as the window widens,
-    capping each card's stretched width at max_card_width instead of letting a
-    single row of cards grow past it -- same trigger native Nautilus grid view
-    uses to add a column, applied to our homogeneous card cells."""
-
-    __gtype_name__ = "MyComputerCappedGridFlowBox"
-
-    def __init__(self, max_card_width: int, spacing: int, hard_max_cols: int) -> None:
-        super().__init__()
-        self._max_card_width = max_card_width
-        self._spacing = spacing
-        self._hard_max_cols = hard_max_cols
-        self.set_max_children_per_line(hard_max_cols)
-
-    def _cols_for_width(self, width: int) -> int:
-        step = self._max_card_width + self._spacing
-        cols = -(-(width + self._spacing) // step) if step > 0 else 1  # ceil division
-        return max(1, min(cols, self._hard_max_cols))
-
-    def do_measure(self, orientation, for_size):
-        if orientation == Gtk.Orientation.VERTICAL and for_size > 0:
-            self.set_max_children_per_line(self._cols_for_width(for_size))
-        minimum, natural, _min_bl, _nat_bl = Gtk.FlowBox.do_measure(self, orientation, for_size)
-        # A FlowBox has no baseline. Chaining up through PyGObject hands the
-        # baseline out-params back as 0 instead of leaving them at -1, and GTK
-        # warns on any non -1 horizontal baseline.
-        return minimum, natural, -1, -1
-
-    def do_size_allocate(self, width: int, height: int, baseline: int) -> None:
-        self.set_max_children_per_line(self._cols_for_width(width))
-        Gtk.FlowBox.do_size_allocate(self, width, height, baseline)
-
-
 class MyComputerCardGroup(Gtk.Box):
     """A heading + FlowBox of cards. Dedups the section setup shared by the
     Preferred Folders block and each disk group in _populate()."""
@@ -1073,7 +1040,6 @@ class MyComputerCardGroup(Gtk.Box):
         row_spacing: int,
         always_grid: bool = False,
         homogeneous: bool = False,
-        max_card_width: int = 0,
     ) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         self._ext = ext
@@ -1087,14 +1053,9 @@ class MyComputerCardGroup(Gtk.Box):
         self.append(heading)
 
         is_list = view_mode == "list-view" and not always_grid
-        is_capped_grid = homogeneous and max_card_width > 0 and not is_list
-        if is_capped_grid:
-            self.flow = MyComputerCappedGridFlowBox(max_card_width, col_spacing, max_cols)
-        else:
-            self.flow = Gtk.FlowBox()
+        self.flow = Gtk.FlowBox()
         self.flow.set_homogeneous(homogeneous)
-        if not is_capped_grid:
-            self.flow.set_max_children_per_line(1 if is_list else max_cols)
+        self.flow.set_max_children_per_line(1 if is_list else max_cols)
         self.flow.set_column_spacing(col_spacing)
         self.flow.set_row_spacing(row_spacing)
         self.flow.set_margin_bottom(12)
@@ -1184,6 +1145,8 @@ class _ColumnRowItem(GObject.Object):
         is_hidden: bool = False,
         content_type: str | None = None,
         mtime: int = 0,
+        can_read: bool = True,
+        can_execute: bool = True,
     ) -> None:
         super().__init__()
         self.uri = uri
@@ -1193,7 +1156,17 @@ class _ColumnRowItem(GObject.Object):
         self.is_hidden = is_hidden
         self.content_type = content_type
         self.mtime = mtime
+        self.can_read = can_read
+        self.can_execute = can_execute
         self.is_cut = False
+
+    @property
+    def open_uri(self) -> str:
+        """Where a deliberate open of this row navigates: admin:// for a local
+        folder the user can't read or enter (issue #187), uri otherwise."""
+        if not self.is_dir or not admin_backend_available():
+            return self.uri
+        return uri_utils.admin_uri_if_needed(self.uri, self.can_read, self.can_execute)
 
 
 def _droppable_uris(uris: list[str], destination_uri: str, *, is_move: bool) -> list[str]:
@@ -1375,6 +1348,10 @@ class MyComputerColumnRow(Gtk.Box):
     @property
     def is_dir(self) -> bool:
         return bool(self.item is not None and self.item.is_dir)
+
+    @property
+    def open_uri(self) -> str | None:
+        return self.item.open_uri if self.item is not None else None
 
     @property
     def display_name(self) -> str | None:
@@ -1669,6 +1646,14 @@ class _ColumnEntry:
     mtime: int
     btime: int
     atime: int
+    can_read: bool
+    can_execute: bool
+
+
+def _access_allowed(info: Gio.FileInfo, attribute: str) -> bool:
+    """An access:: flag, True when the backend doesn't report it: only a flag
+    that is really false may send an open to admin://."""
+    return not info.has_attribute(attribute) or info.get_attribute_boolean(attribute)
 
 
 def _name_tiebreak(e: _ColumnEntry) -> tuple:
@@ -1902,6 +1887,15 @@ class ColumnSelection:
             self._sel = sel
         else:
             self._apply(selection.reconcile(sel, self._ordered()))
+
+    def rebase(self, old: str, new: str) -> None:
+        """Carry the selection over to where its URIs moved. Called during a
+        reload, so end_reload projects it once the new listing is in."""
+        anchor = self._sel.anchor
+        self._sel = selection.Selection(
+            frozenset(uri_utils.rebase(uri, old, new) for uri in self._sel.uris),
+            uri_utils.rebase(anchor, old, new) if anchor is not None else None,
+        )
 
     def clear(self) -> None:
         self._apply(selection.clear(self._sel))
@@ -2400,6 +2394,14 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         self._sort = sort
         self.reload()
 
+    def move_root(self, old_root: str, new_root: str) -> None:
+        """Show the same folder under another scheme root (file:/// and
+        admin:///, issue #187): rebase the location and the selection, then
+        list it again."""
+        self.folder_uri = uri_utils.rebase(self.folder_uri, old_root, new_root)
+        self.reload()
+        self._selection_state.rebase(old_root, new_root)
+
     def reload(self) -> None:
         """Re-enumerate this column's own folder in place (e.g. after the
         hidden-files setting changes), without touching sibling columns or
@@ -2418,7 +2420,8 @@ class MyComputerColumn(Gtk.ScrolledWindow):
             "standard::name,standard::display-name,standard::icon,"
             "standard::is-hidden,standard::is-backup,standard::type,standard::content-type,"
             "standard::size,time::modified,time::created,time::access,"
-            "metadata::custom-icon,metadata::custom-icon-name",
+            "metadata::custom-icon,metadata::custom-icon-name,"
+            "access::can-read,access::can-execute",
             Gio.FileQueryInfoFlags.NONE,
             GLib.PRIORITY_DEFAULT,
             self._cancellable,
@@ -2585,12 +2588,20 @@ class MyComputerColumn(Gtk.ScrolledWindow):
                     name=name,
                     display_name=display_name,
                     icon=_resolve_custom_gicon(info) or info.get_icon(),
-                    content_type=info.get_content_type(),
+                    # GVfs backends can omit standard::content-type even when
+                    # requested; get_content_type() would log a GLib critical.
+                    content_type=(
+                        info.get_content_type()
+                        if info.has_attribute("standard::content-type")
+                        else None
+                    ),
                     is_hidden=is_hidden,
                     size=size,
                     mtime=info.get_attribute_uint64("time::modified"),
                     btime=info.get_attribute_uint64("time::created"),
                     atime=info.get_attribute_uint64("time::access"),
+                    can_read=_access_allowed(info, "access::can-read"),
+                    can_execute=_access_allowed(info, "access::can-execute"),
                 )
             )
 
@@ -2623,6 +2634,8 @@ class MyComputerColumn(Gtk.ScrolledWindow):
                 entry.is_hidden,
                 content_type=entry.content_type,
                 mtime=entry.mtime,
+                can_read=entry.can_read,
+                can_execute=entry.can_execute,
             )
             for entry in entries
         ]

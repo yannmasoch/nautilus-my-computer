@@ -28,12 +28,23 @@ jobs:
               errors.push("Pull requests must target the `dev` branch.");
             }
 
+            const files = await github.paginate(
+              github.rest.pulls.listFiles,
+              {owner, repo, pull_number, per_page: 100}
+            );
+
+            const isTranslation =
+              files.length > 0 &&
+              files.every(file => /^po\/[^/]+\.po$/.test(file.filename));
+
             const commits = await github.paginate(
               github.rest.pulls.listCommits,
               {owner, repo, pull_number, per_page: 100}
             );
 
-            // Validate <type>: <short description>, with a 72-character limit.
+            // Validate <type>: <short description> (#<PR>), with a 72-character limit.
+            // Translation-only pull requests (Weblate) are exempt from the PR suffix.
+            const suffix = ` (#${pull_number})`;
             for (const commit of commits) {
               const subject = commit.commit.message.split("\n")[0];
 
@@ -44,6 +55,13 @@ jobs:
                 );
               }
 
+              if (!isTranslation && !subject.endsWith(suffix)) {
+                errors.push(
+                  `Commit ${commit.sha.slice(0, 7)} must end with \`${suffix.trim()}\`, ` +
+                  "the number of this pull request."
+                );
+              }
+
               if (subject.length > 72) {
                 errors.push(
                   `Commit ${commit.sha.slice(0, 7)} has a ` +
@@ -51,15 +69,6 @@ jobs:
                 );
               }
             }
-
-            const files = await github.paginate(
-              github.rest.pulls.listFiles,
-              {owner, repo, pull_number, per_page: 100}
-            );
-
-            const isTranslation =
-              files.length > 0 &&
-              files.every(file => /^po\/[^/]+\.po$/.test(file.filename));
 
             if (isTranslation) {
               await github.rest.issues.addLabels({

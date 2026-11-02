@@ -47,6 +47,7 @@ from nautilus_my_computer.common import (
     _pin_icon,
     _resolve_gtype,
     _slot_action,
+    resolve_open_uri,
     slot_view_owner,
 )
 from nautilus_my_computer.context_menu import (
@@ -95,7 +96,7 @@ DETACH_SETTINGS_WINDOW = False  # testing toggle: True opens settings as a stand
 
 # ── Extension metadata (keep in sync with pyproject.toml) ────────────────────
 EXT_NAME = "My Computer for Nautilus"
-EXT_VERSION = "0.13.3"
+EXT_VERSION = "0.13.4"
 EXT_AUTHOR = "Yann Masoch"
 EXT_LICENSE = "MIT"
 EXT_GITHUB = "https://github.com/yannmasoch/nautilus-my-computer"
@@ -111,8 +112,13 @@ MILLER_VIEW_UNAVAILABLE_URIS = [
     "recent:///",
     "starred:///",
     "x-network-view:///",
+    "network:///",
     "trash:///",
 ]
+# Nautilus pins the Network overview to its own view and disables the
+# slot.files-view-mode(-toggle) actions there (nautilus-window-slot.c
+# sync_actions), so Grid/List cannot switch anything on these locations.
+NATIVE_VIEW_MODE_UNAVAILABLE_URIS = ["x-network-view:///", "network:///"]
 COMPUTER_LABEL = _native("Computer")
 COMPUTER_ICON = "computer-symbolic"  # icon used in sidebar and path bar
 MENU_ITEM_LABEL = _("My Computer Settings")
@@ -989,6 +995,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         elif key == "show-system-partitions":
             # Needs a rescan because filtered mounts must be re-collected
             self._schedule_live_refresh()
+        elif key == "hidden-drives":
+            self._repopulate_visible()
         elif key.startswith("visibility-"):
             # Grouping change only -- no rescan needed, just re-render
             self._repopulate_visible()
@@ -1148,6 +1156,11 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _column_view_available_at(location: Gio.File | None) -> bool:
         """Whether Miller view can be used for a Nautilus slot location."""
         return location is None or location.get_uri() not in MILLER_VIEW_UNAVAILABLE_URIS
+
+    @staticmethod
+    def _native_view_mode_available_at(location: Gio.File | None) -> bool:
+        """Whether Nautilus lets the user pick Grid/List for a slot location."""
+        return location is None or location.get_uri() not in NATIVE_VIEW_MODE_UNAVAILABLE_URIS
 
     def _column_view_available_for_window(self, win: Gtk.Window) -> bool:
         return self._column_view_available_at(_active_slot_location(win))
@@ -1628,11 +1641,18 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         dialog.present(win)
         search_entry.grab_focus()
 
+    # The three deliberate-open primitives below resolve their URI first, so a
+    # folder the user can't read opens through admin:// like a native
+    # activation does (issue #187). _navigate_to stays unresolved for
+    # sidebar and sync navigation.
     def _do_open(self, nav_uri: str, win: Gtk.Window) -> None:
-        GLib.idle_add(self._navigate_to, nav_uri, win)
+        resolve_open_uri(nav_uri, lambda uri: self._navigate_to(uri, win))
 
     def _do_open_tab(self, nav_uri: str, win: Gtk.Window, make_active: bool = True) -> None:
-        """Open nav_uri in a new tab, built the way Nautilus itself builds one
+        resolve_open_uri(nav_uri, lambda uri: self._open_tab_resolved(uri, win, make_active))
+
+    def _open_tab_resolved(self, uri: str, win: Gtk.Window, make_active: bool) -> None:
+        """Open uri in a new tab, built the way Nautilus itself builds one
         (nautilus_window_create_and_init_slot, nautilus-window.c:406): create a
         NautilusWindowSlot directly and hand it to AdwTabView, rather than firing
         the "new-tab" action (the Ctrl+T path) and polling for the resulting slot.
@@ -1645,8 +1665,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         (adw_tab_view_add_page never selects); selecting happens only in
         set_active_slot, which we skip here when make_active is False.
         """
-        uri = nav_uri
-
         tab_view = next(
             (w for w in _all_widgets(win) if isinstance(w, Adw.TabView)),
             None,
@@ -1720,7 +1738,9 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         own CLI flag rather than an in-process action, so it needs no
         Nautilus-version gating - "--new-window" has been stable since long
         before the 46/47 open-location action migration."""
-        subprocess.Popen(["nautilus", "--new-window", mountpoint])
+        resolve_open_uri(
+            mountpoint, lambda uri: subprocess.Popen(["nautilus", "--new-window", uri])
+        )
 
     def _do_properties(self, nav_uri: str, win: Gtk.Window) -> None:
         uri = nav_uri
@@ -1898,6 +1918,41 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             "show-system-partitions", show_sys_parts_row, "active", Gio.SettingsBindFlags.DEFAULT
         )
         vis_group.add(show_sys_parts_row)
+
+        hidden_group = Adw.PreferencesGroup()
+        hidden_group.set_title(_("Hidden drives"))
+        hidden_group.set_description(
+            _("Drives you manually hide from the Computer view will appear here.")
+        )
+        page_computer.add(hidden_group)
+        hidden_rows: list[Adw.ActionRow] = []
+
+        def _rebuild_hidden_rows(*_args):
+            for row in hidden_rows:
+                hidden_group.remove(row)
+            hidden_rows.clear()
+            hidden = self._gsettings.get_value("hidden-drives").unpack()
+            for key, name in hidden.items():
+                row = Adw.ActionRow()
+                row.set_title(GLib.markup_escape_text(name))
+                btn = Gtk.Button.new_from_icon_name("window-close-symbolic")
+                btn.add_css_class("flat")
+                btn.add_css_class("circular")
+                btn.set_valign(Gtk.Align.CENTER)
+
+                def _unhide(_b, _key=key):
+                    current = dict(self._gsettings.get_value("hidden-drives").unpack())
+                    current.pop(_key, None)
+                    self._gsettings.set_value("hidden-drives", GLib.Variant("a{ss}", current))
+
+                btn.connect("clicked", _unhide)
+                row.add_suffix(btn)
+                hidden_group.add(row)
+                hidden_rows.append(row)
+
+        _rebuild_hidden_rows()
+        _hidden_sig = self._gsettings.connect("changed::hidden-drives", _rebuild_hidden_rows)
+        pref_win.connect("closed", lambda _w: self._gsettings.disconnect(_hidden_sig))
 
         sidebar_vis_group = Adw.PreferencesGroup()
         sidebar_vis_group.set_title(_("Sidebar visibility"))

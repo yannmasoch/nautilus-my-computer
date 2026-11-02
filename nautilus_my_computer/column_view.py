@@ -28,16 +28,16 @@ from nautilus_my_computer.common import (
 from nautilus_my_computer.context_menu import (
     ContextMenu,
     ContextMenuItem,
+    ContextMenuSection,
     background_clipboard_section,
     background_creation_section,
-    background_terminal_section,
     clipboard_actions_section,
     file_actions_section,
     my_computer_additions_section,
     open_section,
     properties_section,
 )
-from nautilus_my_computer.native_selection import NativeBridge
+from nautilus_my_computer.native_selection import NativeBridge, NativeModelBinding
 from nautilus_my_computer.widgets import (
     MyComputerColumn,
     MyComputerColumnRow,
@@ -87,6 +87,10 @@ def _column_sort_variant(ext) -> GLib.Variant:
 _SLOT_STACK_CHILD_NAME = "mc-column"
 _SLOT_INIT_RETRY_MS = 20  # retry interval while waiting for a new slot to settle
 _SLOT_INIT_MAX_ATTEMPTS = 100  # ~2s budget, mirrors main.py's _WIN_INIT_MAX_ATTEMPTS
+
+# The same local path under either scheme (issue #187): the chain swaps one
+# root for the other when the slot location moves between them.
+_PATH_SCHEME_ROOTS = {"file": "file:///", "admin": "admin:///"}
 
 # Whether a navigation event moves into a subfolder of where browsing
 # currently is (NAV_DOWN), back toward a parent (NAV_UP), or re-selects
@@ -166,13 +170,19 @@ _NATIVE_TOGGLE_ACTION = "slot.files-view-mode-toggle"
 # keep the layout arithmetic below legible.
 COLUMN_WIDTH = _COLUMN_WIDTH
 PREVIEW_WIDTH = _COLUMN_PREVIEW_WIDTH
-HANDLE_WIDTH_ESTIMATE = 12
+# Fallback until a real Gtk.Paned handle has been allocated and measured (see
+# _ColumnViewHost._measure_handle_width). 1 px is the Adwaita default with
+# wide_handle off; other themes are picked up by the live measurement.
+HANDLE_WIDTH_ESTIMATE = 1
+# Upper bound for a plausible measured handle width, to ignore a transient
+# mid-reparent reading.
+_HANDLE_WIDTH_MAX = 16
 # Generous hit margin (in px, either side of a paned's current position)
 # used to tell a genuine press-and-drag on the handle apart from GTK
 # repositioning the handle itself during layout (see
 # _on_paned_handle_pressed/_on_paned_position_changed). Errs wide rather
-# than narrow since HANDLE_WIDTH_ESTIMATE above is itself only an estimate
-# (theme-dependent, confirmed narrower than expected in prior measurement).
+# than narrow since the handle width is theme-dependent (confirmed narrower than
+# the old 12 px guess: 1 px on Adwaita).
 HANDLE_HIT_SLOP = 16
 # Gtk.Adjustment can emit several "changed" events in a quick burst when
 # several rebuilds/relayouts land close together (e.g. a resize settling
@@ -311,61 +321,42 @@ class NativeCutStateObserver:
     remains responsible for decoding its private clipboard object; Miller only
     mirrors the resulting item properties that are already present in the
     covered native List/Grid view.
+
+    The model is this slot's own (from its NativeBridge) and is held weakly,
+    under the same ownership rule as the bridge (#198).
     """
 
-    def __init__(self, win: Gtk.Window, on_changed) -> None:
-        self._win = win
+    def __init__(self, find_model, on_changed) -> None:
+        self._find_model = find_model
         self._on_changed = on_changed
-        self._view = None
-        self._view_handler_id = 0
-        self._model = None
-        self._model_handler_id = 0
+        self._active = False
+        self._binding = NativeModelBinding(
+            "items-changed", self._on_items_changed, self._on_model_lost
+        )
+        # NautilusViewItem holds its cell widget weakly, so these refs pin no widget.
         self._item_handlers: list[tuple[GObject.Object, int]] = []
 
     def start(self) -> None:
         self.stop()
-        candidates = [
-            widget
-            for widget in _all_widgets(self._win)
-            if type(widget).__name__ in ("NautilusGridView", "NautilusListView")
-        ]
-        if not candidates:
-            self._on_changed(set())
-            return
-        self._view = next((view for view in candidates if view.get_mapped()), candidates[0])
-        try:
-            self._view_handler_id = self._view.connect("notify::model", self._on_model_changed)
-            model = self._view.get_property("model")
-        except (AttributeError, TypeError):
-            self.stop()
-            self._on_changed(set())
-            return
-        self._bind_model(model)
+        self._active = True
+        self._bind_model(self._find_model())
 
     def stop(self) -> None:
+        self._active = False
         self._disconnect_items()
-        if self._model is not None and self._model_handler_id:
-            self._model.disconnect(self._model_handler_id)
-        self._model = None
-        self._model_handler_id = 0
-        if self._view is not None and self._view_handler_id:
-            self._view.disconnect(self._view_handler_id)
-        self._view = None
-        self._view_handler_id = 0
+        self._binding.unbind()
 
-    def _on_model_changed(self, view, _pspec) -> None:
-        self._bind_model(view.get_property("model"))
+    def _on_model_lost(self) -> None:
+        self._disconnect_items()
+        if self._active:
+            self._bind_model(self._find_model())
 
     def _bind_model(self, model) -> None:
         self._disconnect_items()
-        if self._model is not None and self._model_handler_id:
-            self._model.disconnect(self._model_handler_id)
-        self._model = model
-        self._model_handler_id = 0
+        self._binding.bind(model)
         if model is None:
             self._on_changed(set())
             return
-        self._model_handler_id = model.connect("items-changed", self._on_items_changed)
         self._bind_items()
 
     def _on_items_changed(self, _model, _position, _removed, _added) -> None:
@@ -381,10 +372,11 @@ class NativeCutStateObserver:
 
     def _bind_items(self) -> None:
         self._disconnect_items()
-        if self._model is None:
+        model = self._binding.get()
+        if model is None:
             return
-        for index in range(self._model.get_n_items()):
-            tree_row = self._model.get_item(index)
+        for index in range(model.get_n_items()):
+            tree_row = model.get_item(index)
             item = tree_row.get_item() if isinstance(tree_row, Gtk.TreeListRow) else tree_row
             if item is None or item.find_property("is-cut") is None:
                 continue
@@ -434,11 +426,14 @@ class _ColumnViewHost:
         self._clipboard = win.get_clipboard()
         self._clipboard.connect("changed", self._on_clipboard_changed)
         self._operation_monitors: list[Gio.FileMonitor] = []
-        self._native_cut_observer = NativeCutStateObserver(win, self._apply_native_cut_uris)
+        self._native_cut_observer = NativeCutStateObserver(
+            self._native_bridge.model, self._apply_native_cut_uris
+        )
         self._sort = get_column_view_sort(ext)
         # Outermost paned of the chain, built by _rebuild_chain.
         self.root: Gtk.Widget | None = None
         self._multi_preview_idle = 0
+        self._handle_width = HANDLE_WIDTH_ESTIMATE
 
         self.columns = self._build_columns()
         self.preview_column = self._make_preview_column()
@@ -876,9 +871,12 @@ class _ColumnViewHost:
                 select_all_action=lambda: self._select_all_in_column(column),
             ),
         ]
-        terminal_action = self._terminal_action(uri)
-        if terminal_action is not None:
-            sections.append(background_terminal_section(open_terminal_action=terminal_action))
+        sections[0].items.extend(
+            self._background_items(self._native_bridge.native_terminal_items())
+        )
+        extension_items = self._background_items(self._native_bridge.extension_background_items())
+        if extension_items:
+            sections.append(ContextMenuSection(extension_items))
         sections.append(properties_section(lambda: self._ext._do_properties(uri, self._win)))
         # Parent the column-background menu to the MillerCanvas rather than
         # its GtkPaned child chain. The canvas is the actual view surface and
@@ -917,29 +915,16 @@ class _ColumnViewHost:
             )
         return items
 
-    def _terminal_action(self, uri: str):
-        """Return a launcher for an installed GNOME terminal, if one is available."""
-        if not uri.startswith("file://"):
-            return None
-        terminal_ids = {
-            "org.gnome.Console.desktop",
-            "org.gnome.Terminal.desktop",
-            "org.gnome.Ptyxis.desktop",
-        }
-        terminal = next(
-            (app for app in Gio.AppInfo.get_all() if app.get_id() in terminal_ids),
-            None,
-        )
-        if terminal is None:
-            return None
-
-        def open_terminal() -> None:
-            try:
-                terminal.launch_uris([uri], None)
-            except GLib.Error as error:
-                _log(f"Could not open terminal for {uri!r}: {error.message}")
-
-        return open_terminal
+    def _background_items(self, entries: list[tuple[str, str]]) -> list[ContextMenuItem]:
+        """Menu items for native view actions, run through the view itself so they act on
+        its folder like in Grid/List."""
+        return [
+            ContextMenuItem(
+                label.replace("_", ""),
+                action=lambda name=action: self._win.activate_action(name, None),
+            )
+            for label, action in entries
+        ]
 
     def _create_folder(self, column: Gtk.Widget) -> None:
         """Create a new folder in one column, then refresh its listing."""
@@ -1602,6 +1587,13 @@ class _ColumnViewHost:
         # The trailing preview width is derived from PREVIEW_WIDTH plus any
         # available viewport slack, so it is not tracked per-instance.
         index = self.columns.index(column)
+        open_uri = row.open_uri if row.is_dir else row.uri
+        if open_uri != row.uri:
+            # A folder only admin:// can open (issue #187). Hovering a drag
+            # over it never asks for a password.
+            if not dnd_hover:
+                self._open_locked_folder(index, open_uri, restore_keyboard_focus)
+            return
         if dnd_hover:
             self._begin_dnd_hover(index)
         # Read before any mutation below (self.focused_index still holds the
@@ -1736,6 +1728,15 @@ class _ColumnViewHost:
             if not self._column_fully_visible(index):
                 self._align_to_viewport_start(column)
 
+    def _open_locked_folder(self, index: int, admin_uri: str, restore_keyboard_focus: bool) -> None:
+        """Open a folder through admin:// the way Grid/List does: the chain
+        stops at its column, and only the slot is sent to admin_uri. No column
+        is built for it here, a file:// one would list nothing. gvfs and polkit
+        ask for the password, and the slot location changes only once that
+        succeeds; sync_to_uri then moves the whole chain to admin://."""
+        self._truncate_chain_to(index)
+        self._sync_slot_location(admin_uri, restore_keyboard_focus=restore_keyboard_focus)
+
     def _sync_slot_location(self, uri: str, *, restore_keyboard_focus: bool = False) -> None:
         """Push the Miller chain's new deepest folder to Nautilus's real slot
         location (see _on_slot_location_changed below for the reverse
@@ -1811,6 +1812,7 @@ class _ColumnViewHost:
                 # A different external navigation superseded the keyboard
                 # drill before its echo arrived.
                 self._pending_focus_uri = None
+        self._follow_slot_scheme(target)
         existing = [Gio.File.new_for_uri(c.folder_uri) for c in self.columns]
 
         idx = next((i for i, f in enumerate(existing) if f.equal(target)), None)
@@ -1835,6 +1837,34 @@ class _ColumnViewHost:
 
         _log("sync_to_uri: truncating to already-open ancestor")
         self._truncate_chain_to(idx)
+
+    def _follow_slot_scheme(self, target: Gio.File) -> None:
+        """Keep the chain on the slot location's scheme (issue #187). Grid/List
+        treat admin:// as a property of the whole location: once in, going up
+        or down stays in, until Nautilus itself goes back to file://. When the
+        slot switches between the two over a path the chain already shows (the
+        folder itself or its parent), every column moves to the other root and
+        lists again, keeping its selection. sync_to_uri's usual matching then
+        runs on the switched chain. Any other location is left to reset()."""
+        if not self.columns:
+            return
+        old_root = _PATH_SCHEME_ROOTS.get(GLib.uri_peek_scheme(self.columns[0].folder_uri))
+        new_root = _PATH_SCHEME_ROOTS.get(target.get_uri_scheme())
+        if old_root is None or new_root is None or old_root == new_root:
+            return
+        parent = target.get_parent()
+        moved = [
+            Gio.File.new_for_uri(uri_utils.rebase(c.folder_uri, old_root, new_root))
+            for c in self.columns
+        ]
+        if not any(f.equal(target) or (parent is not None and f.equal(parent)) for f in moved):
+            return
+        _log(f"sync_to_uri: switching chain from {old_root!r} to {new_root!r}")
+        for column in self.columns:
+            column.move_root(old_root, new_root)
+        if self.preview_column.file_uri:
+            self._set_preview(uri_utils.rebase(self.preview_column.file_uri, old_root, new_root))
+            self._rebuild_chain()
 
     def _cut_columns_after(self, index: int) -> list:
         """Drop every column deeper than index from self.columns, cancelling
@@ -2529,7 +2559,22 @@ class _ColumnViewHost:
             self._scroll_animation = None
         self.scroller.get_hadjustment().set_value(0)
 
+    def _measure_handle_width(self) -> None:
+        """Read the real Gtk.Paned handle width from an allocated paned: it is
+        whatever its allocation leaves between the two children. Updates
+        self._handle_width only for a plausible reading, so the estimate
+        stays in place until GTK has actually laid a paned out."""
+        for paned in self.paneds:
+            start, end = paned.get_start_child(), paned.get_end_child()
+            if start is None or end is None:
+                continue
+            width = paned.get_width() - start.get_width() - end.get_width()
+            if 0 < width <= _HANDLE_WIDTH_MAX:
+                self._handle_width = width
+                return
+
     def _sync_root_width(self) -> None:
+        self._measure_handle_width()
         adj = self.scroller.get_hadjustment()
         viewport_width = self.scroller.get_width()
         viewport_height = self.scroller.get_height()
@@ -2578,7 +2623,7 @@ class _ColumnViewHost:
         relaid it out, so it reads a stale/zeroed position. This has no such
         settling delay, so it's safe to call any time relative to
         _rebuild_chain()."""
-        return sum(c.width for c in self.columns[:index]) + HANDLE_WIDTH_ESTIMATE * index
+        return sum(c.width for c in self.columns[:index]) + self._handle_width * index
 
     def _column_fully_visible(self, index: int) -> bool:
         """True if self.columns[index] is entirely within the currently
@@ -2596,12 +2641,12 @@ class _ColumnViewHost:
     def _widget_canvas_x(self, widget: Gtk.Widget) -> float | None:
         """True on-canvas x position of widget's left edge, read directly
         from GTK's own layout rather than arithmetic through each column's
-        .width/HANDLE_WIDTH_ESTIMATE. Relative to self.root, which doesn't itself
+        .width/self._handle_width. Relative to self.root, which doesn't itself
         get shifted by scrolling (only its parent aligner does, via
         _MillerCanvas._reposition's move()), so this is already canvas-space
         with no scroll offset to subtract back out. Used for the actual
         scroll landing position (see _apply_pending_scroll) since that's
-        where a HANDLE_WIDTH_ESTIMATE mismatch is most visible -- it's only
+        where a handle width mismatch is most visible -- it's only
         ever a guess at a Gtk.Paned handle's real rendered width, and the
         error compounds with every handle counted. Returns None if widget
         isn't part of self.root's hierarchy or hasn't been allocated yet.
@@ -3785,6 +3830,9 @@ def _sync_view_switcher(ext, win: Gtk.Window) -> None:
 
     column_available = ext._column_view_available_for_window(win)
     _set_segment_enabled(switcher, "column", column_available)
+    native_modes_available = ext._native_view_mode_available_at(ext._slot_location(win))
+    _set_segment_enabled(switcher, "grid", native_modes_available)
+    _set_segment_enabled(switcher, "list", native_modes_available)
 
     if column_available and is_active_slot_showing_column(ext, win):
         active = "column"

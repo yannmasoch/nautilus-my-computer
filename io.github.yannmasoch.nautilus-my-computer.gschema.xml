@@ -127,6 +127,12 @@
       <description>Symbolic icon name used for the Computer row in the sidebar and path bar. Intended for distro-level customization via .gschema.override.</description>
     </key>
 
+    <key name="hidden-drives" type="a{ss}">
+      <default>{}</default>
+      <summary>Hidden drives</summary>
+      <description>Map of drive key to display name for drives the user hid from the Computer panel.</description>
+    </key>
+
     <key name="custom-bookmark-icons" type="a{ss}">
       <default>{}</default>
       <summary>Custom bookmark icons</summary>

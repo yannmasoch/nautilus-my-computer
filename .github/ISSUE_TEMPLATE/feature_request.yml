@@ -1,0 +1,42 @@
+name: Feature request
+description: Suggest an idea or an improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. Please search [existing issues](https://github.com/yannmasoch/nautilus-my-computer/issues?q=is%3Aissue) first.
+        Ideas that match how Nautilus and GNOME already behave are the easiest to accept.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe what you are trying to do and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+      description: Mockups or screenshots from other file managers are welcome.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part is it about?
+      options:
+        - Computer view (disk cards, Preferred Folders)
+        - Network view
+        - Column view
+        - Sidebar or path bar
+        - Settings
+        - Packaging or install
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Optional. Workarounds you use today, or how other apps do it.

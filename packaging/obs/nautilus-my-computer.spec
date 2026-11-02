@@ -1,5 +1,5 @@
 Name:           nautilus-my-computer
-Version:        0.13.3
+Version:        0.13.4
 Release:        0
 Summary:        My Computer for Nautilus, what GNOME Files should have always been
 
@@ -42,6 +42,19 @@ make build
 %{_datadir}/glib-2.0/schemas/io.github.yannmasoch.nautilus-my-computer.gschema.xml
 
 %changelog
+* Sun Nov 1 2026 Yann Masoch <231734284+yannmasoch@users.noreply.github.com> - 0.13.4-0
+- Prompt for an administrator password when opening protected folders in Computer view and Column View
+- Add a Hide action and hidden drives list for disk cards in the Computer view
+- Add Empty Trash and Trash Settings to the Trash card menu
+- Column View menu now mirrors Nautilus terminal items and respects xdg-terminal-exec
+- Add code of conduct, security policy, and issue and pull request templates
+- Publish the PPA to every Ubuntu series with per-series versions
+- Fix Nautilus crashing when browsing or leaving a network location
+- Disable Grid, List, and Column views in the Network view
+- Fix a Computer view crash when scrolling or resizing, and let disk columns adapt natively
+- Fix Weblate translation sync being blocked by merge conflicts
+- Add Croatian, Serbian, Bosnian, Montenegrin, and Interslavic translations
+- Update Polish and Russian translations
 * Mon Oct 19 2026 Yann Masoch <231734284+yannmasoch@users.noreply.github.com> - 0.13.3-0
 - Add Column View drag and drop (Ctrl to copy, hover a folder to open it)
 - Add Column View multi-selection (Shift ranges, Ctrl toggle, Ctrl+A) that carries over to List/Grid

@@ -1,0 +1,87 @@
+name: Bug report
+description: Something is broken or behaves differently from native Nautilus
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please search [existing issues](https://github.com/yannmasoch/nautilus-my-computer/issues?q=is%3Aissue) first.
+        If Nautilus crashes or a view looks wrong, the details below help a lot.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you see, and what did you expect instead? Screenshots are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Nautilus
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where does it happen?
+      options:
+        - Computer view (disk cards, Preferred Folders)
+        - Network view
+        - Column view
+        - Grid or List view
+        - Sidebar or path bar
+        - Settings
+        - Install or startup (Nautilus crashes on launch)
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: My Computer version
+      description: Shown in the extension settings, About section.
+      placeholder: "0.13.3"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - install.sh
+        - AUR
+        - Fedora COPR
+        - Ubuntu PPA
+        - openSUSE OBS
+        - Nix
+        - Manual copy
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: nautilus
+    attributes:
+      label: Nautilus version
+      description: Output of `nautilus --version`.
+      placeholder: "GNOME nautilus 51.1"
+    validations:
+      required: true
+  - type: input
+    id: distro
+    attributes:
+      label: Distribution and GNOME version
+      placeholder: "Ubuntu 24.04, GNOME 46"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Optional, but essential for crashes. Run Nautilus with debug logging and paste the `MyComputer:` lines:
+        `nautilus -q; sleep 1 && DEBUG=1 nautilus > /tmp/nautilus.log 2>&1`, then `grep "MyComputer:" /tmp/nautilus.log`
+      render: shell
