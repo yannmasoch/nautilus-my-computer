@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 00:06+0100\n"
+"POT-Creation-Date: 2026-11-02 17:15+0100\n"
 "PO-Revision-Date: 2026-08-04 18:39+0000\n"
 "Last-Translator: Pelach András <pelach.andras@gmail.com>\n"
 "Language-Team: Hungarian\n"
@@ -197,10 +197,6 @@ msgstr "Új mappa…"
 #: nautilus_my_computer/context_menu.py
 msgid "New Document"
 msgstr "Új dokumentum"
-
-#: nautilus_my_computer/context_menu.py
-msgid "Open in Terminal"
-msgstr "Megnyitás terminálban"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Rename…"

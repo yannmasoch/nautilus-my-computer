@@ -1,0 +1,493 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the My Computer for Nautilus package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: My Computer for Nautilus 0.13.3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-02 17:15+0100\n"
+"PO-Revision-Date: 2026-11-01 22:58+0000\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: none\n"
+"Language: cnr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;\n"
+
+#: nautilus_my_computer/bookmarks.py
+msgid "Change Icon"
+msgstr "Promijeni ikonu"
+
+#: nautilus_my_computer/bookmarks.py
+msgid "Search icons…"
+msgstr "Pretraži ikone…"
+
+#: nautilus_my_computer/bookmarks.py
+msgid "Reset"
+msgstr "Vrati podrazumijevano"
+
+#: nautilus_my_computer/column_view.py
+msgid "Select"
+msgstr "Izaberi"
+
+#: nautilus_my_computer/column_view.py
+msgid "Beta"
+msgstr "Beta"
+
+#: nautilus_my_computer/column_view.py
+msgid "Early access feature. It may contain bugs or inconsistencies."
+msgstr "Funkcija ranog pristupa. Može sadržati greške ili nedosljednosti."
+
+#: nautilus_my_computer/column_view.py
+msgid "Column View"
+msgstr "Prikaz kolona"
+
+#: nautilus_my_computer/common.py
+#, python-brace-format
+msgid "{n} item"
+msgid_plural "{n} items"
+msgstr[0] "{n} stavka"
+msgstr[1] "{n} stavke"
+msgstr[2] "{n} stavki"
+
+#: nautilus_my_computer/common.py
+msgid "Today"
+msgstr "Danas"
+
+#: nautilus_my_computer/common.py
+msgid "Yesterday"
+msgstr "Juče"
+
+#: nautilus_my_computer/common.py
+msgid "Tomorrow"
+msgstr "Sutra"
+
+#: nautilus_my_computer/common.py
+#, python-brace-format
+msgid "{n} day ago"
+msgid_plural "{n} days ago"
+msgstr[0] "Prije {n} dan"
+msgstr[1] "Prije {n} dana"
+msgstr[2] "Prije {n} dana"
+
+#: nautilus_my_computer/common.py
+#, python-brace-format
+msgid "In {n} day"
+msgid_plural "In {n} days"
+msgstr[0] "Za {n} dan"
+msgstr[1] "Za {n} dana"
+msgstr[2] "Za {n} dana"
+
+#: nautilus_my_computer/common.py
+msgid "This week"
+msgstr "Ova sedmica"
+
+#: nautilus_my_computer/common.py
+msgid "Last week"
+msgstr "Prošla sedmica"
+
+#: nautilus_my_computer/common.py
+msgid "Next week"
+msgstr "Sljedeća sedmica"
+
+#: nautilus_my_computer/common.py
+#, python-brace-format
+msgid "{n} week ago"
+msgid_plural "{n} weeks ago"
+msgstr[0] "Prije {n} sedmicu"
+msgstr[1] "Prije {n} sedmice"
+msgstr[2] "Prije {n} sedmica"
+
+#: nautilus_my_computer/common.py
+#, python-brace-format
+msgid "In {n} week"
+msgid_plural "In {n} weeks"
+msgstr[0] "Za {n} sedmicu"
+msgstr[1] "Za {n} sedmice"
+msgstr[2] "Za {n} sedmica"
+
+#: nautilus_my_computer/common.py
+msgid "This month"
+msgstr "Ovaj mjesec"
+
+#: nautilus_my_computer/common.py
+msgid "Last month"
+msgstr "Prošli mjesec"
+
+#: nautilus_my_computer/common.py
+msgid "Next month"
+msgstr "Sljedeći mjesec"
+
+#: nautilus_my_computer/common.py
+#, python-brace-format
+msgid "{n} month ago"
+msgid_plural "{n} months ago"
+msgstr[0] "Prije {n} mjesec"
+msgstr[1] "Prije {n} mjeseca"
+msgstr[2] "Prije {n} mjeseci"
+
+#: nautilus_my_computer/common.py
+#, python-brace-format
+msgid "In {n} month"
+msgid_plural "In {n} months"
+msgstr[0] "Za {n} mjesec"
+msgstr[1] "Za {n} mjeseca"
+msgstr[2] "Za {n} mjeseci"
+
+#: nautilus_my_computer/common.py
+msgid "This year"
+msgstr "Ova godina"
+
+#: nautilus_my_computer/common.py
+msgid "Last year"
+msgstr "Prošla godina"
+
+#: nautilus_my_computer/common.py
+msgid "Next year"
+msgstr "Sljedeća godina"
+
+#: nautilus_my_computer/common.py
+#, python-brace-format
+msgid "{n} year ago"
+msgid_plural "{n} years ago"
+msgstr[0] "Prije {n} godinu"
+msgstr[1] "Prije {n} godine"
+msgstr[2] "Prije {n} godina"
+
+#: nautilus_my_computer/common.py
+#, python-brace-format
+msgid "In {n} year"
+msgid_plural "In {n} years"
+msgstr[0] "Za {n} godinu"
+msgstr[1] "Za {n} godine"
+msgstr[2] "Za {n} godina"
+
+#: nautilus_my_computer/components.py
+msgid "Rename"
+msgstr "Preimenuj"
+
+#: nautilus_my_computer/context_menu.py
+msgid "Open in New Tab"
+msgstr "Otvori u novoj kartici"
+
+#: nautilus_my_computer/context_menu.py
+msgid "Open in New Window"
+msgstr "Otvori u novom prozoru"
+
+#: nautilus_my_computer/context_menu.py
+msgid "Open With…"
+msgstr "Otvori pomoću…"
+
+#: nautilus_my_computer/context_menu.py
+msgid "Remove from Bookmarks"
+msgstr "Ukloni iz obilježivača"
+
+#: nautilus_my_computer/context_menu.py
+msgid "Add to Bookmarks"
+msgstr "Dodaj u obilježivače"
+
+#: nautilus_my_computer/context_menu.py
+#: nautilus_my_computer/preferred_folders.py
+msgid "Unpin from My Computer"
+msgstr "Otkači sa Mog računara"
+
+#: nautilus_my_computer/context_menu.py
+#: nautilus_my_computer/preferred_folders.py
+msgid "Pin to My Computer"
+msgstr "Zakači na Moj računar"
+
+#: nautilus_my_computer/context_menu.py
+msgid "New Folder…"
+msgstr "Nova fascikla…"
+
+#: nautilus_my_computer/context_menu.py
+msgid "New Document"
+msgstr "Novi dokument"
+
+#: nautilus_my_computer/context_menu.py
+msgid "Rename…"
+msgstr "Preimenuj…"
+
+#: nautilus_my_computer/context_menu.py
+msgid "Compress…"
+msgstr "Kompresuj…"
+
+#: nautilus_my_computer/context_menu.py
+msgid "Move to Trash"
+msgstr "Premjesti u smeće"
+
+#: nautilus_my_computer/main.py
+msgid "My Computer Settings"
+msgstr "Podešavanja Mog računara"
+
+#: nautilus_my_computer/main.py
+msgid "Open My Computer"
+msgstr "Otvori Moj računar"
+
+#: nautilus_my_computer/main.py
+msgid "Recommended Apps"
+msgstr "Preporučene aplikacije"
+
+#: nautilus_my_computer/main.py
+msgid "Other Apps"
+msgstr "Ostale aplikacije"
+
+#: nautilus_my_computer/main.py
+msgid "General"
+msgstr "Opšte"
+
+#: nautilus_my_computer/main.py
+msgid "Computer view"
+msgstr "Prikaz računara"
+
+#: nautilus_my_computer/main.py
+msgid "Start on the Computer view"
+msgstr "Otvori na prikazu računara"
+
+#: nautilus_my_computer/main.py
+msgid "Launch directly to the Computer view instead of Home"
+msgstr "Otvori prikaz računara umjesto lične fascikle"
+
+#: nautilus_my_computer/main.py
+msgid "Panel visibility"
+msgstr "Prikaz grupa"
+
+#: nautilus_my_computer/main.py
+msgid ""
+"Choose how each group appears. Visible: shows the group as a normal "
+"separated section. Merged: folds the group into the On this Computer group. "
+"Hidden: hides the group entirely."
+msgstr ""
+"Izaberite kako se svaka grupa prikazuje. Vidljivo: grupa se prikazuje kao "
+"zaseban odjeljak. Spojeno: grupa se prikazuje unutar grupe „Na ovom "
+"računaru“. Skriveno: grupa se uopšte ne prikazuje."
+
+#: nautilus_my_computer/main.py
+msgid "Visible"
+msgstr "Vidljivo"
+
+#: nautilus_my_computer/main.py
+msgid "Merged"
+msgstr "Spojeno"
+
+#: nautilus_my_computer/main.py
+msgid "Hidden"
+msgstr "Skriveno"
+
+#: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
+msgid "Preferred Folders"
+msgstr "Omiljene fascikle"
+
+#: nautilus_my_computer/main.py
+msgid "Show system partitions"
+msgstr "Prikaži sistemske particije"
+
+#: nautilus_my_computer/main.py
+msgid "Include boot and EFI partitions in the System group"
+msgstr "Uključi boot i EFI particije u grupu „Sistem“"
+
+#: nautilus_my_computer/main.py
+msgid "Hidden drives"
+msgstr "Skriveni diskovi"
+
+#: nautilus_my_computer/main.py
+msgid "Drives you manually hide from the Computer view will appear here."
+msgstr "Diskovi koje ručno sakrijete iz prikaza računara biće prikazani ovdje."
+
+#: nautilus_my_computer/main.py
+msgid "Sidebar visibility"
+msgstr "Vidljivost bočne trake"
+
+#: nautilus_my_computer/main.py
+msgid "Choose which locations appear on the sidebar."
+msgstr "Izaberite koje se lokacije prikazuju na bočnoj traci."
+
+#: nautilus_my_computer/main.py
+msgid "Drives"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Show disk usage"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Show a usage bar under each mounted drive."
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Warn when fuller than (%)"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Turn the usage bar red at this percentage used."
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Bar Color"
+msgstr "Boja trake"
+
+#: nautilus_my_computer/main.py
+msgid "Select or customize the bar color."
+msgstr "Izaberite ili prilagodite boju trake."
+
+#: nautilus_my_computer/main.py
+msgid "Color mode"
+msgstr "Režim boje"
+
+#: nautilus_my_computer/main.py
+msgid "System accent"
+msgstr "Akcentna boja sistema"
+
+#: nautilus_my_computer/main.py
+msgid "Custom color"
+msgstr "Prilagođena boja"
+
+#: nautilus_my_computer/main.py
+msgid "Custom gradient"
+msgstr "Prilagođeni gradijent"
+
+#: nautilus_my_computer/main.py
+msgid "Color"
+msgstr "Boja"
+
+#: nautilus_my_computer/main.py
+msgid "Start color"
+msgstr "Početna boja"
+
+#: nautilus_my_computer/main.py
+msgid "End color"
+msgstr "Krajnja boja"
+
+#: nautilus_my_computer/main.py
+msgid "Extension"
+msgstr "Proširenje"
+
+#: nautilus_my_computer/main.py
+msgid "Version"
+msgstr "Verzija"
+
+#: nautilus_my_computer/main.py
+msgid "Author"
+msgstr "Autor"
+
+#: nautilus_my_computer/main.py
+msgid "Source code"
+msgstr "Izvorni kod"
+
+#: nautilus_my_computer/main.py
+msgid "GitHub"
+msgstr "GitHub"
+
+#: nautilus_my_computer/my_computer_view.py
+msgid "Mount"
+msgstr "Priključi"
+
+#: nautilus_my_computer/my_computer_view.py
+msgid "Hide"
+msgstr "Sakrij"
+
+#: nautilus_my_computer/my_computer_view.py
+msgid "System"
+msgstr "Sistem"
+
+#: nautilus_my_computer/my_computer_view.py
+msgid "On this Computer"
+msgstr "Na ovom računaru"
+
+#: nautilus_my_computer/my_computer_view.py
+msgid "Removable"
+msgstr "Prenosni uređaji"
+
+#: nautilus_my_computer/my_computer_view.py
+msgid "Disc"
+msgstr "Disk"
+
+#: nautilus_my_computer/sidebar_usage.py nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "{free} free of {total}"
+msgstr "{free} slobodno od {total}"
+
+#: nautilus_my_computer/widgets.py
+msgid "Not mounted"
+msgstr "Nije priključeno"
+
+#: nautilus_my_computer/widgets.py
+msgid "Program"
+msgstr "Program"
+
+#: nautilus_my_computer/widgets.py
+msgid "Audio"
+msgstr "Zvuk"
+
+#: nautilus_my_computer/widgets.py
+msgid "Font"
+msgstr "Font"
+
+#: nautilus_my_computer/widgets.py
+msgid "Image"
+msgstr "Slika"
+
+#: nautilus_my_computer/widgets.py
+msgid "Archive"
+msgstr "Arhiva"
+
+#: nautilus_my_computer/widgets.py
+msgid "Markup"
+msgstr "Kod"
+
+#: nautilus_my_computer/widgets.py
+msgid "Text"
+msgstr "Tekst"
+
+#: nautilus_my_computer/widgets.py
+msgid "Video"
+msgstr "Video"
+
+#: nautilus_my_computer/widgets.py
+msgid "Contacts"
+msgstr "Kontakti"
+
+#: nautilus_my_computer/widgets.py
+msgid "Calendar"
+msgstr "Kalendar"
+
+#: nautilus_my_computer/widgets.py
+msgid "Document"
+msgstr "Dokument"
+
+#: nautilus_my_computer/widgets.py
+msgid "Presentation"
+msgstr "Prezentacija"
+
+#: nautilus_my_computer/widgets.py
+msgid "Spreadsheet"
+msgstr "Tabela"
+
+#: nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "{n} document"
+msgid_plural "{n} documents"
+msgstr[0] "{n} dokument"
+msgstr[1] "{n} dokumenta"
+msgstr[2] "{n} dokumenata"
+
+#: nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "{n} folder"
+msgid_plural "{n} folders"
+msgstr[0] "{n} fascikla"
+msgstr[1] "{n} fascikle"
+msgstr[2] "{n} fascikli"
+
+#: nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "{first} and {second}"
+msgstr "{first} i {second}"
+
+#: nautilus_my_computer/widgets.py
+msgid "Dimensions"
+msgstr "Dimenzije"

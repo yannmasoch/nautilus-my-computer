@@ -28,9 +28,9 @@ from nautilus_my_computer.common import (
 from nautilus_my_computer.context_menu import (
     ContextMenu,
     ContextMenuItem,
+    ContextMenuSection,
     background_clipboard_section,
     background_creation_section,
-    background_terminal_section,
     clipboard_actions_section,
     file_actions_section,
     my_computer_additions_section,
@@ -871,9 +871,12 @@ class _ColumnViewHost:
                 select_all_action=lambda: self._select_all_in_column(column),
             ),
         ]
-        terminal_action = self._terminal_action(uri)
-        if terminal_action is not None:
-            sections.append(background_terminal_section(open_terminal_action=terminal_action))
+        sections[0].items.extend(
+            self._background_items(self._native_bridge.native_terminal_items())
+        )
+        extension_items = self._background_items(self._native_bridge.extension_background_items())
+        if extension_items:
+            sections.append(ContextMenuSection(extension_items))
         sections.append(properties_section(lambda: self._ext._do_properties(uri, self._win)))
         # Parent the column-background menu to the MillerCanvas rather than
         # its GtkPaned child chain. The canvas is the actual view surface and
@@ -912,29 +915,16 @@ class _ColumnViewHost:
             )
         return items
 
-    def _terminal_action(self, uri: str):
-        """Return a launcher for an installed GNOME terminal, if one is available."""
-        if not uri.startswith("file://"):
-            return None
-        terminal_ids = {
-            "org.gnome.Console.desktop",
-            "org.gnome.Terminal.desktop",
-            "org.gnome.Ptyxis.desktop",
-        }
-        terminal = next(
-            (app for app in Gio.AppInfo.get_all() if app.get_id() in terminal_ids),
-            None,
-        )
-        if terminal is None:
-            return None
-
-        def open_terminal() -> None:
-            try:
-                terminal.launch_uris([uri], None)
-            except GLib.Error as error:
-                _log(f"Could not open terminal for {uri!r}: {error.message}")
-
-        return open_terminal
+    def _background_items(self, entries: list[tuple[str, str]]) -> list[ContextMenuItem]:
+        """Menu items for native view actions, run through the view itself so they act on
+        its folder like in Grid/List."""
+        return [
+            ContextMenuItem(
+                label.replace("_", ""),
+                action=lambda name=action: self._win.activate_action(name, None),
+            )
+            for label, action in entries
+        ]
 
     def _create_folder(self, column: Gtk.Widget) -> None:
         """Create a new folder in one column, then refresh its listing."""

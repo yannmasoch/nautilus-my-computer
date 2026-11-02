@@ -1,3 +1,20 @@
+nautilus-my-computer (0.13.4-1) UNRELEASED; urgency=medium
+
+  * Prompt for an administrator password when opening protected folders in Computer view and Column View
+  * Add a Hide action and hidden drives list for disk cards in the Computer view
+  * Add Empty Trash and Trash Settings to the Trash card menu
+  * Column View menu now mirrors Nautilus terminal items and respects xdg-terminal-exec
+  * Add code of conduct, security policy, and issue and pull request templates
+  * Publish the PPA to every Ubuntu series with per-series versions
+  * Fix Nautilus crashing when browsing or leaving a network location
+  * Disable Grid, List, and Column views in the Network view
+  * Fix a Computer view crash when scrolling or resizing, and let disk columns adapt natively
+  * Fix Weblate translation sync being blocked by merge conflicts
+  * Add Croatian, Serbian, Bosnian, Montenegrin, and Interslavic translations
+  * Update Polish and Russian translations
+
+ -- Yann Masoch <231734284+yannmasoch@users.noreply.github.com>  Sun, 01 Nov 2026 19:36:47 -0800
+
 nautilus-my-computer (0.13.3-1) UNRELEASED; urgency=medium
 
   * Add Column View drag and drop (Ctrl to copy, hover a folder to open it)

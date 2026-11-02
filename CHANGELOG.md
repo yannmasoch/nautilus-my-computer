@@ -4,6 +4,47 @@ All notable changes to this project are documented here.
 
 ---
 
+## v0.13.4
+Disks can now be hidden from the Computer view, folders that need administrator access now ask
+for a password, and several crashes in Column View and the Network view are fixed.
+
+### Added
+- Folders you do not have permission to open now prompt for an administrator password, like
+  native Nautilus, in the Computer view and in Column View.
+- Computer view: a Hide action on disk cards, plus a list of hidden drives so they can be
+  shown again.
+- Trash card menu: Empty Trash and Trash Settings.
+- Column View's right-click menu now offers the same terminal items as Nautilus, and "Open in
+  Terminal" respects your default terminal.
+- Croatian, Serbian, Bosnian, Montenegrin, and Interslavic translations.
+- README now links to the OMG! Ubuntu feature next to the It's FOSS one.
+- Project community files: code of conduct, security policy, contributing guide, and issue and
+  pull request templates.
+
+### Changed
+- Updated Polish and Russian translations.
+- The Ubuntu PPA now publishes a build for every supported Ubuntu release.
+
+### Fixed
+- Nautilus no longer crashes when browsing or leaving a network location. Grid, List, and Column
+  views are now disabled in the Network view, where they could not work.
+- Disk cards in the Computer view no longer crash Nautilus when scrolling or resizing the
+  window, and the columns now adapt to the window width on their own.
+- Translations syncing from Weblate no longer gets blocked by merge conflicts.
+
+Thanks to @AIR200 for requesting the hidden drives list in #197; to @itzploepie for requesting
+the administrator password prompt for protected folders in #187; to @lucasmantuan for reporting
+and fixing the terminal handling in #186; to @SkeJm for reporting the network crash in #198,
+@christianrauch for the backtrace, and @jadeezomg for the root-cause analysis and patch; to
+@DevGabrielGarcia for reporting and diagnosing the Computer view crash in #177; to @SudoNuker
+for reporting the Weblate sync problem in #205; to @HarshRajSinghania for the OMG! Ubuntu link
+in #201; to @vhrabar for reporting and fixing the per-release PPA versions in #193 and for the
+Croatian, Serbian, Bosnian, and Montenegrin translations; to Piotr Icikowski for the Polish
+translation update; and to @arbtttrn6 for the Interslavic translation and the Russian
+translation update.
+
+---
+
 ## v0.13.3
 Column View gains drag and drop, multi-selection, and a Finder-style multi-file preview, and
 the sidebar no longer goes empty after repeated navigation.
