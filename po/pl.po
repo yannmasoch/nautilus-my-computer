@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: My Computer for Nautilus 0.13.1\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-01 11:48-0800\n"
-"PO-Revision-Date: 2026-11-02 08:13+0000\n"
+"PO-Revision-Date: 2026-11-03 08:51+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: none\n"
 "Language: pl\n"
@@ -292,11 +292,11 @@ msgstr "Dołącza partycję rozruchową i partycję EFI do grupy System."
 
 #: nautilus_my_computer/main.py
 msgid "Hidden drives"
-msgstr "Ukryte napędy"
+msgstr "Ukryte dyski"
 
 #: nautilus_my_computer/main.py
 msgid "Drives you manually hide from the Computer view will appear here."
-msgstr "Napędy ukryte ręcznie z widoku Mój komputer pojawią się tutaj."
+msgstr "Dyski ukryte ręcznie z widoku Mój komputer pojawią się tutaj."
 
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
