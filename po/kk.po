@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: My Computer for Nautilus 0.13.3\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-01 11:48-0800\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: 2026-11-04 16:51+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: none\n"
 "Language: kk\n"
@@ -19,232 +19,234 @@ msgstr ""
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
-msgstr ""
+msgstr "Таңбашаны өзгерту"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Search icons…"
-msgstr ""
+msgstr "Таңбашаларды іздеу…"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Reset"
-msgstr ""
+msgstr "Бастапқы күйге келтіру"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select"
-msgstr ""
+msgstr "Таңдау"
 
 #: nautilus_my_computer/column_view.py
 msgid "Beta"
-msgstr ""
+msgstr "Бета"
 
 #: nautilus_my_computer/column_view.py
 msgid "Early access feature. It may contain bugs or inconsistencies."
 msgstr ""
+"Ерте қолжетімділік мүмкіндігі. Онда ақаулар немесе сәйкессіздіктер болуы "
+"мүмкін."
 
 #: nautilus_my_computer/column_view.py
 msgid "Column View"
-msgstr ""
+msgstr "Бағандық көрініс"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} item"
 msgid_plural "{n} items"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} элемент"
+msgstr[1] "{n} элемент"
 
 #: nautilus_my_computer/common.py
 msgid "Today"
-msgstr ""
+msgstr "Бүгін"
 
 #: nautilus_my_computer/common.py
 msgid "Yesterday"
-msgstr ""
+msgstr "Кеше"
 
 #: nautilus_my_computer/common.py
 msgid "Tomorrow"
-msgstr ""
+msgstr "Ертең"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} day ago"
 msgid_plural "{n} days ago"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} күн бұрын"
+msgstr[1] "{n} күн бұрын"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} day"
 msgid_plural "In {n} days"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} күннен кейін"
+msgstr[1] "{n} күннен кейін"
 
 #: nautilus_my_computer/common.py
 msgid "This week"
-msgstr ""
+msgstr "Осы апта"
 
 #: nautilus_my_computer/common.py
 msgid "Last week"
-msgstr ""
+msgstr "Өткен апта"
 
 #: nautilus_my_computer/common.py
 msgid "Next week"
-msgstr ""
+msgstr "Келесі апта"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} week ago"
 msgid_plural "{n} weeks ago"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} апта бұрын"
+msgstr[1] "{n} апта бұрын"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} week"
 msgid_plural "In {n} weeks"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} аптадан кейін"
+msgstr[1] "{n} аптадан кейін"
 
 #: nautilus_my_computer/common.py
 msgid "This month"
-msgstr ""
+msgstr "Осы ай"
 
 #: nautilus_my_computer/common.py
 msgid "Last month"
-msgstr ""
+msgstr "Өткен ай"
 
 #: nautilus_my_computer/common.py
 msgid "Next month"
-msgstr ""
+msgstr "Келесі ай"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} month ago"
 msgid_plural "{n} months ago"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} ай бұрын"
+msgstr[1] "{n} ай бұрын"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} month"
 msgid_plural "In {n} months"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} айдан кейін"
+msgstr[1] "{n} айдан кейін"
 
 #: nautilus_my_computer/common.py
 msgid "This year"
-msgstr ""
+msgstr "Осы жыл"
 
 #: nautilus_my_computer/common.py
 msgid "Last year"
-msgstr ""
+msgstr "Өткен жыл"
 
 #: nautilus_my_computer/common.py
 msgid "Next year"
-msgstr ""
+msgstr "Келесі жыл"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} year ago"
 msgid_plural "{n} years ago"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} жыл бұрын"
+msgstr[1] "{n} жыл бұрын"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} year"
 msgid_plural "In {n} years"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} жылдан кейін"
+msgstr[1] "{n} жылдан кейін"
 
 #: nautilus_my_computer/components.py
 msgid "Rename"
-msgstr ""
+msgstr "Атын өзгерту"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Tab"
-msgstr ""
+msgstr "Жаңа бетте ашу"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Window"
-msgstr ""
+msgstr "Жаңа терезеде ашу"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open With…"
-msgstr ""
+msgstr "Көмегімен ашу…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Remove from Bookmarks"
-msgstr ""
+msgstr "Бетбелгілерден өшіру"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Add to Bookmarks"
-msgstr ""
+msgstr "Бетбелгілерге қосу"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Unpin from My Computer"
-msgstr ""
+msgstr "«Менің компьютерімнен» бекітуді алып тастау"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Pin to My Computer"
-msgstr ""
+msgstr "«Менің компьютеріме» бекіту"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
-msgstr ""
+msgstr "Жаңа бума…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Document"
-msgstr ""
+msgstr "Жаңа құжат"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Rename…"
-msgstr ""
+msgstr "Атын өзгерту…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Compress…"
-msgstr ""
+msgstr "Сығу…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
-msgstr ""
+msgstr "Қоқыс шелегіне жылжыту"
 
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
-msgstr ""
+msgstr "«Менің компьютерім» баптаулары"
 
 #: nautilus_my_computer/main.py
 msgid "Open My Computer"
-msgstr ""
+msgstr "«Менің компьютерімді» ашу"
 
 #: nautilus_my_computer/main.py
 msgid "Recommended Apps"
-msgstr ""
+msgstr "Ұсынылатын қолданбалар"
 
 #: nautilus_my_computer/main.py
 msgid "Other Apps"
-msgstr ""
+msgstr "Басқа қолданбалар"
 
 #: nautilus_my_computer/main.py
 msgid "General"
-msgstr ""
+msgstr "Жалпы"
 
 #: nautilus_my_computer/main.py
 msgid "Computer view"
-msgstr ""
+msgstr "Компьютер көрінісі"
 
 #: nautilus_my_computer/main.py
 msgid "Start on the Computer view"
-msgstr ""
+msgstr "Компьютер көрінісінен бастау"
 
 #: nautilus_my_computer/main.py
 msgid "Launch directly to the Computer view instead of Home"
-msgstr ""
+msgstr "Үй бумасының орнына тікелей Компьютер көрінісінде іске қосу"
 
 #: nautilus_my_computer/main.py
 msgid "Panel visibility"
-msgstr ""
+msgstr "Панельдің көрінуі"
 
 #: nautilus_my_computer/main.py
 msgid ""
@@ -252,207 +254,211 @@ msgid ""
 "separated section. Merged: folds the group into the On this Computer group. "
 "Hidden: hides the group entirely."
 msgstr ""
+"Әр топтың қалай көрінетінін таңдаңыз. Көрінетін: топты қалыпты бөлінген "
+"бөлім ретінде көрсетеді. Біріктірілген: топты «Осы компьютерде» тобына "
+"жинайды. Жасырын: топты толығымен жасырады."
 
 #: nautilus_my_computer/main.py
 msgid "Visible"
-msgstr ""
+msgstr "Көрінетін"
 
 #: nautilus_my_computer/main.py
 msgid "Merged"
-msgstr ""
+msgstr "Біріктірілген"
 
 #: nautilus_my_computer/main.py
 msgid "Hidden"
-msgstr ""
+msgstr "Жасырын"
 
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Preferred Folders"
-msgstr ""
+msgstr "Таңдаулы бумалар"
 
 #: nautilus_my_computer/main.py
 msgid "Show system partitions"
-msgstr ""
+msgstr "Жүйелік бөлімдерді көрсету"
 
 #: nautilus_my_computer/main.py
 msgid "Include boot and EFI partitions in the System group"
-msgstr ""
+msgstr "«Жүйе» тобына жүктеу және EFI бөлімдерін қамту"
 
 #: nautilus_my_computer/main.py
 msgid "Hidden drives"
-msgstr ""
+msgstr "Жасырын диск құрылғылары"
 
 #: nautilus_my_computer/main.py
 msgid "Drives you manually hide from the Computer view will appear here."
 msgstr ""
+"Компьютер көрінісінен қолмен жасырылған диск құрылғылары осында көрсетіледі."
 
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
-msgstr ""
+msgstr "Бүйірлік панель көрінуі"
 
 #: nautilus_my_computer/main.py
 msgid "Choose which locations appear on the sidebar."
-msgstr ""
+msgstr "Бүйірлік панельде қандай орындардың көрсетілетінін таңдаңыз."
 
 #: nautilus_my_computer/main.py
 msgid "Bar Color"
-msgstr ""
+msgstr "Панель түсі"
 
 #: nautilus_my_computer/main.py
 msgid "Select or customize the bar color."
-msgstr ""
+msgstr "Панель түсін таңдаңыз немесе баптаңыз."
 
 #: nautilus_my_computer/main.py
 msgid "Color mode"
-msgstr ""
+msgstr "Түс режимі"
 
 #: nautilus_my_computer/main.py
 msgid "System accent"
-msgstr ""
+msgstr "Жүйелік акцент"
 
 #: nautilus_my_computer/main.py
 msgid "Custom color"
-msgstr ""
+msgstr "Пайдаланушылық түс"
 
 #: nautilus_my_computer/main.py
 msgid "Custom gradient"
-msgstr ""
+msgstr "Пайдаланушылық градиент"
 
 #: nautilus_my_computer/main.py
 msgid "Color"
-msgstr ""
+msgstr "Түс"
 
 #: nautilus_my_computer/main.py
 msgid "Start color"
-msgstr ""
+msgstr "Бастапқы түс"
 
 #: nautilus_my_computer/main.py
 msgid "End color"
-msgstr ""
+msgstr "Соңғы түс"
 
 #: nautilus_my_computer/main.py
 msgid "Extension"
-msgstr ""
+msgstr "Кеңейту"
 
 #: nautilus_my_computer/main.py
 msgid "Version"
-msgstr ""
+msgstr "Нұсқа"
 
 #: nautilus_my_computer/main.py
 msgid "Author"
-msgstr ""
+msgstr "Автор"
 
 #: nautilus_my_computer/main.py
 msgid "Source code"
-msgstr ""
+msgstr "Бастапқы код"
 
 #: nautilus_my_computer/main.py
 msgid "GitHub"
-msgstr ""
+msgstr "GitHub"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Mount"
-msgstr ""
+msgstr "Тіркеу"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Hide"
-msgstr ""
+msgstr "Жасыру"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "System"
-msgstr ""
+msgstr "Жүйе"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "On this Computer"
-msgstr ""
+msgstr "Осы компьютерде"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Removable"
-msgstr ""
+msgstr "Ауыстырмалы"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Disc"
-msgstr ""
+msgstr "Диск"
 
 #: nautilus_my_computer/widgets.py
 msgid "Not mounted"
-msgstr ""
+msgstr "Тіркелмеген"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{free} free of {total}"
-msgstr ""
+msgstr "{total} ішінен {free} бос"
 
 #: nautilus_my_computer/widgets.py
 msgid "Program"
-msgstr ""
+msgstr "Бағдарлама"
 
 #: nautilus_my_computer/widgets.py
 msgid "Audio"
-msgstr ""
+msgstr "Аудио"
 
 #: nautilus_my_computer/widgets.py
 msgid "Font"
-msgstr ""
+msgstr "Қаріп"
 
 #: nautilus_my_computer/widgets.py
 msgid "Image"
-msgstr ""
+msgstr "Сурет"
 
 #: nautilus_my_computer/widgets.py
 msgid "Archive"
-msgstr ""
+msgstr "Архив"
 
 #: nautilus_my_computer/widgets.py
 msgid "Markup"
-msgstr ""
+msgstr "Белгілеу"
 
 #: nautilus_my_computer/widgets.py
 msgid "Text"
-msgstr ""
+msgstr "Мәтін"
 
 #: nautilus_my_computer/widgets.py
 msgid "Video"
-msgstr ""
+msgstr "Видео"
 
 #: nautilus_my_computer/widgets.py
 msgid "Contacts"
-msgstr ""
+msgstr "Контактілер"
 
 #: nautilus_my_computer/widgets.py
 msgid "Calendar"
-msgstr ""
+msgstr "Күнтізбе"
 
 #: nautilus_my_computer/widgets.py
 msgid "Document"
-msgstr ""
+msgstr "Құжат"
 
 #: nautilus_my_computer/widgets.py
 msgid "Presentation"
-msgstr ""
+msgstr "Презентация"
 
 #: nautilus_my_computer/widgets.py
 msgid "Spreadsheet"
-msgstr ""
+msgstr "Электрондық кесте"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{n} document"
 msgid_plural "{n} documents"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} құжат"
+msgstr[1] "{n} құжат"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{n} folder"
 msgid_plural "{n} folders"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} бума"
+msgstr[1] "{n} бума"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{first} and {second}"
-msgstr ""
+msgstr "{first} және {second}"
 
 #: nautilus_my_computer/widgets.py
 msgid "Dimensions"
-msgstr ""
+msgstr "Өлшемдері"
