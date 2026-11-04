@@ -104,6 +104,14 @@ if [ -z "${INSTALL_SOURCE:-}" ]; then
     fi
 fi
 
+# --- Environment detection ---
+# Nautilus runs on the host, so nautilus-python must be installed there. Inside a
+# toolbox/distrobox container the package manager only sees the container (issue #211).
+in_container() { [ -f /run/.containerenv ] || [ -f /run/.toolboxenv ] || [ -f /.dockerenv ]; }
+# Immutable hosts (Silverblue, Bazzite, ...) layer packages with rpm-ostree, then need a reboot.
+is_ostree() { [ -e /run/ostree-booted ]; }
+REBOOT_NEEDED=""
+
 # --- Package manager detection ---
 PM=""
 NP_PKG=""
@@ -239,6 +247,13 @@ ensure_nautilus_python() {
         return
     fi
     line "$NP_PKG" "not found, installing..."
+    if is_ostree; then
+        # rpm -q only sees the new package after a reboot, so skip the post-install check.
+        $SUDO rpm-ostree install "$NP_PKG" || die "rpm-ostree could not install $NP_PKG."
+        REBOOT_NEEDED=1
+        line "$NP_PKG" "layered, reboot required"
+        return
+    fi
     case "$PM" in
         pacman) $SUDO pacman -S --noconfirm "$NP_PKG" ;;
         apt)    $SUDO apt-get install -y "$NP_PKG" python3-gi ;;
@@ -254,6 +269,11 @@ ensure_gettext() {
     if command -v msgfmt >/dev/null 2>&1; then
         gver=$(gettext_version)
         line "gettext" "$([ -n "$gver" ] && echo "detected ($gver)" || echo "detected")"
+        return
+    fi
+    if is_ostree; then
+        # Layering an optional package would cost another reboot, so skip translations.
+        line "gettext" "not found, translations will be skipped"
         return
     fi
     line "gettext" "not found, installing..."
@@ -391,6 +411,7 @@ restart_nautilus() {
 # --- INSTALL ---
 do_install() {
     echo ""
+    in_container && die "Running inside a container (toolbox/distrobox). Nautilus runs on your host system, so run this installer from a normal terminal there."
     check_dependencies
 
     printf '%s\n' "${BOLD}Install type${RESET}"
@@ -427,6 +448,11 @@ do_install() {
     echo ""
     printf '%s\n' "${BOLD}${CYAN}🚀 Installation complete!${RESET}"
     echo ""
+    if [ -n "$REBOOT_NEEDED" ]; then
+        printf '%s\n' "Reboot to finish: nautilus-python was layered with rpm-ostree and loads after a restart."
+        echo ""
+        return
+    fi
     restart_nautilus
 }
 
