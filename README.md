@@ -148,6 +148,15 @@ nix profile install "github:yannmasoch/nautilus-my-computer?dir=packaging/nix"
   >
   > Run it as `./install.sh` (not `bash install.sh`) so it installs from your local clone instead of downloading.
 
+<br>
+
+- **Immutable distros (Silverblue, Bazzite, Kinoite)**
+
+  Run the installer in a normal terminal on the host, not inside a toolbox or distrobox
+  container. Nautilus runs on the host, so it can't load anything installed in a container.
+  If `nautilus-python` is missing, the installer layers it with `rpm-ostree`. Reboot
+  afterwards to finish.
+
 </details>
 
 <br>
