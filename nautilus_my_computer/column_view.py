@@ -474,6 +474,11 @@ class _ColumnViewHost:
         # Gtk.ListView's recycling).
         self._pending_row_commit: tuple[Gtk.Widget, object] | None = None
         self._row_commit_id = 0
+        # A plain click on a row inside a multi-selection waits one
+        # double-click interval before narrowing the selection to that row, so
+        # a second click can open the whole selection instead (see
+        # _click_in_multi_selection). (row uri, monotonic time, timer id).
+        self._multi_click: tuple[str, int, int] | None = None
         # Right/Enter may target a child whose async enumeration has not
         # completed. Keep keyboard focus on the populated parent until that
         # child proves it has a selectable row (see _on_column_loaded).
@@ -1101,6 +1106,10 @@ class _ColumnViewHost:
             column.modifier_click(row.item, ctrl=ctrl, shift=shift)
             return
         gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+        if column.selection_count() > 1 and column.is_item_selected(row.item):
+            self._click_in_multi_selection(column, row)
+            return
+        self._cancel_multi_click()
         # Activate first: _set_focused_index drops the selection of any column that is
         # not the focused one, so selecting before would be undone (#189).
         self._nav_from_index = self.focused_index
@@ -2222,8 +2231,53 @@ class _ColumnViewHost:
                 self._arm_row_commit(col, item)
         return True
 
+    def _open_selected_files(self, column: Gtk.Widget) -> None:
+        """Open every selected file in its default application. Folders in the
+        selection are skipped: the column chain can only drill into one."""
+        for item in column.selected_items():
+            if not item.is_dir:
+                self._open_file(item.uri)
+
+    def _cancel_multi_click(self) -> None:
+        if self._multi_click is not None:
+            GLib.source_remove(self._multi_click[2])
+            self._multi_click = None
+
+    def _click_in_multi_selection(self, column: Gtk.Widget, row: Gtk.Widget) -> None:
+        """A plain click on a row that is part of a multi-selection. A second
+        click on the same row within the double-click time opens the whole
+        selection. Otherwise the selection narrows to the clicked row once that
+        time has passed, as Nautilus does -- deciding at once would collapse the
+        selection before a double-click could use it."""
+        now = GLib.get_monotonic_time()
+        window_us = Gtk.Settings.get_default().get_property("gtk-double-click-time") * 1000
+        previous = self._multi_click
+        if previous is not None and previous[0] == row.uri and now - previous[1] <= window_us:
+            self._cancel_multi_click()
+            self._open_selected_files(column)
+            return
+        self._cancel_multi_click()
+
+        def narrow() -> bool:
+            self._multi_click = None
+            if column in self.columns and column.is_item_selected(row.item):
+                self._nav_from_index = self.focused_index
+                try:
+                    self._activate_column(column)
+                    column.select_only_item(row.item)
+                    column.activate_row(row)
+                finally:
+                    self._nav_from_index = None
+            return GLib.SOURCE_REMOVE
+
+        timer = GLib.timeout_add(window_us // 1000, narrow)
+        self._multi_click = (row.uri, now, timer)
+
     def _open_selection(self, column: Gtk.Widget) -> bool:
         """Open what column has selected -- the Return/Enter target.
+
+        With several rows selected every selected file opens (folders are
+        skipped, see _open_selected_files).
 
         Folders drill into a new column, matching what clicking them does --
         that's what "open" means in a Miller view. Files go straight to
@@ -2231,6 +2285,9 @@ class _ColumnViewHost:
         is never a mid-flight preview, so neither click-policy nor the
         repeat-click timing activate_row applies."""
         self._cancel_row_commit()
+        if column.selection_count() > 1:
+            self._open_selected_files(column)
+            return True
         item = column.selected_item()
         if item is None:
             return True
