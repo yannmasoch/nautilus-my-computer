@@ -1213,6 +1213,11 @@ def _preferred_move(uris: list[str], destination_uri: str) -> bool:
     return True
 
 
+# Slack, in px, between the end of a row's name and where a press counts as blank
+# (a rubber band start rather than a file drag).
+_ROW_BLANK_PADDING = 6
+
+
 class MyComputerColumnRow(Gtk.Box):
     """One recyclable Gtk.ListView row widget for a Column View column: icon,
     name, and a trailing chevron for folders (visual affordance that
@@ -1360,6 +1365,20 @@ class MyComputerColumnRow(Gtk.Box):
     @property
     def content_type(self) -> str | None:
         return self.item.content_type if self.item is not None else None
+
+    def is_blank_at(self, widget: Gtk.Widget, x: float, y: float) -> bool:
+        """Whether the point (x, y), in `widget`'s coordinates, is on the row
+        to the right of its name text. The icon, the name and the padding left
+        of them are not blank: pressing there drags the file."""
+        ok, point = widget.compute_point(self, Graphene.Point().init(x, y))
+        if not ok:
+            return False
+        label = self._name_lbl
+        offset_x, _offset_y = label.get_layout_offsets()
+        _ink, logical = label.get_layout().get_pixel_extents()
+        text_right = offset_x + logical.x + min(logical.width, label.get_width())
+        ok, end = label.compute_point(self, Graphene.Point().init(text_right, 0))
+        return ok and point.x > end.x + _ROW_BLANK_PADDING
 
     def bind(self, item: _ColumnRowItem) -> None:
         """Apply one model entry's data to this recycled widget instance.
@@ -1917,6 +1936,11 @@ class ColumnSelection:
         uri = self._store.get_item(position).uri
         self._apply(selection.shift_click(self._sel, uri, self._ordered(), extend=extend))
 
+    def select_band(self, uris, anchor: str | None) -> None:
+        """Rubber band: make exactly these URIs the selection, with `anchor` as
+        the row a later Shift+arrow range grows from."""
+        self._apply(selection.Selection(frozenset(uris), anchor))
+
     def cursor(self) -> int | None:
         """Position of the moving end of a Shift range (see selection.cursor_index)."""
         return selection.cursor_index(self._sel, self._ordered())
@@ -1972,10 +1996,23 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         on_files_dropped=None,
         on_drag_start=None,
         on_drag_end=None,
+        on_band_start=None,
     ) -> None:
         super().__init__()
         self._ext = ext
         self.folder_uri = folder_uri
+        # on_band_start(column) makes this the active column when a rubber
+        # band starts selecting in it.
+        self._on_band_start = on_band_start
+        # Rubber band state: where the press landed (x in view coordinates,
+        # y in content coordinates, so it survives scrolling), whether the
+        # press was on a blank spot, whether the drag has become a band, and
+        # the rectangle to paint.
+        self._band_origin: tuple[float, float] | None = None
+        self._band_candidate = False
+        self._band_active = False
+        self._band_base: frozenset[str] = frozenset()
+        self._band_rect: tuple[float, float, float, float] | None = None
         # on_drag_start(column) makes this the active column before a drag
         # reads its selection, so a drag never uses another column's.
         self._on_drag_start = on_drag_start
@@ -2131,7 +2168,122 @@ class MyComputerColumn(Gtk.ScrolledWindow):
         drag_over.connect("leave", lambda *_a: self.remove_css_class("mc-drop-over"))
         self.add_controller(drag_over)
 
+        # CAPTURE, so the band can take over from a row's own drag source once
+        # the pointer has moved; a press that never moves stays a plain click.
+        band = Gtk.GestureDrag(button=Gdk.BUTTON_PRIMARY)
+        band.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        band.connect("drag-begin", self._on_band_begin)
+        band.connect("drag-update", self._on_band_update)
+        band.connect("drag-end", self._on_band_end)
+        self.add_controller(band)
+
         self._load(self._selection_state.begin_reload())
+
+    def _is_band_start(self, x: float, y: float) -> bool:
+        """Whether a press at (x, y) may start a rubber band: on the column's
+        empty space, or on the part of a row to the right of its name. A press
+        on the icon or the name stays a file drag."""
+        if self.get_child() is not self.list_view:
+            return False
+        widget = self.pick(x, y, Gtk.PickFlags.DEFAULT)
+        while widget is not None and widget is not self:
+            if isinstance(widget, Gtk.Scrollbar):
+                return False
+            if isinstance(widget, MyComputerColumnRow):
+                return widget.item is not None and widget.is_blank_at(self, x, y)
+            widget = widget.get_parent()
+        return True
+
+    def _band_geometry(self) -> tuple[float, float] | None:
+        """(content y of row 0's top, row pitch), read off one settled row on
+        screen. Rows are uniform, so one measurement places every row."""
+        page = self.get_vadjustment().get_page_size()
+        for row in self._row_widgets.values():
+            height = row.get_allocated_height()
+            if row.item is None or height <= 0:
+                continue
+            ok, bounds = row.compute_bounds(self)
+            if not ok or not (0 <= bounds.get_y() <= page - height):
+                continue
+            index = self._index_for_uri(row.item.uri)
+            if index is None:
+                continue
+            top = bounds.get_y() + self.get_vadjustment().get_value() - index * height
+            return top, float(height)
+        return None
+
+    def _on_band_begin(self, gesture: Gtk.GestureDrag, x: float, y: float) -> None:
+        self._band_candidate = self._is_band_start(x, y)
+        self._band_active = False
+        self._band_origin = (x, y + self.get_vadjustment().get_value())
+        ctrl = bool(gesture.get_current_event_state() & Gdk.ModifierType.CONTROL_MASK)
+        self._band_base = frozenset(self.selected_uris()) if ctrl else frozenset()
+
+    def _on_band_update(self, gesture: Gtk.GestureDrag, dx: float, dy: float) -> None:
+        if not self._band_candidate or self._band_origin is None:
+            return
+        if not self._band_active:
+            slop = Gtk.Settings.get_default().get_property("gtk-dnd-drag-threshold")
+            if math.hypot(dx, dy) < slop:
+                return
+            # Past the click threshold: this is a band, not a click or a file drag.
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+            self._band_active = True
+            if callable(self._on_band_start):
+                self._on_band_start(self)
+        origin_x, origin_cy = self._band_origin
+        scroll = self.get_vadjustment().get_value()
+        cur_x = origin_x + dx
+        # The press point, in view coordinates now, and the pointer.
+        start_vy = origin_cy - scroll
+        cur_vy = start_vy + dy
+        width, height = self.get_width(), self.get_height()
+        x0, x1 = sorted((max(0.0, min(origin_x, width)), max(0.0, min(cur_x, width))))
+        y0, y1 = sorted((max(0.0, min(start_vy, height)), max(0.0, min(cur_vy, height))))
+        self._band_rect = (x0, y0, x1 - x0, y1 - y0)
+        self._select_band_rows(origin_cy, cur_vy + scroll)
+        self.queue_draw()
+
+    def _select_band_rows(self, content_a: float, content_b: float) -> None:
+        geometry = self._band_geometry()
+        n = self._store.get_n_items()
+        if geometry is None or n == 0:
+            return
+        top, pitch = geometry
+        lo, hi = sorted((content_a, content_b))
+        first = math.floor((lo - top) / pitch)
+        last = math.floor((hi - top) / pitch)
+        if last < 0 or first >= n:
+            uris, anchor = [], None
+        else:
+            first, last = max(0, first), min(n - 1, last)
+            uris = [self._store.get_item(i).uri for i in range(first, last + 1)]
+            start = max(0, min(n - 1, math.floor((content_a - top) / pitch)))
+            anchor = self._store.get_item(start).uri
+        self._selection_state.select_band(self._band_base | set(uris), anchor)
+
+    def _on_band_end(self, _gesture: Gtk.GestureDrag, _dx: float, _dy: float) -> None:
+        self._band_candidate = False
+        self._band_active = False
+        self._band_origin = None
+        self._band_rect = None
+        self.queue_draw()
+
+    def do_snapshot(self, snapshot: Gtk.Snapshot) -> None:
+        Gtk.ScrolledWindow.do_snapshot(self, snapshot)
+        if not self._band_active or self._band_rect is None:
+            return
+        x, y, w, h = self._band_rect
+        if w <= 0 or h <= 0:
+            return
+        found, accent = self.get_style_context().lookup_color("accent_bg_color")
+        if not found:
+            accent = Gdk.RGBA(0.21, 0.52, 0.89, 1.0)
+        fill = Gdk.RGBA(accent.red, accent.green, accent.blue, 0.25)
+        rect = Graphene.Rect().init(x, y, w, h)
+        snapshot.append_color(fill, rect)
+        outline = Gsk.RoundedRect().init_from_rect(rect, 0)
+        snapshot.append_border(outline, [1.0] * 4, [accent] * 4)
 
     def _show_empty_page(self, empty: bool) -> None:
         """Swap the scrolled window's child between the row list and the

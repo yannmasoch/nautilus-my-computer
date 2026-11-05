@@ -649,6 +649,7 @@ class _ColumnViewHost:
             on_files_dropped=self._on_files_dropped,
             on_drag_start=self._activate_column,
             on_drag_end=lambda _column: self._end_dnd_hover(),
+            on_band_start=self._on_column_band_start,
         )
         column.connect_selection_changed(lambda: self._schedule_multi_preview(column))
         column.connect_selection_changed(lambda: self._push_selection_to_native(column))
@@ -660,6 +661,13 @@ class _ColumnViewHost:
         right_click.connect("pressed", self._on_column_background_right_clicked, column)
         column.add_controller(right_click)
         return column
+
+    def _on_column_band_start(self, column) -> None:
+        """A rubber band began in `column`: it becomes the active column, and
+        nothing queued for the row selection it replaces may land afterwards."""
+        self._cancel_row_commit()
+        self._cancel_multi_click()
+        self._activate_column(column)
 
     def _push_selection_to_native(self, column) -> None:
         """Mirror a column's selection into Nautilus's native model (#178), so
