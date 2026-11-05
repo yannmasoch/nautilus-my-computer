@@ -1917,6 +1917,14 @@ class ColumnSelection:
         uri = self._store.get_item(position).uri
         self._apply(selection.shift_click(self._sel, uri, self._ordered(), extend=extend))
 
+    def cursor(self) -> int | None:
+        """Position of the moving end of a Shift range (see selection.cursor_index)."""
+        return selection.cursor_index(self._sel, self._ordered())
+
+    def extend_to(self, position: int) -> None:
+        """Shift+arrow: select from the anchor to this row."""
+        self._apply(selection.extend_to(self._sel, self._ordered(), position))
+
     def modifier_click(self, item, *, ctrl: bool, shift: bool) -> None:
         found, position = self._store.find(item)
         if not found:
@@ -2689,6 +2697,17 @@ class MyComputerColumn(Gtk.ScrolledWindow):
     def select_only_item(self, item) -> None:
         """Drop any multi-selection and keep just this row selected."""
         self._selection_state.select_only_item(item)
+
+    def cursor_index(self) -> int | None:
+        """Position of the row a Shift+arrow range grows from and shrinks to."""
+        return self._selection_state.cursor()
+
+    def extend_selection_to(self, index: int) -> None:
+        """Shift+arrow: select the range from the anchor row to `index`
+        (clamped into range). No-op for an empty folder."""
+        n = self._store.get_n_items()
+        if n:
+            self._selection_state.extend_to(max(0, min(index, n - 1)))
 
     def connect_selection_changed(self, callback) -> None:
         """Call callback() after any change of this column's row selection."""

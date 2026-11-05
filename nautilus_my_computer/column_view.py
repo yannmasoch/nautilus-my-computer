@@ -2081,11 +2081,11 @@ class _ColumnViewHost:
         if column is None:
             return False
 
-        # Shift has no meaning of its own yet for Left/Right/Return --
-        # range selection is out of scope for #91 (see PR #146's
-        # multi-selection work) -- so those combinations fall straight
-        # through to the same swallow every other unclaimed key gets below,
-        # rather than running the plain-key action.
+        # Shift+Up/Down/Home/End/Page Up/Page Down extend the selection as a
+        # range (_move_column_selection). Shift has no meaning of its own for
+        # Left/Right/Return, so those combinations fall straight through to
+        # the same swallow every other unclaimed key gets below, rather than
+        # running the plain-key action.
         shift = bool(int(gtk_state) & Gdk.ModifierType.SHIFT_MASK)
         if not shift:
             if keyval in (Gdk.KEY_Left, Gdk.KEY_KP_Left):
@@ -2095,11 +2095,11 @@ class _ColumnViewHost:
             if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter, Gdk.KEY_ISO_Enter):
                 return self._open_selection(column)
         if keyval in _COLUMN_NAV_KEYVALS:
-            return self._move_column_selection(column, keyval)
+            return self._move_column_selection(column, keyval, extend=shift)
 
         return True
 
-    def _move_column_selection(self, column: Gtk.Widget, keyval: int) -> bool:
+    def _move_column_selection(self, column: Gtk.Widget, keyval: int, extend: bool = False) -> bool:
         """Up/Down/Home/End/Page Up/Page Down: move column's own selection
         directly through its ColumnSelection (see _on_key_pressed's
         docstring for why this isn't left to Gtk.ListView's native
@@ -2115,11 +2115,19 @@ class _ColumnViewHost:
         Down already at the last row, ...) computes target == current and
         returns without reselecting or re-scrolling -- that would otherwise
         arm a real commit (rebuild the chain, re-push the slot location) for
-        a press that didn't actually move anything."""
+        a press that didn't actually move anything.
+
+        With `extend` (Shift held) the keys move the range's cursor instead:
+        the selection becomes everything from the anchor row to the target,
+        growing or shrinking as the cursor moves. Nothing is committed to the
+        Miller chain then -- like a Shift-click, the multi-selection preview
+        follows the selection."""
         count = column.item_count()
         if count == 0:
             return True
         current = column.selected_index()
+        if extend and current is not None:
+            current = column.cursor_index()
 
         if current is None:
             target = (
@@ -2147,6 +2155,14 @@ class _ColumnViewHost:
             target = count - 1 if step is None else min(count - 1, current + step)
 
         if target == current:
+            return True
+
+        if extend and current is not None:
+            # Whatever single-row commit the last plain press armed must not
+            # land on top of the range being built.
+            self._cancel_row_commit()
+            column.extend_selection_to(target)
+            column.list_view.scroll_to(target, Gtk.ListScrollFlags.NONE, None)
             return True
 
         item = column.select_index(target)
