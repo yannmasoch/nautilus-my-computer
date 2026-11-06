@@ -573,6 +573,7 @@ _WINDOW_SHORTCUTS: dict[tuple[int, int], str] = {
         int(Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK),
         Gdk.KEY_N,
     ): "_new_folder_in_column_focused_folder",
+    (0, Gdk.KEY_space): "_preview_column_selection",
     (0, Gdk.KEY_F2): "_rename_column_focused_folder",
     (0, Gdk.KEY_Delete): "_trash_column_focused_folder",
 }
@@ -1178,6 +1179,20 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
     def _set_default_view(self, value: str) -> None:
         if self._gsettings and self._gsettings.get_string("default-view") != value:
             self._gsettings.set_string("default-view", value)
+
+    def _preview_column_selection(self, win: Gtk.Window) -> bool:
+        """Space: preview the selected file in the focused Miller column."""
+        if not self._active_slot_showing_column(win):
+            return False
+        # Leave Space to text entries and to widgets outside the slot (sidebar,
+        # toolbar buttons), which use it themselves.
+        focused = win.get_focus()
+        if isinstance(focused, Gtk.Editable):
+            return False
+        slot = self._active_slot_widget(win)
+        if focused is not None and not (focused is slot or focused.is_ancestor(slot)):
+            return False
+        return column_view.preview_focused_selection(self, win)
 
     def _rename_column_focused_folder(self, win: Gtk.Window) -> bool:
         """F2: rename the selected local item in the focused Miller column."""

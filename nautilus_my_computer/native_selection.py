@@ -213,6 +213,31 @@ class NativeBridge:
         loc = slot.get_property("location") if slot is not None else None
         return loc is not None and loc.equal(Gio.File.new_for_uri(folder_uri))
 
+    def preview(self, folder_uri: str, uri: str) -> bool:
+        """Preview `uri` through Nautilus's own preview action, as Space does in its
+        views. The native selection is brought in line with `uri` first, since the
+        mirror from Column View is applied asynchronously. True when the action ran;
+        False (nothing happens) when the native view isn't showing `folder_uri`, has
+        no such row, or this Nautilus has no such action."""
+        slot = self._slot_ref()
+        if slot is None or not self.shows(folder_uri):
+            _log(f"native_selection: preview skipped, native view not on {folder_uri!r}")
+            return False
+        model = self.model()
+        target = _norm(uri)
+        if model is None or target not in self._available(model):
+            _log(f"native_selection: preview skipped, {target!r} not in native view")
+            return False
+        if [_norm(u) for u in self.read()] != [target]:
+            self._write(model, frozenset({target}))
+        for w in _walk(slot):
+            if type(w).__name__ == "NautilusFilesView":
+                done = bool(w.activate_action("view.preview-selection", None))
+                _log(f"native_selection: view.preview-selection activated={done}")
+                return done
+        _log("native_selection: preview skipped, no NautilusFilesView found")
+        return False
+
     def _loading(self) -> bool:
         slot = self._slot_ref()
         return slot is not None and bool(slot.get_property("loading"))
