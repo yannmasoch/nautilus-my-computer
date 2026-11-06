@@ -974,10 +974,13 @@ def _scan_gio_volumes() -> list[MountInfo]:
             name = volume.get_name() or "Unknown Device"
             drive = volume.get_drive()
             is_removable = drive.is_removable() if drive else True
+            uuid = volume.get_identifier(Gio.VOLUME_IDENTIFIER_KIND_UUID) or None
+            identifier = volume.get_identifier(Gio.VOLUME_IDENTIFIER_KIND_UNIX_DEVICE) or name
+            key = f"uuid:{uuid}" if uuid else f"vol:{identifier}"
             results.append(
                 MountInfo(
-                    key=f"vol:{name}",
-                    uuid=None,
+                    key=key,
+                    uuid=uuid,
                     device=f"vol:{name}",
                     mountpoint="",
                     fstype="unmounted",
