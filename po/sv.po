@@ -1,0 +1,461 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the My Computer for Nautilus package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: My Computer for Nautilus 0.13.3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-01 11:48-0800\n"
+"PO-Revision-Date: 2026-11-06 13:35+0000\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: none\n"
+"Language: sv\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+
+#: nautilus_my_computer/bookmarks.py
+msgid "Change Icon"
+msgstr "Ändra ikon"
+
+#: nautilus_my_computer/bookmarks.py
+msgid "Search icons…"
+msgstr "Sök efter ikoner…"
+
+#: nautilus_my_computer/bookmarks.py
+msgid "Reset"
+msgstr "Återställ"
+
+#: nautilus_my_computer/column_view.py
+msgid "Select"
+msgstr "Välj"
+
+#: nautilus_my_computer/column_view.py
+msgid "Beta"
+msgstr "Beta"
+
+#: nautilus_my_computer/column_view.py
+msgid "Early access feature. It may contain bugs or inconsistencies."
+msgstr "Förhandsfunktion. Den kan innehålla buggar eller brister."
+
+#: nautilus_my_computer/column_view.py
+msgid "Column View"
+msgstr "Kolumnvy"
+
+#: nautilus_my_computer/common.py
+#, python-brace-format
+msgid "{n} item"
+msgid_plural "{n} items"
+msgstr[0] "{n} objekt"
+msgstr[1] "{n} objekt"
+
+#: nautilus_my_computer/common.py
+msgid "Today"
+msgstr "Idag"
+
+#: nautilus_my_computer/common.py
+msgid "Yesterday"
+msgstr "Igår"
+
+#: nautilus_my_computer/common.py
+msgid "Tomorrow"
+msgstr "Imorgon"
+
+#: nautilus_my_computer/common.py
+#, python-brace-format
+msgid "{n} day ago"
+msgid_plural "{n} days ago"
+msgstr[0] "{n} dag sedan"
+msgstr[1] "{n} dagar sedan"
+
+#: nautilus_my_computer/common.py
+#, python-brace-format
+msgid "In {n} day"
+msgid_plural "In {n} days"
+msgstr[0] "Om {n} dag"
+msgstr[1] "Om {n} dagar"
+
+#: nautilus_my_computer/common.py
+msgid "This week"
+msgstr "Denna veckan"
+
+#: nautilus_my_computer/common.py
+msgid "Last week"
+msgstr "Förra veckan"
+
+#: nautilus_my_computer/common.py
+msgid "Next week"
+msgstr "Nästa vecka"
+
+#: nautilus_my_computer/common.py
+#, python-brace-format
+msgid "{n} week ago"
+msgid_plural "{n} weeks ago"
+msgstr[0] "{n} vecka sedan"
+msgstr[1] "{n} veckor sedan"
+
+#: nautilus_my_computer/common.py
+#, python-brace-format
+msgid "In {n} week"
+msgid_plural "In {n} weeks"
+msgstr[0] "Om {n} vecka"
+msgstr[1] "Om {n} veckor"
+
+#: nautilus_my_computer/common.py
+msgid "This month"
+msgstr "Denna månaden"
+
+#: nautilus_my_computer/common.py
+msgid "Last month"
+msgstr "Förra månaden"
+
+#: nautilus_my_computer/common.py
+msgid "Next month"
+msgstr "Nästa månad"
+
+#: nautilus_my_computer/common.py
+#, python-brace-format
+msgid "{n} month ago"
+msgid_plural "{n} months ago"
+msgstr[0] "{n} månad sen"
+msgstr[1] "{n} månader sen"
+
+#: nautilus_my_computer/common.py
+#, python-brace-format
+msgid "In {n} month"
+msgid_plural "In {n} months"
+msgstr[0] "Om {n} månad"
+msgstr[1] "Om {n} månader"
+
+#: nautilus_my_computer/common.py
+msgid "This year"
+msgstr "Detta året"
+
+#: nautilus_my_computer/common.py
+msgid "Last year"
+msgstr "Förra året"
+
+#: nautilus_my_computer/common.py
+msgid "Next year"
+msgstr "Nästa år"
+
+#: nautilus_my_computer/common.py
+#, python-brace-format
+msgid "{n} year ago"
+msgid_plural "{n} years ago"
+msgstr[0] "{n} år sen"
+msgstr[1] "{n} år sen"
+
+#: nautilus_my_computer/common.py
+#, python-brace-format
+msgid "In {n} year"
+msgid_plural "In {n} years"
+msgstr[0] "Om {n} år"
+msgstr[1] "Om {n} år"
+
+#: nautilus_my_computer/components.py
+msgid "Rename"
+msgstr "Döp om"
+
+#: nautilus_my_computer/context_menu.py
+msgid "Open in New Tab"
+msgstr "Öppna i ny flik"
+
+#: nautilus_my_computer/context_menu.py
+msgid "Open in New Window"
+msgstr "Öppna i nytt fönster"
+
+#: nautilus_my_computer/context_menu.py
+msgid "Open With…"
+msgstr "Öppna med…"
+
+#: nautilus_my_computer/context_menu.py
+msgid "Remove from Bookmarks"
+msgstr "Ta bort från bokmärken"
+
+#: nautilus_my_computer/context_menu.py
+msgid "Add to Bookmarks"
+msgstr "Lägg till i bokmärken"
+
+#: nautilus_my_computer/context_menu.py
+#: nautilus_my_computer/preferred_folders.py
+msgid "Unpin from My Computer"
+msgstr "Ta bort från Min dator"
+
+#: nautilus_my_computer/context_menu.py
+#: nautilus_my_computer/preferred_folders.py
+msgid "Pin to My Computer"
+msgstr "Fäst till Min dator"
+
+#: nautilus_my_computer/context_menu.py
+msgid "New Folder…"
+msgstr "Ny mapp…"
+
+#: nautilus_my_computer/context_menu.py
+msgid "New Document"
+msgstr "Nytt dokument"
+
+#: nautilus_my_computer/context_menu.py
+msgid "Rename…"
+msgstr "Döp om…"
+
+#: nautilus_my_computer/context_menu.py
+msgid "Compress…"
+msgstr "Komprimera…"
+
+#: nautilus_my_computer/context_menu.py
+msgid "Move to Trash"
+msgstr "Flytta till papperskorgen"
+
+#: nautilus_my_computer/main.py
+msgid "My Computer Settings"
+msgstr "Inställningar Min dator"
+
+#: nautilus_my_computer/main.py
+msgid "Open My Computer"
+msgstr "Öppna Min dator"
+
+#: nautilus_my_computer/main.py
+msgid "Recommended Apps"
+msgstr "Rekommenderade program"
+
+#: nautilus_my_computer/main.py
+msgid "Other Apps"
+msgstr "Andra program"
+
+#: nautilus_my_computer/main.py
+msgid "General"
+msgstr "Allmänt"
+
+#: nautilus_my_computer/main.py
+msgid "Computer view"
+msgstr "Datorvy"
+
+#: nautilus_my_computer/main.py
+msgid "Start on the Computer view"
+msgstr "Starta i datorvyn"
+
+#: nautilus_my_computer/main.py
+msgid "Launch directly to the Computer view instead of Home"
+msgstr "Öppna i Min dator vyn istället för Hem vyn"
+
+#: nautilus_my_computer/main.py
+msgid "Panel visibility"
+msgstr "Panelsynlighet"
+
+#: nautilus_my_computer/main.py
+msgid ""
+"Choose how each group appears. Visible: shows the group as a normal "
+"separated section. Merged: folds the group into the On this Computer group. "
+"Hidden: hides the group entirely."
+msgstr ""
+"Välj hur varje grupp visas. Synlig: visar gruppen som ett vanligt separat "
+"avsnitt. Sammanslagen: slår ihop gruppen med gruppen På den här datorn. "
+"Gömd: gömmer gruppen helt."
+
+#: nautilus_my_computer/main.py
+msgid "Visible"
+msgstr "Synlig"
+
+#: nautilus_my_computer/main.py
+msgid "Merged"
+msgstr "Sammanslagen"
+
+#: nautilus_my_computer/main.py
+msgid "Hidden"
+msgstr "Gömd"
+
+#: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
+msgid "Preferred Folders"
+msgstr "Föredragna mappar"
+
+#: nautilus_my_computer/main.py
+msgid "Show system partitions"
+msgstr "Visa systempartitioner"
+
+#: nautilus_my_computer/main.py
+msgid "Include boot and EFI partitions in the System group"
+msgstr "Inkludera boot- och EFI-partitioner i gruppen System"
+
+#: nautilus_my_computer/main.py
+msgid "Hidden drives"
+msgstr "Gömda enheter"
+
+#: nautilus_my_computer/main.py
+msgid "Drives you manually hide from the Computer view will appear here."
+msgstr "Enheter som du manuellt gömmer från datorvyn visas här."
+
+#: nautilus_my_computer/main.py
+msgid "Sidebar visibility"
+msgstr "Sidopanelens synlighet"
+
+#: nautilus_my_computer/main.py
+msgid "Choose which locations appear on the sidebar."
+msgstr "Välj vilka platser som visas i sidopanelen."
+
+#: nautilus_my_computer/main.py
+msgid "Bar Color"
+msgstr "Stapelfärg"
+
+#: nautilus_my_computer/main.py
+msgid "Select or customize the bar color."
+msgstr "Välj eller anpassa stapelfärgen."
+
+#: nautilus_my_computer/main.py
+msgid "Color mode"
+msgstr "Färgläge"
+
+#: nautilus_my_computer/main.py
+msgid "System accent"
+msgstr "Systemets accentfärg"
+
+#: nautilus_my_computer/main.py
+msgid "Custom color"
+msgstr "Egen färg"
+
+#: nautilus_my_computer/main.py
+msgid "Custom gradient"
+msgstr "Egen gradient"
+
+#: nautilus_my_computer/main.py
+msgid "Color"
+msgstr "Färg"
+
+#: nautilus_my_computer/main.py
+msgid "Start color"
+msgstr "Startfärg"
+
+#: nautilus_my_computer/main.py
+msgid "End color"
+msgstr "Slutfärg"
+
+#: nautilus_my_computer/main.py
+msgid "Extension"
+msgstr "Tillägg"
+
+#: nautilus_my_computer/main.py
+msgid "Version"
+msgstr "Version"
+
+#: nautilus_my_computer/main.py
+msgid "Author"
+msgstr "Upphovsperson"
+
+#: nautilus_my_computer/main.py
+msgid "Source code"
+msgstr "Källkod"
+
+#: nautilus_my_computer/main.py
+msgid "GitHub"
+msgstr "GitHub"
+
+#: nautilus_my_computer/my_computer_view.py
+msgid "Mount"
+msgstr "Montera"
+
+#: nautilus_my_computer/my_computer_view.py
+msgid "Hide"
+msgstr "Göm"
+
+#: nautilus_my_computer/my_computer_view.py
+msgid "System"
+msgstr "System"
+
+#: nautilus_my_computer/my_computer_view.py
+msgid "On this Computer"
+msgstr "På den här datorn"
+
+#: nautilus_my_computer/my_computer_view.py
+msgid "Removable"
+msgstr "Flyttbara"
+
+#: nautilus_my_computer/my_computer_view.py
+msgid "Disc"
+msgstr "Skiva"
+
+#: nautilus_my_computer/widgets.py
+msgid "Not mounted"
+msgstr "Inte monterad"
+
+#: nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "{free} free of {total}"
+msgstr "{free} ledigt av {total}"
+
+#: nautilus_my_computer/widgets.py
+msgid "Program"
+msgstr "Program"
+
+#: nautilus_my_computer/widgets.py
+msgid "Audio"
+msgstr "Ljud"
+
+#: nautilus_my_computer/widgets.py
+msgid "Font"
+msgstr "Typsnitt"
+
+#: nautilus_my_computer/widgets.py
+msgid "Image"
+msgstr "Bild"
+
+#: nautilus_my_computer/widgets.py
+msgid "Archive"
+msgstr "Arkiv"
+
+#: nautilus_my_computer/widgets.py
+msgid "Markup"
+msgstr "Märkspråk"
+
+#: nautilus_my_computer/widgets.py
+msgid "Text"
+msgstr "Text"
+
+#: nautilus_my_computer/widgets.py
+msgid "Video"
+msgstr "Video"
+
+#: nautilus_my_computer/widgets.py
+msgid "Contacts"
+msgstr "Kontakter"
+
+#: nautilus_my_computer/widgets.py
+msgid "Calendar"
+msgstr "Kalender"
+
+#: nautilus_my_computer/widgets.py
+msgid "Document"
+msgstr "Dokument"
+
+#: nautilus_my_computer/widgets.py
+msgid "Presentation"
+msgstr "Presentation"
+
+#: nautilus_my_computer/widgets.py
+msgid "Spreadsheet"
+msgstr "Kalkylblad"
+
+#: nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "{n} document"
+msgid_plural "{n} documents"
+msgstr[0] "{n} dokument"
+msgstr[1] "{n} dokument"
+
+#: nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "{n} folder"
+msgid_plural "{n} folders"
+msgstr[0] "{n} mapp"
+msgstr[1] "{n} mappar"
+
+#: nautilus_my_computer/widgets.py
+#, python-brace-format
+msgid "{first} and {second}"
+msgstr "{first} och {second}"
+
+#: nautilus_my_computer/widgets.py
+msgid "Dimensions"
+msgstr "Dimensioner"
