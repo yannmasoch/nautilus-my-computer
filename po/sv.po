@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: My Computer for Nautilus 0.13.3\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-01 11:48-0800\n"
-"PO-Revision-Date: 2026-11-06 13:35+0000\n"
+"PO-Revision-Date: 2026-11-06 16:27+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: none\n"
 "Language: sv\n"
@@ -19,7 +19,7 @@ msgstr ""
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
-msgstr "Ändra ikon"
+msgstr "Byt ikon"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Search icons…"
@@ -39,7 +39,7 @@ msgstr "Beta"
 
 #: nautilus_my_computer/column_view.py
 msgid "Early access feature. It may contain bugs or inconsistencies."
-msgstr "Förhandsfunktion. Den kan innehålla buggar eller brister."
+msgstr "Funktion för tidig åtkomst. Den kan innehålla fel eller brister."
 
 #: nautilus_my_computer/column_view.py
 msgid "Column View"
@@ -54,15 +54,15 @@ msgstr[1] "{n} objekt"
 
 #: nautilus_my_computer/common.py
 msgid "Today"
-msgstr "Idag"
+msgstr "I dag"
 
 #: nautilus_my_computer/common.py
 msgid "Yesterday"
-msgstr "Igår"
+msgstr "I går"
 
 #: nautilus_my_computer/common.py
 msgid "Tomorrow"
-msgstr "Imorgon"
+msgstr "I morgon"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
@@ -80,7 +80,7 @@ msgstr[1] "Om {n} dagar"
 
 #: nautilus_my_computer/common.py
 msgid "This week"
-msgstr "Denna veckan"
+msgstr "Denna vecka"
 
 #: nautilus_my_computer/common.py
 msgid "Last week"
@@ -106,7 +106,7 @@ msgstr[1] "Om {n} veckor"
 
 #: nautilus_my_computer/common.py
 msgid "This month"
-msgstr "Denna månaden"
+msgstr "Denna månad"
 
 #: nautilus_my_computer/common.py
 msgid "Last month"
@@ -132,7 +132,7 @@ msgstr[1] "Om {n} månader"
 
 #: nautilus_my_computer/common.py
 msgid "This year"
-msgstr "Detta året"
+msgstr "Detta år"
 
 #: nautilus_my_computer/common.py
 msgid "Last year"
@@ -158,7 +158,7 @@ msgstr[1] "Om {n} år"
 
 #: nautilus_my_computer/components.py
 msgid "Rename"
-msgstr "Döp om"
+msgstr "Byt namn"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Tab"
@@ -200,7 +200,7 @@ msgstr "Nytt dokument"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Rename…"
-msgstr "Döp om…"
+msgstr "Byt namn…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Compress…"
@@ -224,7 +224,7 @@ msgstr "Rekommenderade program"
 
 #: nautilus_my_computer/main.py
 msgid "Other Apps"
-msgstr "Andra program"
+msgstr "Övriga program"
 
 #: nautilus_my_computer/main.py
 msgid "General"
@@ -253,8 +253,8 @@ msgid ""
 "Hidden: hides the group entirely."
 msgstr ""
 "Välj hur varje grupp visas. Synlig: visar gruppen som ett vanligt separat "
-"avsnitt. Sammanslagen: slår ihop gruppen med gruppen På den här datorn. "
-"Gömd: gömmer gruppen helt."
+"avsnitt. Sammanslagen: slår ihop gruppen med gruppen På denna dator. Dold: "
+"döljer gruppen helt."
 
 #: nautilus_my_computer/main.py
 msgid "Visible"
@@ -266,7 +266,7 @@ msgstr "Sammanslagen"
 
 #: nautilus_my_computer/main.py
 msgid "Hidden"
-msgstr "Gömd"
+msgstr "Dold"
 
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Preferred Folders"
@@ -282,11 +282,11 @@ msgstr "Inkludera boot- och EFI-partitioner i gruppen System"
 
 #: nautilus_my_computer/main.py
 msgid "Hidden drives"
-msgstr "Gömda enheter"
+msgstr "Dolda enheter"
 
 #: nautilus_my_computer/main.py
 msgid "Drives you manually hide from the Computer view will appear here."
-msgstr "Enheter som du manuellt gömmer från datorvyn visas här."
+msgstr "Enheter som du manuellt döljer från datorvyn visas här."
 
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
@@ -318,7 +318,7 @@ msgstr "Egen färg"
 
 #: nautilus_my_computer/main.py
 msgid "Custom gradient"
-msgstr "Egen gradient"
+msgstr "Egen färgtoning"
 
 #: nautilus_my_computer/main.py
 msgid "Color"
@@ -358,7 +358,7 @@ msgstr "Montera"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Hide"
-msgstr "Göm"
+msgstr "Dölj"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "System"
@@ -366,11 +366,11 @@ msgstr "System"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "On this Computer"
-msgstr "På den här datorn"
+msgstr "På denna dator"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Removable"
-msgstr "Flyttbara"
+msgstr "Flyttbara media"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Disc"
@@ -407,7 +407,7 @@ msgstr "Arkiv"
 
 #: nautilus_my_computer/widgets.py
 msgid "Markup"
-msgstr "Märkspråk"
+msgstr "Märkning"
 
 #: nautilus_my_computer/widgets.py
 msgid "Text"
@@ -415,7 +415,7 @@ msgstr "Text"
 
 #: nautilus_my_computer/widgets.py
 msgid "Video"
-msgstr "Video"
+msgstr "Film"
 
 #: nautilus_my_computer/widgets.py
 msgid "Contacts"
