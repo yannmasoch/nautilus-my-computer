@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: My Computer for Nautilus 0.13.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 11:48-0800\n"
+"POT-Creation-Date: 2026-11-08 23:16+0100\n"
 "PO-Revision-Date: 2026-08-21 15:51+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: none\n"
@@ -322,6 +322,22 @@ msgstr "起始颜色"
 #: nautilus_my_computer/main.py
 msgid "End color"
 msgstr "结束颜色"
+
+#: nautilus_my_computer/main.py
+msgid "Warn about disk usage"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Change bar color when disk usage reaches warning or critical levels"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Warning threshold (yellow)"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Critical threshold (red)"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Extension"
