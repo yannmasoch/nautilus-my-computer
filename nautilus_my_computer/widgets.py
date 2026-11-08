@@ -239,6 +239,8 @@ class MyComputerDiskCard(Gtk.Box):
         # (gtk_flow_box_child_set_focus never runs). Arrow-key nav is unaffected -- it goes
         # through GtkFlowBox's own move-cursor handler, which always focuses the wrapper.
         self._build()
+        self._update_usage_color()
+
 
         # One gesture on all buttons, dispatched from "pressed"/"released",
         # mirroring nautilus-list-base.c:880-886 (on_item_click_pressed /
@@ -398,6 +400,32 @@ class MyComputerDiskCard(Gtk.Box):
         self.usage_bar = bar if has_size else None
         self.sub_label = sub_lbl if has_size else None
 
+    def _update_usage_color(self) -> None:
+        """Apply warning/critical CSS classes to this disk's usage bar."""
+        if self.usage_bar is None:
+            return
+
+        style = self.usage_bar.get_style_context()
+        style.remove_class("usage-warning")
+        style.remove_class("usage-critical")
+
+        settings = self._ext._gsettings
+        if settings is None or not settings.get_boolean("usage-coloring-enabled"):
+            return
+
+        m = self.model
+        if not m.is_mounted or m.total <= 0:
+            return
+
+        percent = m.percent
+        warning = settings.get_int("usage-warning-threshold")
+        critical = settings.get_int("usage-critical-threshold")
+
+        if percent >= critical:
+            style.add_class("usage-critical")
+        elif percent >= warning:
+            style.add_class("usage-warning")
+
     def update_usage(self, m) -> None:
         """Patch the LevelBar + sub-label in place; called by poll workers."""
         self.model = m
@@ -410,6 +438,8 @@ class MyComputerDiskCard(Gtk.Box):
                     free=_format_size(free), total=_format_size(total)
                 )
             )
+
+        self._update_usage_color()
 
 
 class MyComputerFolderCard(Gtk.Widget):

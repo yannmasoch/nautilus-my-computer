@@ -992,6 +992,14 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             "custom-gradient-color-2",
         ):
             self._apply_bar_color()
+        elif key in (
+            "usage-coloring-enabled",
+            "usage-warning-threshold",
+            "usage-critical-threshold",
+        ):
+            for state in self._iter_panel_states():
+                for card in state.get("card_widgets", {}).values():
+                    card._update_usage_color()
         elif key == "show-system-partitions":
             # Needs a rescan because filtered mounts must be re-collected
             self._schedule_live_refresh()
@@ -2052,6 +2060,126 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
         mode_row.connect("notify::selected", _on_mode_changed)
         _update_color_rows(mode_row.get_selected())
+
+        # Disk usage warning settings
+        usage_switch = Adw.SwitchRow()
+        usage_switch.set_title(_("Warn about disk usage"))
+        usage_switch.set_subtitle(
+            _("Change bar color when disk usage reaches warning or critical levels")
+        )
+        self._gsettings.bind(
+            "usage-coloring-enabled",
+            usage_switch,
+            "active",
+            Gio.SettingsBindFlags.DEFAULT,
+        )
+        color_group.add(usage_switch)
+
+        warning_row = Adw.ActionRow()
+        warning_row.set_title(_("Warning threshold (yellow)"))
+
+        critical_row = Adw.ActionRow()
+        critical_row.set_title(_("Critical threshold (red)"))
+
+        warning_adjustment = Gtk.Adjustment(
+            value=self._gsettings.get_int("usage-warning-threshold"),
+            lower=1,
+            upper=self._gsettings.get_int("usage-critical-threshold") - 1,
+            step_increment=1,
+            page_increment=5,
+            page_size=0,
+        )
+        warning_scale = Gtk.Scale(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            adjustment=warning_adjustment,
+        )
+        warning_scale.set_digits(0)
+        warning_scale.set_draw_value(True)
+        warning_scale.set_value_pos(Gtk.PositionType.RIGHT)
+        warning_scale.set_size_request(220, -1)
+        warning_scale.set_valign(Gtk.Align.CENTER)
+        warning_row.add_suffix(warning_scale)
+        color_group.add(warning_row)
+
+        critical_adjustment = Gtk.Adjustment(
+            value=self._gsettings.get_int("usage-critical-threshold"),
+            lower=warning_adjustment.get_value() + 1,
+            upper=99,
+            step_increment=1,
+            page_increment=5,
+            page_size=0,
+        )
+        critical_scale = Gtk.Scale(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            adjustment=critical_adjustment,
+        )
+        critical_scale.set_digits(0)
+        critical_scale.set_draw_value(True)
+        critical_scale.set_value_pos(Gtk.PositionType.RIGHT)
+        critical_scale.set_size_request(220, -1)
+        critical_scale.set_valign(Gtk.Align.CENTER)
+        critical_row.add_suffix(critical_scale)
+        color_group.add(critical_row)
+
+        updating_usage_sliders = [False]
+
+        def _sync_usage_sliders():
+            warning = self._gsettings.get_int("usage-warning-threshold")
+            critical = self._gsettings.get_int("usage-critical-threshold")
+
+            updating_usage_sliders[0] = True
+            warning_adjustment.configure(
+                warning, 1, critical - 1, 1, 5, 0
+            )
+            critical_adjustment.configure(
+                critical, warning + 1, 99, 1, 5, 0
+            )
+            updating_usage_sliders[0] = False
+
+        def _on_warning_changed(scale):
+            if updating_usage_sliders[0]:
+                return
+
+            warning = round(scale.get_value())
+            critical = self._gsettings.get_int("usage-critical-threshold")
+
+            if warning >= critical:
+                critical = warning + 1
+                self._gsettings.set_int(
+                    "usage-critical-threshold", critical
+                )
+
+            self._gsettings.set_int("usage-warning-threshold", warning)
+            _sync_usage_sliders()
+
+        def _on_critical_changed(scale):
+            if updating_usage_sliders[0]:
+                return
+
+            critical = round(scale.get_value())
+            warning = self._gsettings.get_int("usage-warning-threshold")
+
+            if critical <= warning:
+                warning = critical - 1
+                self._gsettings.set_int(
+                    "usage-warning-threshold", warning
+                )
+
+            self._gsettings.set_int("usage-critical-threshold", critical)
+            _sync_usage_sliders()
+
+        warning_scale.connect("value-changed", _on_warning_changed)
+        critical_scale.connect("value-changed", _on_critical_changed)
+
+        def _on_usage_enabled_changed(row, _pspec):
+            enabled = row.get_active()
+            warning_row.set_sensitive(enabled)
+            critical_row.set_sensitive(enabled)
+
+        usage_switch.connect(
+            "notify::active", _on_usage_enabled_changed
+        )
+        _on_usage_enabled_changed(usage_switch, None)
 
         about_group = Adw.PreferencesGroup()
         about_group.set_title(_native("About"))

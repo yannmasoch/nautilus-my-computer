@@ -121,6 +121,26 @@
       <description>Right color (stop 100%) used when color-mode is gradient</description>
     </key>
 
+    <key name="usage-coloring-enabled" type="b">
+      <default>true</default>
+      <summary>Warn about disk usage</summary>
+      <description>Change disk usage bar color when warning or critical thresholds are reached</description>
+    </key>
+
+    <key name="usage-warning-threshold" type="i">
+      <default>66</default>
+      <range min="1" max="98"/>
+      <summary>Disk usage warning threshold</summary>
+      <description>Disk usage percentage at which the bar changes to yellow</description>
+    </key>
+
+    <key name="usage-critical-threshold" type="i">
+      <default>90</default>
+      <range min="2" max="99"/>
+      <summary>Disk usage critical threshold</summary>
+      <description>Disk usage percentage at which the bar changes to red</description>
+    </key>
+
     <key name="computer-icon" type="s">
       <default>'computer-symbolic'</default>
       <summary>Computer row icon</summary>
