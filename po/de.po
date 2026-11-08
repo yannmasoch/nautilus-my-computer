@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-01 11:48-0800\n"
-"PO-Revision-Date: 2026-08-06 05:01+0000\n"
+"PO-Revision-Date: 2026-11-07 23:51+0000\n"
 "Last-Translator: crian\n"
 "Language-Team: German\n"
 "Language: de\n"
@@ -182,12 +182,12 @@ msgstr "Zu Lesezeichen hinzufügen"
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Unpin from My Computer"
-msgstr "Von Mein Computer lösen"
+msgstr "Von »Mein Rechner« lösen"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Pin to My Computer"
-msgstr "An Mein Computer anheften"
+msgstr "An »Mein Rechner« anheften"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
@@ -280,13 +280,14 @@ msgid "Include boot and EFI partitions in the System group"
 msgstr "Boot- und EFI-Partitionen in die System-Gruppe einbeziehen"
 
 #: nautilus_my_computer/main.py
-#, fuzzy
 msgid "Hidden drives"
-msgstr "Verborgen"
+msgstr "Verborgene Datenträger"
 
 #: nautilus_my_computer/main.py
 msgid "Drives you manually hide from the Computer view will appear here."
 msgstr ""
+"Datenträger, die Sie in der Rechneransicht manuell verborgen haben, "
+"ercheinen hier."
 
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
@@ -358,7 +359,7 @@ msgstr "Einhängen"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Hide"
-msgstr ""
+msgstr "Verbergen"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "System"
@@ -438,23 +439,23 @@ msgid "Spreadsheet"
 msgstr "Rechenblatt"
 
 #: nautilus_my_computer/widgets.py
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "{n} document"
 msgid_plural "{n} documents"
-msgstr[0] "Dokument"
-msgstr[1] "Dokument"
+msgstr[0] "{n} Dokument"
+msgstr[1] "{n} Dokumente"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{n} folder"
 msgid_plural "{n} folders"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} Ordner"
+msgstr[1] "{n} Ordner"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{first} and {second}"
-msgstr ""
+msgstr "{first} und {second}"
 
 #: nautilus_my_computer/widgets.py
 msgid "Dimensions"
