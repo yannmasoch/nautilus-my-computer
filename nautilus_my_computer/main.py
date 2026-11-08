@@ -2128,12 +2128,8 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             critical = self._gsettings.get_int("usage-critical-threshold")
 
             updating_usage_sliders[0] = True
-            warning_adjustment.configure(
-                warning, 1, critical - 1, 1, 5, 0
-            )
-            critical_adjustment.configure(
-                critical, warning + 1, 99, 1, 5, 0
-            )
+            warning_adjustment.configure(warning, 1, critical - 1, 1, 5, 0)
+            critical_adjustment.configure(critical, warning + 1, 99, 1, 5, 0)
             updating_usage_sliders[0] = False
 
         def _on_warning_changed(scale):
@@ -2145,9 +2141,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
             if warning >= critical:
                 critical = warning + 1
-                self._gsettings.set_int(
-                    "usage-critical-threshold", critical
-                )
+                self._gsettings.set_int("usage-critical-threshold", critical)
 
             self._gsettings.set_int("usage-warning-threshold", warning)
             _sync_usage_sliders()
@@ -2161,9 +2155,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
             if critical <= warning:
                 warning = critical - 1
-                self._gsettings.set_int(
-                    "usage-warning-threshold", warning
-                )
+                self._gsettings.set_int("usage-warning-threshold", warning)
 
             self._gsettings.set_int("usage-critical-threshold", critical)
             _sync_usage_sliders()
@@ -2176,9 +2168,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             warning_row.set_sensitive(enabled)
             critical_row.set_sensitive(enabled)
 
-        usage_switch.connect(
-            "notify::active", _on_usage_enabled_changed
-        )
+        usage_switch.connect("notify::active", _on_usage_enabled_changed)
         _on_usage_enabled_changed(usage_switch, None)
 
         about_group = Adw.PreferencesGroup()

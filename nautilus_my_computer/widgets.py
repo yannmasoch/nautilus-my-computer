@@ -241,7 +241,6 @@ class MyComputerDiskCard(Gtk.Box):
         self._build()
         self._update_usage_color()
 
-
         # One gesture on all buttons, dispatched from "pressed"/"released",
         # mirroring nautilus-list-base.c:880-886 (on_item_click_pressed /
         # button=0). Primary is claimed and driven end to end by
