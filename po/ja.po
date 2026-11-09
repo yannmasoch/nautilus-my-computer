@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: My Computer for Nautilus 0.13.3\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-01 11:48-0800\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: 2026-11-09 12:51+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: none\n"
 "Language: ja\n"
@@ -19,11 +19,11 @@ msgstr ""
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
-msgstr ""
+msgstr "アイコンを変更"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Search icons…"
-msgstr ""
+msgstr "アイコンを検索…"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Reset"
@@ -35,126 +35,117 @@ msgstr ""
 
 #: nautilus_my_computer/column_view.py
 msgid "Beta"
-msgstr ""
+msgstr "Beta"
 
 #: nautilus_my_computer/column_view.py
 msgid "Early access feature. It may contain bugs or inconsistencies."
-msgstr ""
+msgstr "早期アクセス機能。 バグや不整合性が含まれる場合があります。"
 
 #: nautilus_my_computer/column_view.py
 msgid "Column View"
-msgstr ""
+msgstr "カラム表示"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} item"
 msgid_plural "{n} items"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n}個のアイテム"
 
 #: nautilus_my_computer/common.py
 msgid "Today"
-msgstr ""
+msgstr "今日"
 
 #: nautilus_my_computer/common.py
 msgid "Yesterday"
-msgstr ""
+msgstr "昨日"
 
 #: nautilus_my_computer/common.py
 msgid "Tomorrow"
-msgstr ""
+msgstr "明日"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} day ago"
 msgid_plural "{n} days ago"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n}日前"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} day"
 msgid_plural "In {n} days"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n}日後"
 
 #: nautilus_my_computer/common.py
 msgid "This week"
-msgstr ""
+msgstr "今週"
 
 #: nautilus_my_computer/common.py
 msgid "Last week"
-msgstr ""
+msgstr "先週"
 
 #: nautilus_my_computer/common.py
 msgid "Next week"
-msgstr ""
+msgstr "来週"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} week ago"
 msgid_plural "{n} weeks ago"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n}週間前"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} week"
 msgid_plural "In {n} weeks"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n}週間後"
 
 #: nautilus_my_computer/common.py
 msgid "This month"
-msgstr ""
+msgstr "今月"
 
 #: nautilus_my_computer/common.py
 msgid "Last month"
-msgstr ""
+msgstr "先月"
 
 #: nautilus_my_computer/common.py
 msgid "Next month"
-msgstr ""
+msgstr "来月"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} month ago"
 msgid_plural "{n} months ago"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n}ヶ月前"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} month"
 msgid_plural "In {n} months"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n}ヶ月後"
 
 #: nautilus_my_computer/common.py
 msgid "This year"
-msgstr ""
+msgstr "今年"
 
 #: nautilus_my_computer/common.py
 msgid "Last year"
-msgstr ""
+msgstr "去年"
 
 #: nautilus_my_computer/common.py
 msgid "Next year"
-msgstr ""
+msgstr "来年"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} year ago"
 msgid_plural "{n} years ago"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n}年前"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} year"
 msgid_plural "In {n} years"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n}年後"
 
 #: nautilus_my_computer/components.py
 msgid "Rename"
@@ -162,37 +153,37 @@ msgstr ""
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Tab"
-msgstr ""
+msgstr "新しいタブで開く"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Window"
-msgstr ""
+msgstr "新しいウィンドウで開く"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open With…"
-msgstr ""
+msgstr "アプリケーションで開く…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Remove from Bookmarks"
-msgstr ""
+msgstr "ブックマークから削除"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Add to Bookmarks"
-msgstr ""
+msgstr "ブックマークに追加"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Unpin from My Computer"
-msgstr ""
+msgstr "コンピューターからピン留めを外す"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Pin to My Computer"
-msgstr ""
+msgstr "コンピューターにピン留め"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
-msgstr ""
+msgstr "新しいフォルダー…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Document"
@@ -200,19 +191,19 @@ msgstr ""
 
 #: nautilus_my_computer/context_menu.py
 msgid "Rename…"
-msgstr ""
+msgstr "名前を変更…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Compress…"
-msgstr ""
+msgstr "圧縮…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
-msgstr ""
+msgstr "ゴミ箱に移動する"
 
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
-msgstr ""
+msgstr "My Computer for Nautilusの設定"
 
 #: nautilus_my_computer/main.py
 msgid "Open My Computer"
@@ -228,23 +219,23 @@ msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "General"
-msgstr ""
+msgstr "全般"
 
 #: nautilus_my_computer/main.py
 msgid "Computer view"
-msgstr ""
+msgstr "コンピュータービュー"
 
 #: nautilus_my_computer/main.py
 msgid "Start on the Computer view"
-msgstr ""
+msgstr "コンピュータービューで起動"
 
 #: nautilus_my_computer/main.py
 msgid "Launch directly to the Computer view instead of Home"
-msgstr ""
+msgstr "ホームではなくコンピュータビューに直接起動"
 
 #: nautilus_my_computer/main.py
 msgid "Panel visibility"
-msgstr ""
+msgstr "パネルのカスタマイズ"
 
 #: nautilus_my_computer/main.py
 msgid ""
@@ -252,70 +243,73 @@ msgid ""
 "separated section. Merged: folds the group into the On this Computer group. "
 "Hidden: hides the group entirely."
 msgstr ""
+"各グループがどのように表示されるかを選択します。 表示: グループを通常の区切ら"
+"れたセクションとして表示します。 統合: このコンピュータ内グループにグループを"
+"折り畳みます。 非表示: グループを完全に隠します。"
 
 #: nautilus_my_computer/main.py
 msgid "Visible"
-msgstr ""
+msgstr "表示"
 
 #: nautilus_my_computer/main.py
 msgid "Merged"
-msgstr ""
+msgstr "統合"
 
 #: nautilus_my_computer/main.py
 msgid "Hidden"
-msgstr ""
+msgstr "非表示"
 
 #: nautilus_my_computer/main.py nautilus_my_computer/my_computer_view.py
 msgid "Preferred Folders"
-msgstr ""
+msgstr "よく使用するフォルダー"
 
 #: nautilus_my_computer/main.py
 msgid "Show system partitions"
-msgstr ""
+msgstr "システムパーティションを表示"
 
 #: nautilus_my_computer/main.py
 msgid "Include boot and EFI partitions in the System group"
-msgstr ""
+msgstr "システムグループにbootパーティションとEFIパーティションを含める"
 
 #: nautilus_my_computer/main.py
 msgid "Hidden drives"
-msgstr ""
+msgstr "非表示にしたドライブ"
 
 #: nautilus_my_computer/main.py
 msgid "Drives you manually hide from the Computer view will appear here."
-msgstr ""
+msgstr "コンピュータービューから手動で隠したドライブがここに表示されます。"
 
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
-msgstr ""
+msgstr "サイドバー"
 
 #: nautilus_my_computer/main.py
 msgid "Choose which locations appear on the sidebar."
-msgstr ""
+msgstr "サイドバーにどの場所を表示するかを選択します。"
 
 #: nautilus_my_computer/main.py
 msgid "Bar Color"
-msgstr ""
+msgstr "バーの色"
 
 #: nautilus_my_computer/main.py
 msgid "Select or customize the bar color."
-msgstr ""
+msgstr "バーの色を選択またはカスタマイズします。"
 
 #: nautilus_my_computer/main.py
 msgid "Color mode"
-msgstr ""
+msgstr "カラーモード"
 
 #: nautilus_my_computer/main.py
 msgid "System accent"
-msgstr ""
+msgstr "システムのアクセントカラー"
 
 #: nautilus_my_computer/main.py
 msgid "Custom color"
-msgstr ""
+msgstr "カスタムカラー"
 
 #: nautilus_my_computer/main.py
 msgid "Custom gradient"
-msgstr ""
+msgstr "カスタムグラデーション"
 
 #: nautilus_my_computer/main.py
 msgid "Color"
@@ -323,39 +317,39 @@ msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Start color"
-msgstr ""
+msgstr "開始色"
 
 #: nautilus_my_computer/main.py
 msgid "End color"
-msgstr ""
+msgstr "終了色"
 
 #: nautilus_my_computer/main.py
 msgid "Extension"
-msgstr ""
+msgstr "拡張機能"
 
 #: nautilus_my_computer/main.py
 msgid "Version"
-msgstr ""
+msgstr "バージョン"
 
 #: nautilus_my_computer/main.py
 msgid "Author"
-msgstr ""
+msgstr "作者"
 
 #: nautilus_my_computer/main.py
 msgid "Source code"
-msgstr ""
+msgstr "ソースコード"
 
 #: nautilus_my_computer/main.py
 msgid "GitHub"
-msgstr ""
+msgstr "GitHub"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Mount"
-msgstr ""
+msgstr "マウント"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Hide"
-msgstr ""
+msgstr "非表示"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "System"
@@ -363,24 +357,24 @@ msgstr ""
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "On this Computer"
-msgstr ""
+msgstr "このコンピューター上"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Removable"
-msgstr ""
+msgstr "リムーバブル"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Disc"
-msgstr ""
+msgstr "ディスク"
 
 #: nautilus_my_computer/widgets.py
 msgid "Not mounted"
-msgstr ""
+msgstr "未マウント"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{free} free of {total}"
-msgstr ""
+msgstr "空き領域 {free}/{total}"
 
 #: nautilus_my_computer/widgets.py
 msgid "Program"
@@ -438,20 +432,18 @@ msgstr ""
 #, python-brace-format
 msgid "{n} document"
 msgid_plural "{n} documents"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n}個のドキュメント"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{n} folder"
 msgid_plural "{n} folders"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n}個のフォルダー"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{first} and {second}"
-msgstr ""
+msgstr "{first} と {second}"
 
 #: nautilus_my_computer/widgets.py
 msgid "Dimensions"
