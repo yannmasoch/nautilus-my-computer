@@ -2083,7 +2083,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
         warning_adjustment = Gtk.Adjustment(
             value=self._gsettings.get_int("usage-warning-threshold"),
-            lower=1,
+            lower=50,
             upper=self._gsettings.get_int("usage-critical-threshold") - 1,
             step_increment=1,
             page_increment=5,
@@ -2128,7 +2128,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             critical = self._gsettings.get_int("usage-critical-threshold")
 
             updating_usage_sliders[0] = True
-            warning_adjustment.configure(warning, 1, critical - 1, 1, 5, 0)
+            warning_adjustment.configure(warning, 50, critical - 1, 1, 5, 0)
             critical_adjustment.configure(critical, warning + 1, 99, 1, 5, 0)
             updating_usage_sliders[0] = False
 
