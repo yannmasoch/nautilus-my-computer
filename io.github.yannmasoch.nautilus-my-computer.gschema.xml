@@ -128,15 +128,15 @@
     </key>
 
     <key name="usage-warning-threshold" type="i">
-      <default>66</default>
-      <range min="1" max="98"/>
+      <default>75</default>
+      <range min="50" max="98"/>
       <summary>Disk usage warning threshold</summary>
       <description>Disk usage percentage at which the bar changes to yellow</description>
     </key>
 
     <key name="usage-critical-threshold" type="i">
       <default>90</default>
-      <range min="2" max="99"/>
+      <range min="51" max="99"/>
       <summary>Disk usage critical threshold</summary>
       <description>Disk usage percentage at which the bar changes to red</description>
     </key>
