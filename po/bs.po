@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: My Computer for Nautilus 0.13.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 11:48-0800\n"
+"POT-Creation-Date: 2026-11-10 21:26+0100\n"
 "PO-Revision-Date: 2026-11-01 22:34+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: none\n"
@@ -263,8 +263,8 @@ msgid ""
 "Hidden: hides the group entirely."
 msgstr ""
 "Odaberite kako se svaka grupa prikazuje. Vidljivo: grupa se prikazuje kao "
-"zaseban odjeljak. Spojeno: grupa se prikazuje unutar grupe „Na ovom računaru"
-"“. Skriveno: grupa se uopće ne prikazuje."
+"zaseban odjeljak. Spojeno: grupa se prikazuje unutar grupe „Na ovom "
+"računaru“. Skriveno: grupa se uopće ne prikazuje."
 
 #: nautilus_my_computer/main.py
 msgid "Visible"
@@ -342,6 +342,22 @@ msgstr "Početna boja"
 #: nautilus_my_computer/main.py
 msgid "End color"
 msgstr "Krajnja boja"
+
+#: nautilus_my_computer/main.py
+msgid "Disk space indicators"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Change bar colors when free disk space becomes limited."
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Low on space at:"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Nearly full at:"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Extension"

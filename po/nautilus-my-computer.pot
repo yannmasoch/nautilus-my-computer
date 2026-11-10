@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: My Computer for Nautilus 0.13.3\n"
+"Project-Id-Version: My Computer for Nautilus 0.13.4\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 11:48-0800\n"
+"POT-Creation-Date: 2026-11-10 21:26+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -328,6 +328,22 @@ msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "End color"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Disk space indicators"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Change bar colors when free disk space becomes limited."
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Low on space at:"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Nearly full at:"
 msgstr ""
 
 #: nautilus_my_computer/main.py

@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 11:48-0800\n"
+"POT-Creation-Date: 2026-11-10 21:26+0100\n"
 "PO-Revision-Date: 2026-08-04 18:39+0000\n"
 "Last-Translator: Pelach András <pelach.andras@gmail.com>\n"
 "Language-Team: Hungarian\n"
@@ -332,6 +332,22 @@ msgstr "Induló szín"
 #: nautilus_my_computer/main.py
 msgid "End color"
 msgstr "Záró szín"
+
+#: nautilus_my_computer/main.py
+msgid "Disk space indicators"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Change bar colors when free disk space becomes limited."
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Low on space at:"
+msgstr ""
+
+#: nautilus_my_computer/main.py
+msgid "Nearly full at:"
+msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Extension"

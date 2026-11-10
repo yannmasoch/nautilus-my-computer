@@ -694,6 +694,14 @@ _CSS = b"""
 .mc-toggle-sep.mc-toggle-sep-hidden {
     opacity: 0;
 }
+.usage-warning-scale trough highlight {
+    background-color: #e5a50a;
+    background-image: none;
+}
+.usage-critical-scale trough highlight {
+    background-color: #e01b24;
+    background-image: none;
+}
 """
 
 
@@ -1415,7 +1423,9 @@ def init_data_watchers(ext) -> None:
 def _apply_bar_color(ext) -> None:
     if not ext._gsettings or ext._bar_css_display is None:
         return
+
     mode = ext._gsettings.get_string("color-mode")
+
     if mode == "flat":
         color = ext._gsettings.get_string("custom-color")
         css = f".diskinfo-bar block.filled {{ background: {color}; }}".encode()
@@ -1433,6 +1443,17 @@ def _apply_bar_color(ext) -> None:
         ).encode()
     else:
         css = b".diskinfo-bar block.filled { background: @accent_bg_color; }"
+
+    # Usage warning colors override the selected base color.
+    css += b"""
+.diskinfo-bar.usage-warning block.filled {
+    background: #e5a50a;
+}
+.diskinfo-bar.usage-critical block.filled {
+    background: #e01b24;
+}
+"""
+
     ext._bar_css_provider.load_from_data(css)
     Gtk.StyleContext.add_provider_for_display(
         ext._bar_css_display,
