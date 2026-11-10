@@ -694,6 +694,14 @@ _CSS = b"""
 .mc-toggle-sep.mc-toggle-sep-hidden {
     opacity: 0;
 }
+.usage-warning-scale trough highlight {
+    background-color: #e5a50a;
+    background-image: none;
+}
+.usage-critical-scale trough highlight {
+    background-color: #e01b24;
+    background-image: none;
+}
 """
 
 

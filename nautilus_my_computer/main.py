@@ -2063,9 +2063,9 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
         # Disk usage warning settings
         usage_switch = Adw.SwitchRow()
-        usage_switch.set_title(_("Warn about disk usage"))
+        usage_switch.set_title(_("Disk space indicators"))
         usage_switch.set_subtitle(
-            _("Change bar color when disk usage reaches warning or critical levels")
+            _("Change bar colors when free disk space becomes limited.")
         )
         self._gsettings.bind(
             "usage-coloring-enabled",
@@ -2076,10 +2076,10 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         color_group.add(usage_switch)
 
         warning_row = Adw.ActionRow()
-        warning_row.set_title(_("Warning threshold (yellow)"))
+        warning_row.set_title(_("Low on space at:"))
 
         critical_row = Adw.ActionRow()
-        critical_row.set_title(_("Critical threshold (red)"))
+        critical_row.set_title(_("Nearly full at:"))
 
         warning_adjustment = Gtk.Adjustment(
             value=self._gsettings.get_int("usage-warning-threshold"),
@@ -2094,6 +2094,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             adjustment=warning_adjustment,
         )
         warning_scale.set_digits(0)
+        warning_scale.add_css_class("usage-warning-scale")
         warning_scale.set_draw_value(True)
         warning_scale.set_value_pos(Gtk.PositionType.RIGHT)
         warning_scale.set_format_value_func(lambda scale, value: f"{value:.0f}%")
@@ -2115,6 +2116,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
             adjustment=critical_adjustment,
         )
         critical_scale.set_digits(0)
+        critical_scale.add_css_class("usage-critical-scale")
         critical_scale.set_draw_value(True)
         critical_scale.set_value_pos(Gtk.PositionType.RIGHT)
         critical_scale.set_format_value_func(lambda scale, value: f"{value:.0f}%")

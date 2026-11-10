@@ -123,22 +123,22 @@
 
     <key name="usage-coloring-enabled" type="b">
       <default>true</default>
-      <summary>Warn about disk usage</summary>
-      <description>Change disk usage bar color when warning or critical thresholds are reached</description>
+      <summary>Disk space indicators</summary>
+      <description>Change bar colors when free disk space becomes limited.</description>
     </key>
 
     <key name="usage-warning-threshold" type="i">
       <default>75</default>
       <range min="50" max="98"/>
-      <summary>Disk usage warning threshold</summary>
-      <description>Disk usage percentage at which the bar changes to yellow</description>
+      <summary>Low on space at</summary>
+      <description>Free disk space percentage at which the bar changes to yellow.</description>
     </key>
 
     <key name="usage-critical-threshold" type="i">
       <default>90</default>
       <range min="51" max="99"/>
-      <summary>Disk usage critical threshold</summary>
-      <description>Disk usage percentage at which the bar changes to red</description>
+      <summary>Nearly full at</summary>
+      <description>Free disk space percentage at which the bar changes to red.</description>
     </key>
 
     <key name="computer-icon" type="s">

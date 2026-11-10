@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-08 23:16+0100\n"
+"POT-Creation-Date: 2026-11-10 21:26+0100\n"
 "PO-Revision-Date: 2026-08-19 11:51+0000\n"
 "Last-Translator: Unai Lomas\n"
 "Language-Team: Spanish\n"
@@ -330,19 +330,19 @@ msgid "End color"
 msgstr "Color final"
 
 #: nautilus_my_computer/main.py
-msgid "Warn about disk usage"
+msgid "Disk space indicators"
 msgstr ""
 
 #: nautilus_my_computer/main.py
-msgid "Change bar color when disk usage reaches warning or critical levels"
+msgid "Change bar colors when free disk space becomes limited."
 msgstr ""
 
 #: nautilus_my_computer/main.py
-msgid "Warning threshold (yellow)"
+msgid "Low on space at:"
 msgstr ""
 
 #: nautilus_my_computer/main.py
-msgid "Critical threshold (red)"
+msgid "Nearly full at:"
 msgstr ""
 
 #: nautilus_my_computer/main.py
