@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: nautilus-my-computer\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-01 11:48-0800\n"
-"PO-Revision-Date: 2026-11-06 16:27+0000\n"
+"PO-Revision-Date: 2026-11-12 17:51+0000\n"
 "Last-Translator: Saintliy\n"
 "Language-Team: Korean\n"
 "Language: ko\n"
@@ -14,31 +14,31 @@ msgstr ""
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
-msgstr ""
+msgstr "아이콘 변경"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Search icons…"
-msgstr ""
+msgstr "아이콘 찾기…"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Reset"
-msgstr ""
+msgstr "초기화"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select"
-msgstr ""
+msgstr "선택"
 
 #: nautilus_my_computer/column_view.py
 msgid "Beta"
-msgstr ""
+msgstr "베타"
 
 #: nautilus_my_computer/column_view.py
 msgid "Early access feature. It may contain bugs or inconsistencies."
-msgstr ""
+msgstr "정식 출시 전 사전 체험 기능입니다. 오류나 불일치가 있을 수 있습니다."
 
 #: nautilus_my_computer/column_view.py
 msgid "Column View"
-msgstr ""
+msgstr "열 보기"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
@@ -144,7 +144,7 @@ msgstr[0] "{n}년 후"
 
 #: nautilus_my_computer/components.py
 msgid "Rename"
-msgstr ""
+msgstr "이름 변경"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Tab"
@@ -160,41 +160,41 @@ msgstr "다른 프로그램으로 열기…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Remove from Bookmarks"
-msgstr ""
+msgstr "즐겨찾기에서 제거"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Add to Bookmarks"
-msgstr ""
+msgstr "즐겨찾기에 추가"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Unpin from My Computer"
-msgstr ""
+msgstr "내 컴퓨터에서 고정 해제"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Pin to My Computer"
-msgstr ""
+msgstr "내 컴퓨터에 고정"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
-msgstr ""
+msgstr "새 폴더…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Document"
-msgstr ""
+msgstr "새 문서"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Rename…"
-msgstr ""
+msgstr "이름 변경…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Compress…"
-msgstr ""
+msgstr "압축…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
-msgstr ""
+msgstr "휴지통으로 이동"
 
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
@@ -206,11 +206,11 @@ msgstr "내 컴퓨터 열기"
 
 #: nautilus_my_computer/main.py
 msgid "Recommended Apps"
-msgstr ""
+msgstr "추천 앱들"
 
 #: nautilus_my_computer/main.py
 msgid "Other Apps"
-msgstr ""
+msgstr "다른 앱들"
 
 #: nautilus_my_computer/main.py
 msgid "General"
@@ -231,7 +231,7 @@ msgstr "홈 대신 컴퓨터 보기를 바로 엽니다"
 # Previous translation (before rename from "Visibility"): 표시 여부
 #: nautilus_my_computer/main.py
 msgid "Panel visibility"
-msgstr ""
+msgstr "패널 표시 여부"
 
 #: nautilus_my_computer/main.py
 msgid ""
@@ -268,21 +268,20 @@ msgid "Include boot and EFI partitions in the System group"
 msgstr "부트 및 EFI 파티션을 시스템 그룹에 포함합니다"
 
 #: nautilus_my_computer/main.py
-#, fuzzy
 msgid "Hidden drives"
-msgstr "숨김"
+msgstr "숨겨진 드라이브"
 
 #: nautilus_my_computer/main.py
 msgid "Drives you manually hide from the Computer view will appear here."
-msgstr ""
+msgstr "수동으로 숨겨진 드라이브는 이곳에 나타납니다."
 
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
-msgstr ""
+msgstr "사이드바 표시 여부"
 
 #: nautilus_my_computer/main.py
 msgid "Choose which locations appear on the sidebar."
-msgstr ""
+msgstr "사이드바에서 어느 위치에 표시될 지 선택하세요."
 
 #: nautilus_my_computer/main.py
 msgid "Bar Color"
@@ -346,7 +345,7 @@ msgstr "마운트"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Hide"
-msgstr ""
+msgstr "숨기기"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "System"
@@ -375,73 +374,73 @@ msgstr "{total} 중 {free} 사용 가능"
 
 #: nautilus_my_computer/widgets.py
 msgid "Program"
-msgstr ""
+msgstr "프로그램"
 
 #: nautilus_my_computer/widgets.py
 msgid "Audio"
-msgstr ""
+msgstr "오디오"
 
 #: nautilus_my_computer/widgets.py
 msgid "Font"
-msgstr ""
+msgstr "글꼴"
 
 #: nautilus_my_computer/widgets.py
 msgid "Image"
-msgstr ""
+msgstr "그림"
 
 #: nautilus_my_computer/widgets.py
 msgid "Archive"
-msgstr ""
+msgstr "보관"
 
 #: nautilus_my_computer/widgets.py
 msgid "Markup"
-msgstr ""
+msgstr "주석"
 
 #: nautilus_my_computer/widgets.py
 msgid "Text"
-msgstr ""
+msgstr "텍스트"
 
 #: nautilus_my_computer/widgets.py
 msgid "Video"
-msgstr ""
+msgstr "비디오"
 
 #: nautilus_my_computer/widgets.py
 msgid "Contacts"
-msgstr ""
+msgstr "연락처"
 
 #: nautilus_my_computer/widgets.py
 msgid "Calendar"
-msgstr ""
+msgstr "달력"
 
 #: nautilus_my_computer/widgets.py
 msgid "Document"
-msgstr ""
+msgstr "문서"
 
 #: nautilus_my_computer/widgets.py
 msgid "Presentation"
-msgstr ""
+msgstr "프리젠테이션"
 
 #: nautilus_my_computer/widgets.py
 msgid "Spreadsheet"
-msgstr ""
+msgstr "스프레드시트"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{n} document"
 msgid_plural "{n} documents"
-msgstr[0] ""
+msgstr[0] "{n}개의 문서"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{n} folder"
 msgid_plural "{n} folders"
-msgstr[0] ""
+msgstr[0] "{n}개의 폴더"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{first} and {second}"
-msgstr ""
+msgstr "{first} 와 {second}"
 
 #: nautilus_my_computer/widgets.py
 msgid "Dimensions"
-msgstr ""
+msgstr "크기"
