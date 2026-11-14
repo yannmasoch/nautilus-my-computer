@@ -1524,6 +1524,15 @@ class _ColumnViewHost:
     # made it silently no-op whenever the user had scrolled away from their
     # own selection. Rename is the one exception -- see below.
 
+    def preview_selection(self) -> bool:
+        """Space: preview the focused column's selected file through Nautilus's own
+        preview action. Always consumed, so Nautilus's type-ahead search never opens."""
+        column = self._focused_column()
+        item = column.selected_item() if column is not None else None
+        if item is not None and not item.is_dir:
+            self._native_bridge.preview(column.folder_uri, item.uri)
+        return True
+
     def trash_focused_folder(self) -> bool:
         """Move the focused local Miller item to trash (the Delete target)."""
         column = self._focused_column()
@@ -2949,6 +2958,12 @@ def rename_focused_folder(ext, win: Gtk.Window) -> bool:
     """Dispatch the window-level F2 shortcut to the active slot's Miller host."""
     host = _host_for_window(ext, win)
     return host.rename_focused_folder() if host is not None else False
+
+
+def preview_focused_selection(ext, win: Gtk.Window) -> bool:
+    """Dispatch the window-level Space shortcut to the active slot's Miller host."""
+    host = _host_for_window(ext, win)
+    return host.preview_selection() if host is not None else False
 
 
 def trash_focused_folder(ext, win: Gtk.Window) -> bool:
