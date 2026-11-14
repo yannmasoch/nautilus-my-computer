@@ -468,6 +468,9 @@ class _ColumnViewHost:
         # for the duration of that click so _on_real_row_activated still reads
         # the direction the user moved in (see _on_row_released).
         self._nav_from_index: int | None = None
+        # True while a mouse click is navigating, so the navigation restores
+        # keyboard focus the way a keyboard drill does (see _on_row_released).
+        self._click_navigation = False
         # Keyboard row change waiting to be committed (see _arm_row_commit) --
         # a (column, item) pair, item being a _ColumnRowItem model entry, not
         # a row widget (a selection made off-screen has no live widget under
@@ -1104,6 +1107,7 @@ class _ColumnViewHost:
         # Activate first: _set_focused_index drops the selection of any column that is
         # not the focused one, so selecting before would be undone (#189).
         self._nav_from_index = self.focused_index
+        self._click_navigation = True
         try:
             self._activate_column(column)
             # A plain click ends any Ctrl/Shift multi-selection: only this row stays.
@@ -1111,6 +1115,11 @@ class _ColumnViewHost:
             column.activate_row(row)
         finally:
             self._nav_from_index = None
+            self._click_navigation = False
+        # The click rebuilt the chain, which drops GTK focus, and navigated the
+        # hidden native view, whose late focus grab can follow. Put keyboard
+        # focus back on the clicked column so the arrow keys keep working.
+        self._arm_focus_retry(self._focused_column())
 
     def _on_row_right_clicked(
         self,
@@ -1586,6 +1595,7 @@ class _ColumnViewHost:
         # past the activated one, each carrying its own .width away with it.
         # The trailing preview width is derived from PREVIEW_WIDTH plus any
         # available viewport slack, so it is not tracked per-instance.
+        restore_keyboard_focus = restore_keyboard_focus or self._click_navigation
         index = self.columns.index(column)
         open_uri = row.open_uri if row.is_dir else row.uri
         if open_uri != row.uri:
