@@ -474,6 +474,11 @@ class _ColumnViewHost:
         # Gtk.ListView's recycling).
         self._pending_row_commit: tuple[Gtk.Widget, object] | None = None
         self._row_commit_id = 0
+        # A plain click on a row inside a multi-selection waits one
+        # double-click interval before narrowing the selection to that row, so
+        # a second click can open the whole selection instead (see
+        # _click_in_multi_selection). (row uri, monotonic time, timer id).
+        self._multi_click: tuple[str, int, int] | None = None
         # Right/Enter may target a child whose async enumeration has not
         # completed. Keep keyboard focus on the populated parent until that
         # child proves it has a selectable row (see _on_column_loaded).
@@ -644,6 +649,7 @@ class _ColumnViewHost:
             on_files_dropped=self._on_files_dropped,
             on_drag_start=self._activate_column,
             on_drag_end=lambda _column: self._end_dnd_hover(),
+            on_band_start=self._on_column_band_start,
         )
         column.connect_selection_changed(lambda: self._schedule_multi_preview(column))
         column.connect_selection_changed(lambda: self._push_selection_to_native(column))
@@ -655,6 +661,13 @@ class _ColumnViewHost:
         right_click.connect("pressed", self._on_column_background_right_clicked, column)
         column.add_controller(right_click)
         return column
+
+    def _on_column_band_start(self, column) -> None:
+        """A rubber band began in `column`: it becomes the active column, and
+        nothing queued for the row selection it replaces may land afterwards."""
+        self._cancel_row_commit()
+        self._cancel_multi_click()
+        self._activate_column(column)
 
     def _push_selection_to_native(self, column) -> None:
         """Mirror a column's selection into Nautilus's native model (#178), so
@@ -1101,6 +1114,10 @@ class _ColumnViewHost:
             column.modifier_click(row.item, ctrl=ctrl, shift=shift)
             return
         gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+        if column.selection_count() > 1 and column.is_item_selected(row.item):
+            self._click_in_multi_selection(column, row)
+            return
+        self._cancel_multi_click()
         # Activate first: _set_focused_index drops the selection of any column that is
         # not the focused one, so selecting before would be undone (#189).
         self._nav_from_index = self.focused_index
@@ -2081,11 +2098,11 @@ class _ColumnViewHost:
         if column is None:
             return False
 
-        # Shift has no meaning of its own yet for Left/Right/Return --
-        # range selection is out of scope for #91 (see PR #146's
-        # multi-selection work) -- so those combinations fall straight
-        # through to the same swallow every other unclaimed key gets below,
-        # rather than running the plain-key action.
+        # Shift+Up/Down/Home/End/Page Up/Page Down extend the selection as a
+        # range (_move_column_selection). Shift has no meaning of its own for
+        # Left/Right/Return, so those combinations fall straight through to
+        # the same swallow every other unclaimed key gets below, rather than
+        # running the plain-key action.
         shift = bool(int(gtk_state) & Gdk.ModifierType.SHIFT_MASK)
         if not shift:
             if keyval in (Gdk.KEY_Left, Gdk.KEY_KP_Left):
@@ -2095,11 +2112,11 @@ class _ColumnViewHost:
             if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter, Gdk.KEY_ISO_Enter):
                 return self._open_selection(column)
         if keyval in _COLUMN_NAV_KEYVALS:
-            return self._move_column_selection(column, keyval)
+            return self._move_column_selection(column, keyval, extend=shift)
 
         return True
 
-    def _move_column_selection(self, column: Gtk.Widget, keyval: int) -> bool:
+    def _move_column_selection(self, column: Gtk.Widget, keyval: int, extend: bool = False) -> bool:
         """Up/Down/Home/End/Page Up/Page Down: move column's own selection
         directly through its ColumnSelection (see _on_key_pressed's
         docstring for why this isn't left to Gtk.ListView's native
@@ -2115,11 +2132,19 @@ class _ColumnViewHost:
         Down already at the last row, ...) computes target == current and
         returns without reselecting or re-scrolling -- that would otherwise
         arm a real commit (rebuild the chain, re-push the slot location) for
-        a press that didn't actually move anything."""
+        a press that didn't actually move anything.
+
+        With `extend` (Shift held) the keys move the range's cursor instead:
+        the selection becomes everything from the anchor row to the target,
+        growing or shrinking as the cursor moves. Nothing is committed to the
+        Miller chain then -- like a Shift-click, the multi-selection preview
+        follows the selection."""
         count = column.item_count()
         if count == 0:
             return True
         current = column.selected_index()
+        if extend and current is not None:
+            current = column.cursor_index()
 
         if current is None:
             target = (
@@ -2147,6 +2172,14 @@ class _ColumnViewHost:
             target = count - 1 if step is None else min(count - 1, current + step)
 
         if target == current:
+            return True
+
+        if extend and current is not None:
+            # Whatever single-row commit the last plain press armed must not
+            # land on top of the range being built.
+            self._cancel_row_commit()
+            column.extend_selection_to(target)
+            column.list_view.scroll_to(target, Gtk.ListScrollFlags.NONE, None)
             return True
 
         item = column.select_index(target)
@@ -2206,8 +2239,53 @@ class _ColumnViewHost:
                 self._arm_row_commit(col, item)
         return True
 
+    def _open_selected_files(self, column: Gtk.Widget) -> None:
+        """Open every selected file in its default application. Folders in the
+        selection are skipped: the column chain can only drill into one."""
+        for item in column.selected_items():
+            if not item.is_dir:
+                self._open_file(item.uri)
+
+    def _cancel_multi_click(self) -> None:
+        if self._multi_click is not None:
+            GLib.source_remove(self._multi_click[2])
+            self._multi_click = None
+
+    def _click_in_multi_selection(self, column: Gtk.Widget, row: Gtk.Widget) -> None:
+        """A plain click on a row that is part of a multi-selection. A second
+        click on the same row within the double-click time opens the whole
+        selection. Otherwise the selection narrows to the clicked row once that
+        time has passed, as Nautilus does -- deciding at once would collapse the
+        selection before a double-click could use it."""
+        now = GLib.get_monotonic_time()
+        window_us = Gtk.Settings.get_default().get_property("gtk-double-click-time") * 1000
+        previous = self._multi_click
+        if previous is not None and previous[0] == row.uri and now - previous[1] <= window_us:
+            self._cancel_multi_click()
+            self._open_selected_files(column)
+            return
+        self._cancel_multi_click()
+
+        def narrow() -> bool:
+            self._multi_click = None
+            if column in self.columns and column.is_item_selected(row.item):
+                self._nav_from_index = self.focused_index
+                try:
+                    self._activate_column(column)
+                    column.select_only_item(row.item)
+                    column.activate_row(row)
+                finally:
+                    self._nav_from_index = None
+            return GLib.SOURCE_REMOVE
+
+        timer = GLib.timeout_add(window_us // 1000, narrow)
+        self._multi_click = (row.uri, now, timer)
+
     def _open_selection(self, column: Gtk.Widget) -> bool:
         """Open what column has selected -- the Return/Enter target.
+
+        With several rows selected every selected file opens (folders are
+        skipped, see _open_selected_files).
 
         Folders drill into a new column, matching what clicking them does --
         that's what "open" means in a Miller view. Files go straight to
@@ -2215,6 +2293,9 @@ class _ColumnViewHost:
         is never a mid-flight preview, so neither click-policy nor the
         repeat-click timing activate_row applies."""
         self._cancel_row_commit()
+        if column.selection_count() > 1:
+            self._open_selected_files(column)
+            return True
         item = column.selected_item()
         if item is None:
             return True
