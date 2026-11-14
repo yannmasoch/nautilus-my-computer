@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: My Computer for Nautilus 0.13.3\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-01 11:48-0800\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: 2026-11-14 07:51+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: none\n"
 "Language: vi\n"
@@ -19,212 +19,205 @@ msgstr ""
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Change Icon"
-msgstr ""
+msgstr "Thay đổi biểu tượng"
 
 #: nautilus_my_computer/bookmarks.py
+#, fuzzy
 msgid "Search icons…"
-msgstr ""
+msgstr "Search icons…"
 
 #: nautilus_my_computer/bookmarks.py
 msgid "Reset"
-msgstr ""
+msgstr "Đặt lại"
 
 #: nautilus_my_computer/column_view.py
 msgid "Select"
-msgstr ""
+msgstr "Chọn"
 
 #: nautilus_my_computer/column_view.py
 msgid "Beta"
-msgstr ""
+msgstr "Bản beta"
 
 #: nautilus_my_computer/column_view.py
 msgid "Early access feature. It may contain bugs or inconsistencies."
 msgstr ""
+"Tính năng truy cập sớm. Có thể chứa lỗi hoặc hành vi có thể không nhất quán."
 
 #: nautilus_my_computer/column_view.py
 msgid "Column View"
-msgstr ""
+msgstr "Chế độ xem kiểu cột"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} item"
 msgid_plural "{n} items"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} phần tử"
 
 #: nautilus_my_computer/common.py
 msgid "Today"
-msgstr ""
+msgstr "Hôm nay"
 
 #: nautilus_my_computer/common.py
 msgid "Yesterday"
-msgstr ""
+msgstr "Hôm qua"
 
 #: nautilus_my_computer/common.py
 msgid "Tomorrow"
-msgstr ""
+msgstr "Ngày mai"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} day ago"
 msgid_plural "{n} days ago"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} ngày trước"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} day"
 msgid_plural "In {n} days"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Trong {n} ngày"
 
 #: nautilus_my_computer/common.py
 msgid "This week"
-msgstr ""
+msgstr "Tuần này"
 
 #: nautilus_my_computer/common.py
 msgid "Last week"
-msgstr ""
+msgstr "Tuần trước"
 
 #: nautilus_my_computer/common.py
 msgid "Next week"
-msgstr ""
+msgstr "Tuần sau"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} week ago"
 msgid_plural "{n} weeks ago"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} tuần trước"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} week"
 msgid_plural "In {n} weeks"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Trong {n} tuần"
 
 #: nautilus_my_computer/common.py
 msgid "This month"
-msgstr ""
+msgstr "Tháng này"
 
 #: nautilus_my_computer/common.py
 msgid "Last month"
-msgstr ""
+msgstr "Tháng trước"
 
 #: nautilus_my_computer/common.py
 msgid "Next month"
-msgstr ""
+msgstr "Tháng sau"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} month ago"
 msgid_plural "{n} months ago"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} tháng trước"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} month"
 msgid_plural "In {n} months"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Trong {n} tháng"
 
 #: nautilus_my_computer/common.py
 msgid "This year"
-msgstr ""
+msgstr "Năm nay"
 
 #: nautilus_my_computer/common.py
 msgid "Last year"
-msgstr ""
+msgstr "Năm ngoái"
 
 #: nautilus_my_computer/common.py
 msgid "Next year"
-msgstr ""
+msgstr "Năm sau"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "{n} year ago"
 msgid_plural "{n} years ago"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} năm trước"
 
 #: nautilus_my_computer/common.py
 #, python-brace-format
 msgid "In {n} year"
 msgid_plural "In {n} years"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Trong {n} năm"
 
 #: nautilus_my_computer/components.py
 msgid "Rename"
-msgstr ""
+msgstr "Đổi tên"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Tab"
-msgstr ""
+msgstr "Mở trong Tab mới"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open in New Window"
-msgstr ""
+msgstr "Mở trong Cửa sổ mới"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Open With…"
-msgstr ""
+msgstr "Mở bằng…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Remove from Bookmarks"
-msgstr ""
+msgstr "Loại bỏ khỏi Bookmark"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Add to Bookmarks"
-msgstr ""
+msgstr "Thêm vào Bookmark"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Unpin from My Computer"
-msgstr ""
+msgstr "Bỏ ghim khỏi My Computer"
 
 #: nautilus_my_computer/context_menu.py
 #: nautilus_my_computer/preferred_folders.py
 msgid "Pin to My Computer"
-msgstr ""
+msgstr "Ghim vào My Computer"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Folder…"
-msgstr ""
+msgstr "Thư mục mới…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "New Document"
-msgstr ""
+msgstr "Tài liệu mới"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Rename…"
-msgstr ""
+msgstr "Đổi tên…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Compress…"
-msgstr ""
+msgstr "Nén…"
 
 #: nautilus_my_computer/context_menu.py
 msgid "Move to Trash"
-msgstr ""
+msgstr "Chuyển vào Thùng rác"
 
 #: nautilus_my_computer/main.py
 msgid "My Computer Settings"
-msgstr ""
+msgstr "Cài đặt My Computer"
 
 #: nautilus_my_computer/main.py
 msgid "Open My Computer"
-msgstr ""
+msgstr "Mở My Computer"
 
 #: nautilus_my_computer/main.py
 msgid "Recommended Apps"
-msgstr ""
+msgstr "Ứng dụng đề xuất"
 
 #: nautilus_my_computer/main.py
 msgid "Other Apps"
-msgstr ""
+msgstr "Ứng dụng khác"
 
 #: nautilus_my_computer/main.py
 msgid "General"
@@ -271,19 +264,20 @@ msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Show system partitions"
-msgstr ""
+msgstr "Xem phân vùng hệ thống"
 
 #: nautilus_my_computer/main.py
+#, fuzzy
 msgid "Include boot and EFI partitions in the System group"
-msgstr ""
+msgstr "Bao gồm phân vùng boot và EFI trong nhóm Hệ thống"
 
 #: nautilus_my_computer/main.py
 msgid "Hidden drives"
-msgstr ""
+msgstr "Ổ đĩa ẩn"
 
 #: nautilus_my_computer/main.py
 msgid "Drives you manually hide from the Computer view will appear here."
-msgstr ""
+msgstr "Ổ đĩa bạn đã ẩn sẽ xuất hiện ở đây."
 
 #: nautilus_my_computer/main.py
 msgid "Sidebar visibility"
@@ -319,7 +313,7 @@ msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Color"
-msgstr ""
+msgstr "Màu sắc"
 
 #: nautilus_my_computer/main.py
 msgid "Start color"
@@ -331,128 +325,131 @@ msgstr ""
 
 #: nautilus_my_computer/main.py
 msgid "Extension"
-msgstr ""
+msgstr "Tiện ích"
 
 #: nautilus_my_computer/main.py
 msgid "Version"
-msgstr ""
+msgstr "Phiên bản"
 
 #: nautilus_my_computer/main.py
 msgid "Author"
-msgstr ""
+msgstr "Tác giả"
 
 #: nautilus_my_computer/main.py
 msgid "Source code"
-msgstr ""
+msgstr "Mã nguồn"
 
 #: nautilus_my_computer/main.py
+#, fuzzy
 msgid "GitHub"
-msgstr ""
+msgstr "GitHub"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Mount"
-msgstr ""
+msgstr "Gắn kết"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Hide"
-msgstr ""
+msgstr "Ẩn"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "System"
-msgstr ""
+msgstr "Hệ thống"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "On this Computer"
-msgstr ""
+msgstr "Trên máy tính này"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Removable"
-msgstr ""
+msgstr "Ổ cứng di động"
 
 #: nautilus_my_computer/my_computer_view.py
 msgid "Disc"
-msgstr ""
+msgstr "Đĩa"
 
 #: nautilus_my_computer/widgets.py
 msgid "Not mounted"
-msgstr ""
+msgstr "Chưa gắn kết"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{free} free of {total}"
-msgstr ""
+msgstr "{free} còn lại trong tổng số {total}"
 
 #: nautilus_my_computer/widgets.py
 msgid "Program"
-msgstr ""
+msgstr "Chương trình"
 
 #: nautilus_my_computer/widgets.py
 msgid "Audio"
-msgstr ""
+msgstr "Âm thanh"
 
 #: nautilus_my_computer/widgets.py
 msgid "Font"
-msgstr ""
+msgstr "Font"
 
 #: nautilus_my_computer/widgets.py
 msgid "Image"
-msgstr ""
+msgstr "Hình ảnh"
 
 #: nautilus_my_computer/widgets.py
 msgid "Archive"
-msgstr ""
+msgstr "Lưu trữ"
 
 #: nautilus_my_computer/widgets.py
+#, fuzzy
 msgid "Markup"
-msgstr ""
+msgstr "Markup"
 
 #: nautilus_my_computer/widgets.py
 msgid "Text"
-msgstr ""
+msgstr "Văn bản"
 
 #: nautilus_my_computer/widgets.py
 msgid "Video"
-msgstr ""
+msgstr "Video"
 
 #: nautilus_my_computer/widgets.py
 msgid "Contacts"
-msgstr ""
+msgstr "Liên hệ"
 
 #: nautilus_my_computer/widgets.py
 msgid "Calendar"
-msgstr ""
+msgstr "Lịch"
 
 #: nautilus_my_computer/widgets.py
 msgid "Document"
-msgstr ""
+msgstr "Tài liệu"
 
 #: nautilus_my_computer/widgets.py
+#, fuzzy
 msgid "Presentation"
-msgstr ""
+msgstr "Presentation"
 
 #: nautilus_my_computer/widgets.py
+#, fuzzy
 msgid "Spreadsheet"
-msgstr ""
+msgstr "Spreadsheet"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{n} document"
 msgid_plural "{n} documents"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} tài liệu"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{n} folder"
 msgid_plural "{n} folders"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} thư mục"
 
 #: nautilus_my_computer/widgets.py
 #, python-brace-format
 msgid "{first} and {second}"
-msgstr ""
+msgstr "{first} và {second}"
 
 #: nautilus_my_computer/widgets.py
+#, fuzzy
 msgid "Dimensions"
-msgstr ""
+msgstr "Dimensions"
