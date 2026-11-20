@@ -53,6 +53,30 @@ def shift_click(
     return Selection(sel.uris | span if extend else span, sel.anchor)
 
 
+def cursor_index(sel: Selection, ordered: Sequence[str]) -> int | None:
+    """Position of the moving end of a Shift range: the selected row furthest
+    from the anchor. With one row selected, or the anchor in the middle of the
+    selection, that is the anchor itself. None when nothing listed is selected."""
+    positions = [i for i, uri in enumerate(ordered) if uri in sel.uris]
+    if not positions:
+        return None
+    if sel.anchor is None or sel.anchor not in ordered:
+        return positions[0]
+    anchor = ordered.index(sel.anchor)
+    if anchor == positions[0]:
+        return positions[-1]
+    if anchor == positions[-1]:
+        return positions[0]
+    return anchor
+
+
+def extend_to(sel: Selection, ordered: Sequence[str], index: int) -> Selection:
+    """Shift+arrow: select from the anchor to the row at `index`, so the range
+    grows or shrinks as the cursor moves. Starts from `index` alone when there
+    is no anchor yet."""
+    return shift_click(sel, ordered[index], ordered)
+
+
 def select_all(ordered: Sequence[str]) -> Selection:
     return Selection(frozenset(ordered))
 
