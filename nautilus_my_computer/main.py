@@ -92,7 +92,6 @@ DEBUG_SIDEBAR_MODE = _sidebar_mode(
 DEBUG_PATHBAR_ACTIVE = _flag("MC_PATHBAR")  # top URL bar: chip icon pinning
 DEBUG_LOCATION_FILTER_ACTIVE = _flag("MC_LOCATION_FILTER")  # address bar: card filter watch
 DEBUG_SELFTEST = _flag("MC_SELFTEST", default=False)  # in-process navigation self-test driver
-DETACH_SETTINGS_WINDOW = False  # testing toggle: True opens settings as a standalone window
 
 # ── Extension metadata (keep in sync with pyproject.toml) ────────────────────
 EXT_NAME = "My Computer for Nautilus"
@@ -1807,12 +1806,13 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         if not self._gsettings:
             return
 
-        detached = DETACH_SETTINGS_WINDOW or win is None
-        pref_win = Adw.PreferencesWindow() if detached else Adw.PreferencesDialog()
+        pref_win = Adw.PreferencesWindow()
         pref_win.set_title(PREFS_WIN_TITLE)
         pref_win.set_search_enabled(False)
-        if detached:
-            pref_win.set_default_size(680, 760)
+        pref_win.set_default_size(680, 760)
+
+        if win is not None:
+            pref_win.set_transient_for(win)
 
         page_general = Adw.PreferencesPage()
         page_general.set_title(_("General"))
@@ -1952,7 +1952,6 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
 
         _rebuild_hidden_rows()
         _hidden_sig = self._gsettings.connect("changed::hidden-drives", _rebuild_hidden_rows)
-        pref_win.connect("closed", lambda _w: self._gsettings.disconnect(_hidden_sig))
 
         sidebar_vis_group = Adw.PreferencesGroup()
         sidebar_vis_group.set_title(_("Sidebar visibility"))
@@ -2079,10 +2078,7 @@ class MyComputerExtension(GObject.GObject, Nautilus.MenuProvider):
         github_row.add_suffix(github_btn)
         about_group.add(github_row)
 
-        if detached:
-            pref_win.present()
-        else:
-            pref_win.present(win)
+        pref_win.present()
 
     @staticmethod
     def _activate_qualified_action(name: str, param: GLib.Variant | None, win: Gtk.Window) -> bool:
