@@ -1881,7 +1881,7 @@ def _populate_slot(ext, slot, sort: tuple[str, bool] | None = None) -> None:
 
     active_uris = {m.nav_uri for m in _disk_data.values()}
     for place in _network_places:
-        if place.nav_uri not in active_uris:
+        if place.nav_uri not in active_uris and place.key not in hidden_drives:
             groups["network"].add_item(place)
 
     # Sort each group's items
@@ -2615,6 +2615,12 @@ def _on_card_right_clicked(ext, gesture, _n, x, y, win: Gtk.Window, row: Gtk.Box
 
     if isinstance(row, MyComputerDiskCard):
         m = _disk_data.get(row.model.key)
+        if m is None:
+            m = next(
+                (place for place in _network_places if place.key == row.model.key),
+                None,
+            )
+
         if not m or not callable(m.menu):
             return
         ctx_menu = m.menu(ext, win, m)
