@@ -238,6 +238,7 @@ class MountInfo:
     gio_icon: object | None = None
     gio_mount: object | None = None
     gio_volume: object | None = None
+    gio_class: str | None = None
 
     # Flags
     is_gio: bool = False
@@ -395,6 +396,9 @@ def _classify_mount(m: MountInfo) -> str:
     """Return 'system', 'local', 'removable', 'disc', or 'network' for a mount entry."""
     # Unmounted volumes are never part of the running system.
     # Removable (USB, optical) -> "Removable"; others -> "On this Computer"
+    if not m.is_mounted and m.gio_class == "network":
+        return "network"
+
     if not m.is_mounted:
         return "removable" if m.is_removable else "local"
 
@@ -973,7 +977,8 @@ def _scan_gio_volumes() -> list[MountInfo]:
                 continue  # already mounted — covered elsewhere
             name = volume.get_name() or "Unknown Device"
             drive = volume.get_drive()
-            is_removable = drive.is_removable() if drive else True
+            volume_class = volume.get_identifier("class")
+            is_removable = drive.is_removable() if drive else False
             results.append(
                 MountInfo(
                     key=f"vol:{name}",
@@ -990,6 +995,7 @@ def _scan_gio_volumes() -> list[MountInfo]:
                     is_removable=is_removable,
                     gio_icon=volume.get_icon(),
                     gio_volume=volume,
+                    gio_class=volume_class,
                     can_eject=bool(volume.can_eject() or (drive and drive.can_eject())),
                     can_mount=bool(volume.can_mount()),
                 )
