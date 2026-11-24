@@ -2141,7 +2141,7 @@ def _on_special_place_icon_ready(
 
 def _refresh_folder_icon_async(ext, pf: "PreferredFolder") -> None:
     """Icon/name refresh for built-in real-folder tokens (Documents/Downloads/
-    Music/Videos/Pictures/Home). GIO's standard::icon already resolves the
+    Music/Videos/Pictures/Projects/Home). GIO's standard::icon already resolves the
     correct native icon for these paths (folder-download, user-home, ...) --
     no hardcoded icon table needed -- and metadata::custom-icon(-name) layers
     a user-set custom icon on top, exactly like Nautilus itself does.

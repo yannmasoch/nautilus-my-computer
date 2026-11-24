@@ -201,11 +201,17 @@ PREFERRED_TOKENS: dict[str, dict] = {
         "label": "Pictures",
         "special_dir": GLib.UserDirectory.DIRECTORY_PICTURES,
     },
+    # DIRECTORY_PROJECTS only exists since GLib 2.90; on older GLib the token
+    # resolves to no folder and is skipped, like an unset XDG directory.
+    "projects": {
+        "label": "Projects",
+        "special_dir": getattr(GLib.UserDirectory, "DIRECTORY_PROJECTS", None),
+    },
 }
 
 # Mirrors Nautilus' own sidebar: its built-in places in source order
 # (Home, Recent, Starred, Network -- see nautilus-sidebar.c), then the XDG user
-# directories in /etc/xdg/user-dirs.defaults order. Those five are not built-in
+# directories in /etc/xdg/user-dirs.defaults order. Those six are not built-in
 # sidebar places at all: Nautilus reads them from the user's GTK bookmarks, so
 # there is no native sidebar order to copy and the xdg-user-dirs order is the
 # closest canonical one. Trash is the exception to the mirror -- native keeps it
@@ -222,6 +228,7 @@ DEFAULT_PREFERRED_FOLDERS: list[str] = [
     "music",
     "pictures",
     "videos",
+    "projects",
     "trash",
 ]
 
@@ -261,9 +268,9 @@ def load_preferred_folders(gsettings) -> list[PreferredFolder]:
     for entry in entries:
         token = PREFERRED_TOKENS.get(entry)
         if token is not None:
-            special_dir = token.get("special_dir")
-            if special_dir is not None:
-                path = GLib.get_user_special_dir(special_dir)
+            if "special_dir" in token:
+                special_dir = token["special_dir"]
+                path = GLib.get_user_special_dir(special_dir) if special_dir is not None else None
                 if not path:
                     continue
                 uri = GLib.filename_to_uri(path, None)
